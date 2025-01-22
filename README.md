@@ -5,8 +5,9 @@ CS Master thesis about Uncertainty Quantification for the transformer architectu
 # Installation
 
 ## install python 3.8
+sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt-get update
-sudo apt-get install python3.8
+sudo apt-get install python3.8-full
 
 ## install poetry
 curl -sSL https://install.python-poetry.org | python3.8 - --version 1.8.5
