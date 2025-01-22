@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "transformeruq"
+version = "0.1.0"
+description = ""
+authors = ["Sondre Sørbye <sondre@magson.no>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+fairseq = "^0.10.2"
+torch = "1.12.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
