@@ -1,78 +1,156 @@
+import os
+from venv import logger
 import sacremoses
 import subword_nmt.learn_bpe
 import subword_nmt.apply_bpe
+from tqdm import tqdm
+import multiprocessing
+from functools import partial
+
 
 class ParallelCorpusTokenizer:
-    def __init__(self):
-        self.en_tokenizer = sacremoses.MosesTokenizer(lang='en')
-        self.de_tokenizer = sacremoses.MosesTokenizer(lang='de')
-    
-    def tokenize_files(self, en_file_path, de_file_path, output_en_path, output_de_path):
+    def __init__(self, num_processes=None, chunksize=1000):
         """
-        Tokenize parallel corpus files
-        
-        Args:
-            en_file_path (str): Path to English sentences file
-            de_file_path (str): Path to German sentences file
-            output_en_path (str): Path to save tokenized English sentences
-            output_de_path (str): Path to save tokenized German sentences
+        :param num_processes: Number of processes to use for tokenization.
+                              Defaults to all available CPU cores.
+        :param chunksize: Number of lines to send to each worker process at a time.
         """
-        with open(en_file_path, 'r', encoding='utf-8') as en_file, \
-             open(de_file_path, 'r', encoding='utf-8') as de_file, \
-             open(output_en_path, 'w', encoding='utf-8') as out_en, \
-             open(output_de_path, 'w', encoding='utf-8') as out_de:
-            
-            for en_line, de_line in zip(en_file, de_file):
-                # Tokenize and write English sentences
-                en_tokens = self.en_tokenizer.tokenize(en_line.strip())
-                out_en.write(' '.join(en_tokens) + '\n')
-                
-                # Tokenize and write German sentences
-                de_tokens = self.de_tokenizer.tokenize(de_line.strip())
-                out_de.write(' '.join(de_tokens) + '\n')
-    
+        self.en_tokenizer = sacremoses.MosesTokenizer(lang="en")
+        self.de_tokenizer = sacremoses.MosesTokenizer(lang="de")
+        self.num_processes = num_processes or multiprocessing.cpu_count()
+        self.chunksize = chunksize
+
+    def _tokenize_line(self, line, tokenizer):
+        """Tokenize a single line (helper for multiprocessing)."""
+        return " ".join(tokenizer.tokenize(line.strip())) + "\n"
+
+    def tokenize_file(self, input_path, output_path, lang="en"):
+        """
+        Tokenize a file line by line using multiprocessing.
+
+        :param input_path: Path to the input file.
+        :param output_path: Path to save the tokenized output.
+        :param lang: Language identifier ("en" or "de").
+        """
+
+        if os.path.exists(output_path):
+            logger.warning(f"Output file {output_path} already exists. Skipping tokenization.")
+            return
+
+        tokenizer = self.en_tokenizer if lang == "en" else self.de_tokenizer
+        tokenize_func = partial(self._tokenize_line, tokenizer=tokenizer)
+
+        # Get total lines for tqdm progress bar
+        with open(input_path, "r", encoding="utf-8") as f:
+            total_lines = sum(1 for _ in f)
+
+        with open(input_path, "r", encoding="utf-8") as input_file, open(
+            output_path, "w", encoding="utf-8"
+        ) as output_file:
+            with multiprocessing.Pool(processes=self.num_processes) as pool:
+                # imap returns results one by one in order, while processing in parallel
+                for tokenized_line in tqdm(
+                    pool.imap(tokenize_func, input_file, chunksize=self.chunksize),
+                    total=total_lines,
+                    desc=f"Tokenizing {os.path.basename(input_path)}",
+                ):
+                    output_file.write(tokenized_line)
+
+    def tokenize_files(
+        self,
+        train_en_path,
+        train_de_path,
+        test_en_path,
+        test_de_path,
+        output_train_en,
+        output_train_de,
+        output_test_en,
+        output_test_de,
+    ):
+        """
+        Tokenize training and test files.
+
+        :param train_en_path: Path to the English training file.
+        :param train_de_path: Path to the German training file.
+        :param test_en_path: Path to the English test file.
+        :param test_de_path: Path to the German test file.
+        :param output_train_en: Path to save the tokenized English training file.
+        :param output_train_de: Path to save the tokenized German training file.
+        :param output_test_en: Path to save the tokenized English test file.
+        :param output_test_de: Path to save the tokenized German test file.
+        """
+        # Tokenize training files
+        self.tokenize_file(train_en_path, output_train_en, "en")
+        self.tokenize_file(train_de_path, output_train_de, "de")
+
+        # Tokenize test files
+        self.tokenize_file(test_en_path, output_test_en, "en")
+        self.tokenize_file(test_de_path, output_test_de, "de")
+
     def learn_bpe(self, input_file, output_codes_path, num_symbols=10000):
-        """Learn BPE codes from input file"""
-        with open(input_file, 'r', encoding='utf-8') as infile, \
-             open(output_codes_path, 'w', encoding='utf-8') as outfile:
-            subword_nmt.learn_bpe.learn_bpe(
-                infile, 
-                outfile, 
-                num_symbols=num_symbols
-            )
-    
+        """
+        Learn BPE codes from a tokenized file.
+
+        :param input_file: Path to the tokenized file (usually a concatenation of training data).
+        :param output_codes_path: Where to save the learned BPE codes.
+        :param num_symbols: Number of BPE symbols to learn.
+        """
+        with open(input_file, "r", encoding="utf-8") as infile, open(
+            output_codes_path, "w", encoding="utf-8"
+        ) as outfile:
+            subword_nmt.learn_bpe.learn_bpe(infile, outfile, num_symbols=num_symbols)
+
     def apply_bpe(self, input_path, output_path, codes_path):
-        """Apply BPE to tokenized corpus"""
-        with open(codes_path, 'r', encoding='utf-8') as codes_file:
+        """
+        Apply BPE to a tokenized corpus line by line.
+
+        :param input_path: Path to the tokenized input file.
+        :param output_path: Path to the BPE-applied output file.
+        :param codes_path: Path to the BPE codes file.
+        """
+        # Load the BPE codes
+        with open(codes_path, "r", encoding="utf-8") as codes_file:
             bpe = subword_nmt.apply_bpe.BPE(codes_file)
-        
-        with open(input_path, 'r', encoding='utf-8') as input_file, \
-             open(output_path, 'w', encoding='utf-8') as output_file:
-            for line in input_file:
+
+        # Count lines for progress bar
+        with open(input_path, "r", encoding="utf-8") as f:
+            total_lines = sum(1 for _ in f)
+
+        with open(input_path, "r", encoding="utf-8") as input_file, open(
+            output_path, "w", encoding="utf-8"
+        ) as output_file:
+            for line in tqdm(
+                input_file,
+                total=total_lines,
+                desc=f"Applying BPE to {os.path.basename(input_path)}",
+            ):
                 bpe_line = bpe.process_line(line.strip())
-                output_file.write(bpe_line + '\n')
+                output_file.write(bpe_line + "\n")
+
 
 # Example usage
-if __name__ == '__main__':
+if __name__ == "__main__":
     tokenizer = ParallelCorpusTokenizer()
-    
-    # Step 1: Tokenize parallel corpus
+
+    # Tokenize train and test files
     tokenizer.tokenize_files(
-        'english_sentences.txt', 
-        'german_sentences.txt', 
-        'tokenized_english.txt', 
-        'tokenized_german.txt'
+        "train_english.txt",
+        "train_german.txt",
+        "test_english.txt",
+        "test_german.txt",
+        "tokenized_train_english.txt",
+        "tokenized_train_german.txt",
+        "tokenized_test_english.txt",
+        "tokenized_test_german.txt",
     )
-    
-    # Step 2: Learn BPE codes from tokenized files
-    tokenizer.learn_bpe(
-        'tokenized_english.txt', 
-        'en_bpe_codes.txt'
-    )
-    
-    # Step 3: Apply BPE to tokenized files
+
+    # Learn BPE codes from training data
+    tokenizer.learn_bpe("tokenized_train_english.txt", "en_bpe_codes.txt")
+
+    # Apply BPE to train and test files
     tokenizer.apply_bpe(
-        'tokenized_english.txt', 
-        'bpe_english.txt', 
-        'en_bpe_codes.txt'
+        "tokenized_train_english.txt", "bpe_train_english.txt", "en_bpe_codes.txt"
+    )
+    tokenizer.apply_bpe(
+        "tokenized_test_english.txt", "bpe_test_english.txt", "en_bpe_codes.txt"
     )
