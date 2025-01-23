@@ -2,6 +2,9 @@ import os
 from collections import Counter
 import torch
 from torch.utils.data import Dataset, DataLoader
+import logging
+
+logger = logging.getLogger(__name__)
 
 # -----------------------
 # Special Tokens
@@ -173,7 +176,8 @@ def tokens_to_tensor(
     def read_tokenized_file(path):
         with open(path, "r", encoding="utf-8") as f:
             return [line.strip().split() for line in f]
-
+    
+    logger.debug("Reading tokenized files...")
     train_en_tokens = read_tokenized_file(train_en_path)
     train_de_tokens = read_tokenized_file(train_de_path)
     test_en_tokens = read_tokenized_file(test_en_path)
@@ -182,6 +186,7 @@ def tokens_to_tensor(
     # ---------------------
     # 2. Build vocabs
     # ---------------------
+    logger.debug("Building vocabularies...")
     en_vocab = Vocabulary(min_freq=min_freq)
     en_vocab.build_vocab(train_en_tokens)  # Build from training data only
     de_vocab = Vocabulary(min_freq=min_freq)
@@ -194,6 +199,7 @@ def tokens_to_tensor(
         return [vocab.encode(tokens, add_bos=add_bos_eos, add_eos=add_bos_eos)
                 for tokens in token_lines]
 
+    logger.debug("Converting tokens to IDs...")
     train_en_ids = convert_lines_to_ids(train_en_tokens, en_vocab)
     train_de_ids = convert_lines_to_ids(train_de_tokens, de_vocab)
     test_en_ids = convert_lines_to_ids(test_en_tokens, en_vocab)
@@ -202,6 +208,7 @@ def tokens_to_tensor(
     # ---------------------
     # 4. Build Datasets and DataLoaders
     # ---------------------
+    logger.debug("Building DataLoaders...")
     train_dataset = ParallelDataset(train_de_ids, train_en_ids)  # DE->EN
     test_dataset  = ParallelDataset(test_de_ids, test_en_ids)
 

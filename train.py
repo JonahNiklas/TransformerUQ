@@ -7,14 +7,30 @@ from tqdm import tqdm
 import validate
 
 
-def train(model: nn.Module, dataloader: DataLoader, optimizer: optim.Optimizer, criterion: nn.Module, max_updates: int, validate_every: int = 1000):
+def train(
+    model: nn.Module,
+    training_loader: DataLoader,
+    test_loader: DataLoader,
+    optimizer: optim.Optimizer,
+    criterion: nn.Module,
+    max_updates: int,
+    validate_every: int = 1000,
+):
     model.train()
     for update in tqdm(range(max_updates), desc=f"Step {update}/{max_updates}"):
         total_loss = 0
-        for i, batch in enumerate(dataloader):
-            src_tokens, src_lengths, tgt_tokens = batch['net_input']['src_tokens'], batch['net_input']['src_lengths'], batch['target']
+        for i, batch in enumerate(training_loader):
+            src_tokens, src_lengths, tgt_tokens = (
+                batch["net_input"]["src_tokens"],
+                batch["net_input"]["src_lengths"],
+                batch["target"],
+            )
             device = model.device
-            src_tokens, src_lengths, tgt_tokens = src_tokens.to(device), src_lengths.to(device), tgt_tokens.to(device)
+            src_tokens, src_lengths, tgt_tokens = (
+                src_tokens.to(device),
+                src_lengths.to(device),
+                tgt_tokens.to(device),
+            )
 
             optimizer.zero_grad()
             output = model(src_tokens, src_lengths, tgt_tokens)
@@ -24,8 +40,7 @@ def train(model: nn.Module, dataloader: DataLoader, optimizer: optim.Optimizer, 
 
             total_loss += loss.item()
             if i % validate_every == 0:
-                validate(model, test_data)
+                validate(model, test_loader)
 
     avg_loss = total_loss / max_updates
     print(f"Average Loss: {avg_loss}")
-
