@@ -2,6 +2,14 @@ import torch
 import torch.nn as nn
 import torch.utils.data.dataloader as DataLoader
 from sacrebleu import corpus_bleu
+from tqdm import tqdm
+
+from vocab import output_to_text
+import logging
+
+logger = logging.getLogger(__name__)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
     model.eval()
@@ -9,19 +17,22 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
     all_references = []
     all_hypotheses = []
 
-    with torch.no_grad():
-        for i, batch in enumerate(test_data):
-            src_tokens, src_lengths, tgt_tokens = batch['net_input']['src_tokens'], batch['net_input']['src_lengths'], batch['target']
-            device = model.device
-            src_tokens, src_lengths, tgt_tokens = src_tokens.to(device), src_lengths.to(device), tgt_tokens.to(device)
+    logger.debug("Started validating models")
 
-            output = model(src_tokens, src_lengths, tgt_tokens)
+    with torch.no_grad():
+        for i, batch in tqdm(enumerate(test_data), desc="Running validation", total=len(test_data)):
+            src_tokens, tgt_tokens = batch
+            src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
+
+            output = model(src_tokens, tgt_tokens)
+            output = output.transpose(1, 2)
             loss = criterion(output, tgt_tokens)
             total_loss += loss.item()
 
             # Convert output to text
-            hypotheses = model.decode(output)
-            references = model.decode(tgt_tokens)
+            hypotheses = output.argmax(dim=1)
+            hypotheses = [output_to_text(hyp) for hyp in hypotheses.tolist()]
+            references = [output_to_text(ref) for ref in tgt_tokens.tolist()]
 
             all_hypotheses.extend(hypotheses)
             all_references.extend(references)
@@ -29,7 +40,6 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
     avg_loss = total_loss / len(test_data)
     bleu_score = corpus_bleu(all_hypotheses, [all_references]).score
 
-    print(f"Validation Loss: {avg_loss}")
-    print(f"BLEU Score: {bleu_score}")
+    print(f"Validation Loss: {avg_loss} | BLEU Score: {bleu_score}")
 
     return bleu_score

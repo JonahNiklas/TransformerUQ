@@ -1,10 +1,13 @@
+import os
 import torch
+from dataloader import get_data_loader, load_vocab
 from models.transformer import Transformer
 from tokenizer import ParallelCorpusTokenizer
-from tokens_to_tensor import tokens_to_tensor
-import train
+from train import train
 import logging
 from torch.utils.data import DataLoader
+
+from vocab import build_and_save_vocab
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -43,24 +46,69 @@ def main():
             codes_path=f"local/data/training/{lang}_bpe_codes.txt",
         )
 
-    logger.info("Convert tokenized data to tensors")
-    training_loader, test_loader = tokens_to_tensor(
-        train_en_path="local/data/training/bpe_train.en",
-        train_de_path="local/data/training/bpe_train.de",
-        test_en_path="local/data/test/bpe_test.en",
-        test_de_path="local/data/test/bpe_test.de",
-        batch_size=32,
-        min_freq=1,
+    logger.info("Build and save vocab")
+    if not os.path.exists("vocab_en.pkl") or not os.path.exists("vocab_de.pkl"):
+        build_and_save_vocab(
+            train_en_path="local/data/training/bpe_train.en",
+            train_de_path="local/data/training/bpe_train.de",
+            min_freq=5,  # for example
+            save_en_path="vocab_en.pkl",
+            save_de_path="vocab_de.pkl"
+        )
+        logger.warning("Vocab files not found. Building vocab from training data.")
+    en_vocab = load_vocab("vocab_en.pkl")
+    de_vocab = load_vocab("vocab_de.pkl")
+    logger.info(f"English vocab size: {len(en_vocab)}")
+    logger.info(f"German vocab size: {len(de_vocab)}")
+
+    logger.info("Create data loaders")
+    training_loader = get_data_loader(
+        src_file="local/data/training/bpe_train.de",
+        tgt_file="local/data/training/bpe_train.en",
+        src_vocab=de_vocab,
+        tgt_vocab=en_vocab,
+        batch_size=64,
         add_bos_eos=True,
+        shuffle=True
+    )
+
+    test_loader = get_data_loader(
+        src_file="local/data/test/bpe_test.de",
+        tgt_file="local/data/test/bpe_test.en",
+        src_vocab=de_vocab,
+        tgt_vocab=en_vocab,
+        batch_size=64,
+        add_bos_eos=True,
+        shuffle=False
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
     logger.info("Creating model")
-    model = Transformer()
+    class Hyperparameter:
+        def __init__(self):
+            self.encoder_embed_dim: int = 512
+            self.encoder_ffn_embed_dim: int = 1024
+            self.encoder_attention_heads: int = 4
+            self.encoder_layers: int = 6
+
+    hyperparameters = Hyperparameter()
+    model = Transformer(
+        src_vocab_size=len(de_vocab),
+        tgt_vocab_size=len(en_vocab),
+        d_model=hyperparameters.encoder_embed_dim,
+        num_heads=hyperparameters.encoder_attention_heads,
+        d_ff=hyperparameters.encoder_ffn_embed_dim,
+        num_encoder_layers=hyperparameters.encoder_layers,
+        num_decoder_layers=hyperparameters.encoder_layers,
+        dropout=0.1,
+        max_len=512,
+    )
+    number_of_params = sum(p.numel() for p in model.parameters())
+    print(f"Model number of parameters: {number_of_params/1e6:.2f}M")
     model.to(device)
-    model = model.compile()
+    # model = model.compile() | not available, might be due to old pytorch version
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
