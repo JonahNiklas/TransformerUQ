@@ -1,6 +1,7 @@
 import torch
 from models.transformer import Transformer
 from tokenizer import ParallelCorpusTokenizer
+from tokens_to_tensor import tokens_to_tensor
 import train
 import logging
 from torch.utils.data import DataLoader
@@ -21,20 +22,36 @@ def main():
         output_test_en='local/data/test/tokenized_test.de',
         output_test_de='local/data/test/tokenized_test.en'
     )
-    logger.info("Learning BPE codes")
-    tokenizer.learn_bpe(
-        input_path='local/data/training/tokenized_train.en',
-        output_codes_path='local/data/training/en_bpe_codes.txt'
-    )
-    logger.info("Applying BPE")
-    tokenizer.apply_bpe(
-        input_path='local/data/training/tokenized_train.en',
-        output_path='local/data/training/bpe_train.en',
-        codes_path='local/data/training/en_bpe_codes.txt'
-    )
+    languages = ['en', 'de']
+    for lang in languages:
+        logger.info(f"Learning BPE codes for {lang.upper()}")
+        tokenizer.learn_bpe(
+            input_path=f'local/data/training/tokenized_train.{lang}',
+            output_codes_path=f'local/data/training/{lang}_bpe_codes.txt'
+        )
+        logger.info(f"Applying BPE to {lang.upper()} data")
+        tokenizer.apply_bpe(
+            input_path=f'local/data/training/tokenized_train.{lang}',
+            output_path=f'local/data/training/bpe_train.{lang}',
+            codes_path=f'local/data/training/{lang}_bpe_codes.txt'
+        )
+        logger.info(f"Applying BPE to {lang.upper()} test data")
+        tokenizer.apply_bpe(
+            input_path=f'local/data/test/tokenized_test.{lang}',
+            output_path=f'local/data/test/bpe_test.{lang}',
+            codes_path=f'local/data/training/{lang}_bpe_codes.txt'
+        )
 
     # Convert tokenized data to tensors
-    # TODO
+    training_loader, test_loader = tokens_to_tensor(
+        train_en_path='local/data/training/bpe_train.en',
+        train_de_path='local/data/training/bpe_train.de',
+        test_en_path='local/data/test/bpe_test.en',
+        test_de_path='local/data/test/bpe_test.de',
+        batch_size=32,
+        min_freq=1,
+        add_bos_eos=True
+    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
@@ -44,7 +61,7 @@ def main():
     model.to(device)
     model = model.compile()
 
-    train(model, training_data, test_data)
+    train(model, training_loader, test_loader)
 
 if __name__ == "__main__":
     main()
