@@ -87,7 +87,7 @@ class ParallelCorpusTokenizer:
         self.tokenize_file(test_en_path, output_test_en, "en")
         self.tokenize_file(test_de_path, output_test_de, "de")
 
-    def learn_bpe(self, input_file, output_codes_path, num_symbols=10000):
+    def learn_bpe(self, input_path, output_codes_path, num_symbols=10000):
         """
         Learn BPE codes from a tokenized file.
 
@@ -95,19 +95,28 @@ class ParallelCorpusTokenizer:
         :param output_codes_path: Where to save the learned BPE codes.
         :param num_symbols: Number of BPE symbols to learn.
         """
-        with open(input_file, "r", encoding="utf-8") as infile, open(
+
+        if os.path.exists(output_codes_path):
+            logger.warning(f"Output file {output_codes_path} already exists. Skipping BPE learning.")
+            return
+
+        with open(input_path, "r", encoding="utf-8") as infile, open(
             output_codes_path, "w", encoding="utf-8"
         ) as outfile:
             subword_nmt.learn_bpe.learn_bpe(infile, outfile, num_symbols=num_symbols)
 
+    def _apply_bpe_line(self, line: str, bpe: subword_nmt.apply_bpe.BPE) -> str:
+        """Apply BPE to a single line."""
+        return bpe.process_line(line.strip())
+
     def apply_bpe(self, input_path, output_path, codes_path):
         """
-        Apply BPE to a tokenized corpus line by line.
-
-        :param input_path: Path to the tokenized input file.
-        :param output_path: Path to the BPE-applied output file.
-        :param codes_path: Path to the BPE codes file.
+        Apply BPE to a tokenized corpus line by line, using multiprocessing.
         """
+        if os.path.exists(output_path):
+            logger.warning(f"Output file {output_path} already exists. Skipping BPE application.")
+            return
+
         # Load the BPE codes
         with open(codes_path, "r", encoding="utf-8") as codes_file:
             bpe = subword_nmt.apply_bpe.BPE(codes_file)
@@ -118,13 +127,13 @@ class ParallelCorpusTokenizer:
 
         with open(input_path, "r", encoding="utf-8") as input_file, open(
             output_path, "w", encoding="utf-8"
-        ) as output_file:
-            for line in tqdm(
-                input_file,
+        ) as output_file, multiprocessing.Pool(processes=self.num_processes) as pool:
+            apply_bpe_func = partial(self._apply_bpe_line, bpe=bpe)
+            for bpe_line in tqdm(
+                pool.imap(apply_bpe_func, input_file, chunksize=self.chunksize),
                 total=total_lines,
                 desc=f"Applying BPE to {os.path.basename(input_path)}",
             ):
-                bpe_line = bpe.process_line(line.strip())
                 output_file.write(bpe_line + "\n")
 
 
