@@ -23,18 +23,18 @@ def main():
     )
     logger.info("Learning BPE codes")
     tokenizer.learn_bpe(
-        input_path='local/data/training/tokenized_train_en.txt',
+        input_path='local/data/training/tokenized_train.en',
         output_codes_path='local/data/training/en_bpe_codes.txt'
     )
     logger.info("Applying BPE")
     tokenizer.apply_bpe(
-        input_path='local/data/training/tokenized_train_en.txt',
-        output_path='local/data/training/bpe_train_en.txt',
+        input_path='local/data/training/tokenized_train.en',
+        output_path='local/data/training/bpe_train.en',
         codes_path='local/data/training/en_bpe_codes.txt'
     )
 
     # Convert tokenized data to tensors
-    
+    # TODO
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
