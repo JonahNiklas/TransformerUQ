@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
 import math
+from torch import Tensor
+from typing import Optional, Tuple
 
 
-def scaled_dot_product_attention(query, key, value, mask=None):
+def scaled_dot_product_attention(query: Tensor, key: Tensor, value: Tensor, mask: Optional[Tensor] = None) -> Tuple[Tensor, Tensor]:
     """
     query, key, value shape: (batch_size, num_heads, seq_length, d_k)
     mask: same shape broadcastable to (batch_size, 1, seq_length, seq_length)
@@ -24,7 +26,7 @@ def scaled_dot_product_attention(query, key, value, mask=None):
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
+    def __init__(self, d_model: int, num_heads: int):
         super(MultiHeadAttention, self).__init__()
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
 
@@ -40,7 +42,7 @@ class MultiHeadAttention(nn.Module):
         # Final linear layer after concat of all heads
         self.out = nn.Linear(d_model, d_model)
 
-    def forward(self, query, key, value, mask=None):
+    def forward(self, query: Tensor, key: Tensor, value: Tensor, mask: Optional[Tensor] = None) -> Tensor:
         batch_size = query.size(0)
 
         # 1) Linear projections: (batch_size, seq_length, d_model) -> (batch_size, seq_length, num_heads * d_k)
@@ -69,19 +71,19 @@ class MultiHeadAttention(nn.Module):
 
 
 class PositionwiseFeedForward(nn.Module):
-    def __init__(self, d_model, d_ff, dropout):
+    def __init__(self, d_model: int, d_ff: int, dropout: float):
         super(PositionwiseFeedForward, self).__init__()
         self.linear1 = nn.Linear(d_model, d_ff)
         self.linear2 = nn.Linear(d_ff, d_model)
         self.dropout = nn.Dropout(dropout)
         self.relu = nn.ReLU()
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return self.linear2(self.dropout(self.relu(self.linear1(x))))
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len):
+    def __init__(self, d_model: int, max_len: int):
         super(PositionalEncoding, self).__init__()
 
         # Create a long enough PEmatrix of shape (max_len, d_model)
@@ -97,7 +99,7 @@ class PositionalEncoding(nn.Module):
         # Register pe as a buffer so it is not a parameter but is saved in the state_dict
         self.register_buffer("pe", pe)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         """
         x: (batch_size, seq_length, d_model)
         """
@@ -108,7 +110,7 @@ class PositionalEncoding(nn.Module):
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, d_model, num_heads, d_ff, dropout):
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float):
         super(EncoderLayer, self).__init__()
         self.self_attn = MultiHeadAttention(d_model, num_heads)
         self.feed_forward = PositionwiseFeedForward(d_model, d_ff, dropout)
@@ -117,7 +119,7 @@ class EncoderLayer(nn.Module):
         self.norm2 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, mask=None):
+    def forward(self, x: Tensor, mask: Optional[Tensor] = None) -> Tensor:
         # Self-attention sub-layer
         attn_output = self.self_attn(x, x, x, mask)
         x = x + self.dropout(attn_output)
@@ -134,13 +136,13 @@ class EncoderLayer(nn.Module):
 class Encoder(nn.Module):
     def __init__(
         self,
-        vocab_size,
-        d_model,
-        num_heads,
-        d_ff,
-        num_layers,
-        dropout,
-        max_len,
+        vocab_size: int,
+        d_model: int,
+        num_heads: int,
+        d_ff: int,
+        num_layers: int,
+        dropout: float,
+        max_len: int,
     ):
         super(Encoder, self).__init__()
         self.d_model = d_model
@@ -155,7 +157,7 @@ class Encoder(nn.Module):
         )
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, src, src_mask=None):
+    def forward(self, src: Tensor, src_mask: Optional[Tensor] = None) -> Tensor:
         """
         src: (batch_size, src_seq_length)
         src_mask: (batch_size, 1, 1, src_seq_length) or (batch_size, 1, src_seq_length, src_seq_length)
@@ -171,7 +173,7 @@ class Encoder(nn.Module):
 
 
 class DecoderLayer(nn.Module):
-    def __init__(self, d_model, num_heads, d_ff, dropout):
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float):
         super(DecoderLayer, self).__init__()
         self.self_attn = MultiHeadAttention(d_model, num_heads)
         self.cross_attn = MultiHeadAttention(d_model, num_heads)
@@ -182,7 +184,7 @@ class DecoderLayer(nn.Module):
         self.norm3 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, enc_output, tgt_mask=None, memory_mask=None):
+    def forward(self, x: Tensor, enc_output: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None) -> Tensor:
         # 1) Masked self-attention
         _x = x
         x = self.self_attn(x, x, x, tgt_mask)
@@ -207,13 +209,13 @@ class DecoderLayer(nn.Module):
 class Decoder(nn.Module):
     def __init__(
         self,
-        vocab_size,
-        d_model,
-        num_heads,
-        d_ff,
-        num_layers,
-        dropout,
-        max_len,
+        vocab_size: int,
+        d_model: int,
+        num_heads: int,
+        d_ff: int,
+        num_layers: int,
+        dropout: float,
+        max_len: int,
     ):
         super(Decoder, self).__init__()
         self.d_model = d_model
@@ -228,7 +230,7 @@ class Decoder(nn.Module):
         )
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, tgt, enc_output, tgt_mask=None, memory_mask=None):
+    def forward(self, tgt: Tensor, enc_output: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None) -> Tensor:
         """
         tgt: (batch_size, tgt_seq_length)
         enc_output: (batch_size, src_seq_length, d_model)
@@ -246,15 +248,15 @@ class Decoder(nn.Module):
 class Transformer(nn.Module):
     def __init__(
         self,
-        src_vocab_size,
-        tgt_vocab_size,
-        d_model,
-        num_heads,
-        d_ff,
-        num_encoder_layers,
-        num_decoder_layers,
-        dropout,
-        max_len,
+        src_vocab_size: int,
+        tgt_vocab_size: int,
+        d_model: int,
+        num_heads: int,
+        d_ff: int,
+        num_encoder_layers: int,
+        num_decoder_layers: int,
+        dropout: float,
+        max_len: int,
     ):
         super(Transformer, self).__init__()
 
@@ -280,7 +282,7 @@ class Transformer(nn.Module):
         # Final linear layer to project decoder outputs to vocab
         self.output_projection = nn.Linear(d_model, tgt_vocab_size)
 
-    def forward(self, src, tgt, src_mask=None, tgt_mask=None, memory_mask=None):
+    def forward(self, src: Tensor, tgt: Tensor, src_mask: Optional[Tensor] = None, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None) -> Tensor:
         """
         src: (batch_size, src_seq_length)
         tgt: (batch_size, tgt_seq_length)
@@ -295,31 +297,27 @@ if __name__ == "__main__":
 
     class Hyperparameter:
         def __init__(self):
-            self.encoder_embed_dim = 512
-            self.encoder_ffn_embed_dim = 1024
-            self.encoder_attention_heads = 4
-            self.encoder_layers = 6
-            # self.decoder_embed_dim = 512
-            # self.decoder_ffn_embed_dim = 1024
-            # self.decoder_attention_heads = 4
-            # self.decoder_layers = 6
-            self.src_vocab_size = 6632
-            self.trg_vocab_size = 8848
+            self.encoder_embed_dim: int = 512
+            self.encoder_ffn_embed_dim: int = 1024
+            self.encoder_attention_heads: int = 4
+            self.encoder_layers: int = 6
+            self.src_vocab_size: int = 6632
+            self.trg_vocab_size: int = 8848
 
 
     hyperparameters = Hyperparameter()
 
     src = torch.randint(0, hyperparameters.src_vocab_size, (2, 10))
     model = Transformer(
-        src_vocab_size = hyperparameters.src_vocab_size,
-        tgt_vocab_size = hyperparameters.trg_vocab_size,
-        d_model = hyperparameters.encoder_embed_dim,
-        num_heads = hyperparameters.encoder_attention_heads,
-        d_ff = hyperparameters.encoder_ffn_embed_dim,
-        num_encoder_layers = hyperparameters.encoder_layers,
-        num_decoder_layers = hyperparameters.encoder_layers,
-        dropout = 0.1,
-        max_len = 512,
+        src_vocab_size=hyperparameters.src_vocab_size,
+        tgt_vocab_size=hyperparameters.trg_vocab_size,
+        d_model=hyperparameters.encoder_embed_dim,
+        num_heads=hyperparameters.encoder_attention_heads,
+        d_ff=hyperparameters.encoder_ffn_embed_dim,
+        num_encoder_layers=hyperparameters.encoder_layers,
+        num_decoder_layers=hyperparameters.encoder_layers,
+        dropout=0.1,
+        max_len=512,
     )
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Number of parameters: {number_of_params/1e6:.2f}M")

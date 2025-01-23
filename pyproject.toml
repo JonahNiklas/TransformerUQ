@@ -11,7 +11,21 @@ python = "^3.8"
 fairseq = "^0.12.2" # needed 0.12.2 to download iwslt14.de-en
 torch = "1.12.1"
 numpy = "^1.24.4"
+nltk = "^3.9.1"
+sacremoses = "^0.1.1"
+subword-nmt = "^0.3.8"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+python_version = "3.8"
+ignore_missing_imports = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
