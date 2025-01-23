@@ -11,15 +11,15 @@ logger = logging.getLogger(__name__)
 def main():
     logger.info("Tokenize data")
     tokenizer = ParallelCorpusTokenizer()
-    tokenizer.tokenize_files(
-        train_en_path='local/data/training/commoncrawl.de-en.en',
-        train_de_path='local/data/training/commoncrawl.de-en.de',
-        test_en_path='local/data/training/commoncrawl.de-en.en',
-        test_de_path='local/data/training/commoncrawl.de-en.en',
-        output_train_en='local/data/training/tokenized_train_en.txt',
-        output_train_de='local/data/training/tokenized_train_de.txt',
-        output_test_en='local/data/training/tokenized_train_en.txt',
-        output_test_de='local/data/training/tokenized_train_de.txt', 
+    tokenizer.tokenize_files(        
+        train_en_path='local/data/training/train.de',
+        train_de_path='local/data/training/train.en',
+        test_en_path='local/data/test/test.de',
+        test_de_path='local/data/test/test.en',
+        output_train_en='local/data/training/tokenized_train.de',
+        output_train_de='local/data/training/tokenized_train.en',
+        output_test_en='local/data/test/tokenized_test.de',
+        output_test_de='local/data/test/tokenized_test.en'
     )
     logger.info("Learning BPE codes")
     tokenizer.learn_bpe(
