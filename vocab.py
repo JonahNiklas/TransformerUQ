@@ -3,7 +3,7 @@ import torch
 import pickle
 from collections import Counter
 import logging
-from nltk.lm import Vocabulary
+from sacremoses import MosesDetokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -118,10 +118,20 @@ def load_vocab(vocab_file):
 
 
 _vocab_en = None
-def output_to_text(output):
+def output_to_text(output, lang="en"):
     global _vocab_en
     if _vocab_en is None:
         logger.debug("Loading vocab")
-        _vocab_en = load_vocab("vocab_en.pkl")
+        _vocab_en = load_vocab("local/vocab_en.pkl")
     tokens = [_vocab_en.id_to_token(i) for i in output]
-    return " ".join(tokens)
+    detokenizer = MosesDetokenizer(lang=lang)
+    return detokenizer.detokenize(tokens)
+
+
+if __name__ == "__main__":
+    # Test output_to_text
+    output = [i for i in range(15)]
+    text = output_to_text(output)
+    print("The 15 most common words in our vocabulary are:")
+    print(text)
+    
