@@ -15,6 +15,7 @@ sacremoses = "^0.1.1"
 subword-nmt = "^0.3.8"
 requests = "^2.32.3"
 bs4 = "^0.0.2"
+sacrebleu = "^2.5.1"
 
 [build-system]
 requires = ["poetry-core"]
