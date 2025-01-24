@@ -123,7 +123,7 @@ def output_to_text(output, lang="en"):
     if _vocab_en is None:
         logger.debug("Loading vocab")
         _vocab_en = load_vocab("local/vocab_en.pkl")
-    tokens = [_vocab_en.id_to_token(i) for i in output]
+    tokens = [_vocab_en.id_to_token(i).replace("@@ ", "") for i in output]
     detokenizer = MosesDetokenizer(lang=lang)
     return detokenizer.detokenize(tokens)
 
