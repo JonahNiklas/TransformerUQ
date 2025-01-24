@@ -1,3 +1,4 @@
+from tqdm import tqdm
 from collate import collate_fn
 from streaming_parallell_dataset import StreamingParallelDataset
 from vocab import PAD_TOKEN, load_vocab
@@ -10,7 +11,7 @@ def get_data_loader(
     tgt_vocab,
     batch_size=32,
     add_bos_eos=True,
-    shuffle=True
+    shuffle=False
 ):
     dataset = StreamingParallelDataset(
         src_file=src_file,
@@ -21,27 +22,27 @@ def get_data_loader(
         store_offsets=True  # build the offset lists
     )
 
-    # We'll use the EN vocab's PAD token ID (assuming both vocabs have the same PAD ID)
-    pad_id = tgt_vocab.token2id[PAD_TOKEN]
-
     loader = DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        collate_fn=lambda batch: collate_fn(batch, pad_id=pad_id)
+        collate_fn=collate_fn,
+        num_workers=8,
+        prefetch_factor=4,
+        pin_memory=True,
     )
     return loader
 
 if __name__ == "__main__":
     # Paths
-    train_en_path = "train.bpe.en"
-    train_de_path = "train.bpe.de"
-    test_en_path  = "test.bpe.en"
-    test_de_path  = "test.bpe.de"
+    train_en_path = "local/data/training/bpe_train.en"
+    train_de_path = "local/data/training/bpe_train.de"
+    test_en_path  = "local/data/test/bpe_test.en"
+    test_de_path  = "local/data/test/bpe_test.de"
 
     # Load the saved vocabularies
-    en_vocab = load_vocab("vocab_en.pkl")
-    de_vocab = load_vocab("vocab_de.pkl")
+    en_vocab = load_vocab("local/vocab_en.pkl")
+    de_vocab = load_vocab("local/vocab_de.pkl")
 
     # Build PyTorch DataLoaders for training, test
     train_loader = get_data_loader(
@@ -64,11 +65,14 @@ if __name__ == "__main__":
         shuffle=False
     )
 
-    # Example usage:
-    for batch_idx, (src_batch, tgt_batch) in enumerate(train_loader):
-        # src_batch.shape = [B, T_src], tgt_batch.shape = [B, T_tgt]
-        print(src_batch.shape, tgt_batch.shape)
-        # break or continue ...
+    # Time the data loading
+    import time
+    start = time.time()
+    for batch_idx, (src_batch, tgt_batch) in tqdm(enumerate(train_loader), total=len(train_loader)):
+        if batch_idx == 0:
+            print(f"First src batch: {src_batch}")
+            print(f"First tgt batch: {tgt_batch}")
+    print(f"Time taken: {time.time() - start:.2f} seconds")
 
 
 

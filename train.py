@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -19,7 +20,7 @@ def train(
     optimizer: optim.Optimizer,
     criterion: nn.Module,
     max_steps: int,
-    validate_every: int = 5,
+    validate_every: int = 20,
 ):
     logger.info(
         f"Training model for {max_steps} steps or {max_steps / len(training_loader):2f} epochs"
@@ -46,9 +47,11 @@ def train(
 
                 if step_num % validate_every == 0:
                     validate(model, test_loader, criterion)
+                    os.makedirs("checkpoints", exist_ok=True)
                     save_checkpoint(
                         model, optimizer, f"checkpoints/checkpoint-{step_num}.pth"
                     )
+                    model.train()
 
 
 def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
