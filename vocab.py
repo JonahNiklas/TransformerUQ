@@ -107,7 +107,7 @@ def build_and_save_vocab(train_en_path, train_de_path, min_freq,
     # torch.save(de_vocab, save_de_path)
 
     logger.info(f"Saved English vocab to {save_en_path}")
-    logger.info(f"[Saved German vocab  to {save_de_path}")
+    logger.info(f"Saved German vocab  to {save_de_path}")
 
 
 def load_vocab(vocab_file):
@@ -123,7 +123,8 @@ def output_to_text(output, lang="en"):
     if _vocab_en is None:
         logger.debug("Loading vocab")
         _vocab_en = load_vocab("local/vocab_en.pkl")
-    tokens = [_vocab_en.id_to_token(i).replace("@@ ", "") for i in output]
+    tokens = _vocab_en.decode(output)
+    tokens = [token.replace("@@ ", "") for token in tokens]
     detokenizer = MosesDetokenizer(lang=lang)
     return detokenizer.detokenize(tokens)
 
