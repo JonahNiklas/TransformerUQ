@@ -12,6 +12,7 @@ from vocab import build_and_save_vocab
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+torch.set_float32_matmul_precision('high')
 
 def main():
     logger.info("Tokenize data")
@@ -62,6 +63,7 @@ def main():
     logger.info(f"German vocab size: {len(de_vocab)}")
 
     logger.info("Create data loaders")
+    max_len=512,
     training_loader = get_data_loader(
         src_file="local/data/training/bpe_train.de",
         tgt_file="local/data/training/bpe_train.en",
@@ -69,7 +71,8 @@ def main():
         tgt_vocab=en_vocab,
         batch_size=64,
         add_bos_eos=True,
-        shuffle=False
+        shuffle=False,
+        max_len=max_len,
     )
 
     test_loader = get_data_loader(
@@ -79,7 +82,8 @@ def main():
         tgt_vocab=en_vocab,
         batch_size=64,
         add_bos_eos=True,
-        shuffle=False
+        shuffle=False,
+        max_len=max_len,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -103,12 +107,13 @@ def main():
         num_encoder_layers=hyperparameters.encoder_layers,
         num_decoder_layers=hyperparameters.encoder_layers,
         dropout=0.1,
-        max_len=512,
+        max_len=max_len,
     )
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Model number of parameters: {number_of_params/1e6:.2f}M")
     model.to(device)
-    # model = torch.compile(model)
+    if torch.cuda.is_available():
+        model = torch.compile(model)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)

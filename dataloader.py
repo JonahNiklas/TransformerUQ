@@ -9,9 +9,10 @@ def get_data_loader(
     tgt_file,
     src_vocab, 
     tgt_vocab,
-    batch_size=32,
-    add_bos_eos=True,
-    shuffle=False
+    batch_size,
+    add_bos_eos,
+    shuffle,
+    max_len,
 ):
     dataset = StreamingParallelDataset(
         src_file=src_file,
@@ -19,7 +20,8 @@ def get_data_loader(
         src_vocab=src_vocab,
         tgt_vocab=tgt_vocab,
         add_bos_eos=add_bos_eos,
-        store_offsets=True  # build the offset lists
+        max_len=max_len,
+        store_offsets=True
     )
 
     loader = DataLoader(

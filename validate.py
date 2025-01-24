@@ -37,7 +37,8 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
             all_hypotheses.extend(hypotheses)
             all_references.extend(references)
 
-    logger.debug(f"Generation example: {hypotheses[0]} | Reference: {references[0]}")
+    random_sample_idx = torch.randint(0, len(hypotheses), (1,)).item()
+    logger.debug(f"Generation example: {hypotheses[random_sample_idx]} | Reference: {references[random_sample_idx]}")
 
     avg_loss = total_loss / len(test_data)
     bleu_score = corpus_bleu(all_hypotheses, [all_references]).score

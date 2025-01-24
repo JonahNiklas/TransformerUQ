@@ -12,8 +12,8 @@ sudo apt-get install python3.8-full
 ## install poetry
 curl -sSL https://install.python-poetry.org | python3.8 - --version 1.8.5
 
-## uninstall poetry
-curl -sSL https://uninstall.python-poetry.org | python3.8 - --uninstall
+### Uninstall poetry
+curl -sSL https://install.python-poetry.org | python3.8 - --uninstall
 
 ## add poetry to path
 

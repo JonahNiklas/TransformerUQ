@@ -20,7 +20,7 @@ def train(
     optimizer: optim.Optimizer,
     criterion: nn.Module,
     max_steps: int,
-    validate_every: int = 20,
+    validate_every: int = 1000,
 ):
     logger.info(
         f"Training model for {max_steps} steps or {max_steps / len(training_loader):2f} epochs"

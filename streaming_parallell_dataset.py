@@ -17,6 +17,7 @@ class StreamingParallelDataset(Dataset):
                  tgt_file,
                  src_vocab, 
                  tgt_vocab,
+                 max_len,
                  add_bos_eos=True,
                  store_offsets=True):
         super().__init__()
@@ -25,6 +26,7 @@ class StreamingParallelDataset(Dataset):
         self.src_vocab = src_vocab
         self.tgt_vocab = tgt_vocab
         self.add_bos_eos = add_bos_eos
+        self.max_len = max_len
         
         # We will store (byte_offset_src[i], byte_offset_tgt[i]) for line i.
         # This allows random access in __getitem__.
@@ -81,4 +83,9 @@ class StreamingParallelDataset(Dataset):
         tgt_ids = self.tgt_vocab.encode(tgt_line, 
                                         add_bos=self.add_bos_eos, 
                                         add_eos=self.add_bos_eos)
+        
+        # Clip to max_len
+        src_ids = src_ids[:self.max_len]
+        tgt_ids = tgt_ids[:self.max_len]
+
         return src_ids, tgt_ids

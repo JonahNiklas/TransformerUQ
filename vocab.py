@@ -124,7 +124,11 @@ def output_to_text(output, lang="en"):
         logger.debug("Loading vocab")
         _vocab_en = load_vocab("local/vocab_en.pkl")
     tokens = _vocab_en.decode(output)
-    tokens = [token.replace("@@", "") for token in tokens]
+    
+    for i in range(len(tokens) - 1, -1, -1):
+        if tokens[i].endswith("@@") and i + 1 < len(tokens):
+            tokens[i] = tokens[i][:-2] + tokens.pop(i + 1)
+            
     detokenizer = MosesDetokenizer(lang=lang)
     return detokenizer.detokenize(tokens)
 
