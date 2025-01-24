@@ -45,3 +45,17 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
     print(f"Validation Loss: {avg_loss} | BLEU Score: {bleu_score}")
 
     return bleu_score
+
+if __name__ == "__main__":
+    dummy_hyptheses = [
+        "<pos> This is goof the the the the",
+    ]
+    dummy_references = [
+        "This is a test sentence for BLEU score calculation",
+        "Banana is good for a long life",
+        "cat is meowing",
+        "house is big",
+    ]
+
+    bleu_score = corpus_bleu(dummy_hyptheses, [dummy_references]).score
+    print(f"Dummy BLEU Score: {bleu_score}")
