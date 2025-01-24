@@ -5,6 +5,9 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from validate import validate
+import logging
+
+logger = logging.getLogger(__name__)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -14,14 +17,18 @@ def train(
     test_loader: DataLoader,
     optimizer: optim.Optimizer,
     criterion: nn.Module,
-    max_updates: int,
+    max_steps: int,
     validate_every: int = 1000,
 ):
+    logger.debug(f"Training model for {max_steps} steps or {max_steps / len(training_loader):2f} epochs")
     model.train()
-    update = 0
-    for update in tqdm(range(max_updates), desc=f"Step {update}/{max_updates}"):
-        total_loss = 0
-        for i, batch in enumerate(training_loader):
+    step_num = 0
+    while True:
+        for batch in training_loader:
+            step_num += 1
+            if step_num > max_steps:
+                return
+            
             src_tokens, tgt_tokens = batch
             src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
 
@@ -32,9 +39,24 @@ def train(
             loss.backward()
             optimizer.step()
 
-            total_loss += loss.item()
-            if i % validate_every == 0:
-                validate(model, test_loader, criterion)
+            logger.info(f"Step: {step_num} | Loss: {loss.item()}")
 
-    avg_loss = total_loss / max_updates
-    print(f"Average Loss: {avg_loss}")
+            if step_num % validate_every == 0:
+                validate(model, test_loader, criterion)
+                save_checkpoint(model, optimizer, f"checkpoint-{step_num}.pth")
+
+
+def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
+    torch.save(
+        {
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+        },
+        path,
+    )
+
+def load_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    return model, optimizer

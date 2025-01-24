@@ -51,7 +51,7 @@ def main():
         build_and_save_vocab(
             train_en_path="local/data/training/bpe_train.en",
             train_de_path="local/data/training/bpe_train.de",
-            min_freq=5,  # for example
+            min_freq=20,  # for example
             save_en_path="vocab_en.pkl",
             save_de_path="vocab_de.pkl"
         )
@@ -108,7 +108,7 @@ def main():
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Model number of parameters: {number_of_params/1e6:.2f}M")
     model.to(device)
-    # model = model.compile() # not available, might be due to old pytorch version
+    model = torch.compile(model)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
@@ -119,7 +119,7 @@ def main():
         test_loader,
         optimizer,
         criterion,
-        max_updates=500_000,
+        max_steps=500_000,
     )
 
 
