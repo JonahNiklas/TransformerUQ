@@ -3,6 +3,7 @@ import torch
 import pickle
 from collections import Counter
 import logging
+from nltk.lm import Vocabulary
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ BOS_TOKEN = "<bos>"
 EOS_TOKEN = "<eos>"
 
 class Vocabulary:
-    def __init__(self, min_freq=1, specials=None):
+    def __init__(self, min_freq, specials=None):
         if specials is None:
             specials = [PAD_TOKEN, UNK_TOKEN, BOS_TOKEN, EOS_TOKEN]
         self.min_freq = min_freq
@@ -78,18 +79,18 @@ class Vocabulary:
         return tokens
 
 
-def build_and_save_vocab(train_en_path, train_de_path, min_freq=1, 
-                         save_en_path="vocab_en.pkl", save_de_path="vocab_de.pkl"):
+def build_and_save_vocab(train_en_path, train_de_path, min_freq, 
+                         save_en_path, save_de_path):
     """
     Build English & German vocabularies from streaming of training data.
     Saves them to disk as pickle or torch file.
     """
-    print("[INFO] Building English vocabulary...")
+    logger.info("Building English vocabulary...")
     en_vocab = Vocabulary(min_freq=min_freq)
     en_vocab.update_freqs_from_file(train_en_path)
     en_vocab.build_vocab_from_freqs()
 
-    print("[INFO] Building German vocabulary...")
+    logger.info("Building German vocabulary...")
     de_vocab = Vocabulary(min_freq=min_freq)
     de_vocab.update_freqs_from_file(train_de_path)
     de_vocab.build_vocab_from_freqs()
@@ -105,8 +106,8 @@ def build_and_save_vocab(train_en_path, train_de_path, min_freq=1,
     # torch.save(en_vocab, save_en_path)
     # torch.save(de_vocab, save_de_path)
 
-    print(f"[INFO] Saved English vocab to {save_en_path}")
-    print(f"[INFO] Saved German vocab  to {save_de_path}")
+    logger.info(f"Saved English vocab to {save_en_path}")
+    logger.info(f"[Saved German vocab  to {save_de_path}")
 
 
 def load_vocab(vocab_file):

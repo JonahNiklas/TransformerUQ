@@ -47,11 +47,11 @@ def main():
         )
 
     logger.info("Build and save vocab")
-    if not os.path.exists("vocab_en.pkl") or not os.path.exists("vocab_de.pkl"):
+    if not os.path.exists("local/vocab_en.pkl") or not os.path.exists("local/vocab_de.pkl"):
         build_and_save_vocab(
             train_en_path="local/data/training/bpe_train.en",
             train_de_path="local/data/training/bpe_train.de",
-            min_freq=20,  # for example
+            min_freq=2000,
             save_en_path="local/vocab_en.pkl",
             save_de_path="local/vocab_de.pkl"
         )
@@ -108,7 +108,7 @@ def main():
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Model number of parameters: {number_of_params/1e6:.2f}M")
     model.to(device)
-    model = torch.compile(model)
+    # model = torch.compile(model)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)

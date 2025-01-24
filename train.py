@@ -23,27 +23,27 @@ def train(
     logger.debug(f"Training model for {max_steps} steps or {max_steps / len(training_loader):2f} epochs")
     model.train()
     step_num = 0
-    while True:
-        for batch in training_loader:
-            step_num += 1
-            if step_num > max_steps:
-                return
-            
-            src_tokens, tgt_tokens = batch
-            src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
+    with tqdm(total=max_steps, desc="Training Progress") as pbar:
+        while step_num < max_steps:
+            for batch in training_loader:
+                step_num += 1
+                
+                src_tokens, tgt_tokens = batch
+                src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
 
-            optimizer.zero_grad()
-            output = model(src_tokens, tgt_tokens)
-            output = output.transpose(1, 2)
-            loss = criterion(output, tgt_tokens)
-            loss.backward()
-            optimizer.step()
+                optimizer.zero_grad()
+                output = model(src_tokens, tgt_tokens)
+                output = output.transpose(1, 2)
+                loss = criterion(output, tgt_tokens)
+                loss.backward()
+                optimizer.step()
 
-            logger.info(f"Step: {step_num} | Loss: {loss.item()}")
+                pbar.update(1)
+                pbar.set_postfix({"Loss": loss.item()})
 
-            if step_num % validate_every == 0:
-                validate(model, test_loader, criterion)
-                save_checkpoint(model, optimizer, f"checkpoint-{step_num}.pth")
+                if step_num % validate_every == 0:
+                    validate(model, test_loader, criterion)
+                    save_checkpoint(model, optimizer, f"checkpoint-{step_num}.pth")
 
 
 def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
