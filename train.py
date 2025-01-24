@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def train(
     model: nn.Module,
     training_loader: DataLoader,
@@ -18,16 +19,18 @@ def train(
     optimizer: optim.Optimizer,
     criterion: nn.Module,
     max_steps: int,
-    validate_every: int = 1000,
+    validate_every: int = 5,
 ):
-    logger.debug(f"Training model for {max_steps} steps or {max_steps / len(training_loader):2f} epochs")
+    logger.info(
+        f"Training model for {max_steps} steps or {max_steps / len(training_loader):2f} epochs"
+    )
     model.train()
     step_num = 0
     with tqdm(total=max_steps, desc="Training Progress") as pbar:
         while step_num < max_steps:
             for batch in training_loader:
                 step_num += 1
-                
+
                 src_tokens, tgt_tokens = batch
                 src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
 
@@ -43,7 +46,9 @@ def train(
 
                 if step_num % validate_every == 0:
                     validate(model, test_loader, criterion)
-                    save_checkpoint(model, optimizer, f"checkpoint-{step_num}.pth")
+                    save_checkpoint(
+                        model, optimizer, f"checkpoints/checkpoint-{step_num}.pth"
+                    )
 
 
 def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
@@ -54,6 +59,7 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
         },
         path,
     )
+
 
 def load_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
     checkpoint = torch.load(path)
