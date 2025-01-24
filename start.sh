@@ -8,5 +8,8 @@
 #SBATCH --gres=gpu:1
 
 module load Python/3.12.3-GCCcore-13.3.0
+python -m venv venv
+source venv/bin/activate
+poetry install
 python wat_zei_je_download_data.py > wat_zei_je_download_data.log
 python main.py > run.log

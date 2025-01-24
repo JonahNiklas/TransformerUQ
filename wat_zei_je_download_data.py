@@ -82,6 +82,7 @@ def download_and_extract(url, de_file=None, en_file=None):
             with open(os.path.join(data_directory, local_filename[:-3]), 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
     os.remove(local_filename)
+    print(f"Downloaded and extracted {local_filename}")
 
 # Download and extract training sets
 for dataset in training_sets:
@@ -155,6 +156,7 @@ def merge_files(datasets, subfolder,filename,second_lang="de"):
 
     for file in de_files + en_files:
         os.remove(file)
+    print(f"Merged files into {filename}")
 
 # %%
 merge_files(training_sets, "training", "train")
@@ -166,6 +168,7 @@ for root, dirs, files in os.walk(data_directory, topdown=False):
         dir_path = os.path.join(root, name)
         if not os.listdir(dir_path):
             os.rmdir(dir_path)
-    
+
+print("Data downloaded and merged successfully")    
 
 
