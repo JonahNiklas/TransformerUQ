@@ -52,12 +52,12 @@ def main():
             train_en_path="local/data/training/bpe_train.en",
             train_de_path="local/data/training/bpe_train.de",
             min_freq=20,  # for example
-            save_en_path="vocab_en.pkl",
-            save_de_path="vocab_de.pkl"
+            save_en_path="local/vocab_en.pkl",
+            save_de_path="local/vocab_de.pkl"
         )
         logger.warning("Vocab files not found. Building vocab from training data.")
-    en_vocab = load_vocab("vocab_en.pkl")
-    de_vocab = load_vocab("vocab_de.pkl")
+    en_vocab = load_vocab("local/vocab_en.pkl")
+    de_vocab = load_vocab("local/vocab_de.pkl")
     logger.info(f"English vocab size: {len(en_vocab)}")
     logger.info(f"German vocab size: {len(de_vocab)}")
 
