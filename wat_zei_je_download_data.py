@@ -99,16 +99,16 @@ test_ood_file_path = os.path.join(data_directory, test_ood["file_name"])
 if os.path.exists(test_ood_file_path):
     en_lines = []
     nl_lines = []
-    with open(test_ood_file_path, 'r') as f:
+    with open(test_ood_file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
             tab_split = line.split("\t")
             nl_lines.append(tab_split[-1])
             en_lines.append(" ".join(tab_split[:-1]) + "\n") # 32 lines have a tab in the english sentence that needs to be merged
                 
-    with open(os.path.join(data_directory, test_ood["en_file"]), "w") as de_f:
+    with open(os.path.join(data_directory, test_ood["en_file"]), "w", encoding='utf-8') as de_f:
         de_f.writelines(en_lines)
-    with open(os.path.join(data_directory, test_ood["nl_file"]), "w") as en_f:
+    with open(os.path.join(data_directory, test_ood["nl_file"]), "w", encoding='utf-8') as en_f:
         en_f.writelines(nl_lines)
     os.remove(test_ood_file_path)
 
@@ -143,14 +143,14 @@ def merge_files(datasets, subfolder,filename,second_lang="de"):
 
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
-    with open(os.path.join(target_folder, filename+"."+second_lang), "w") as de_f:
+    with open(os.path.join(target_folder, filename+"."+second_lang), "w", encoding='utf-8') as de_f:
         for de_file in de_files:
-            with open(de_file, "r") as f:
+            with open(de_file, "r", encoding='utf-8') as f:
                 de_f.write(f.read())
 
-    with open(os.path.join(target_folder, filename+".en"), "w") as en_f:
+    with open(os.path.join(target_folder, filename+".en"), "w", encoding='utf-8') as en_f:
         for en_file in en_files:
-            with open(en_file, "r") as f:
+            with open(en_file, "r", encoding='utf-8') as f:
                 en_f.write(f.read())
 
     for file in de_files + en_files:
