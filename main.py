@@ -27,9 +27,12 @@ def main():
         output_train_de="local/data/training/tokenized_train.en",
         output_test_en="local/data/test/tokenized_test.de",
         output_test_de="local/data/test/tokenized_test.en",
+        test_ood_en_path="local/data/test_ood/test_ood.en",
+        test_ood_nl_path="local/data/test_ood/test_ood.nl",
+        output_test_ood_en="local/data/test_ood/tokenized_test_ood.en",
+        output_test_ood_nl="local/data/test_ood/tokenized_test_ood.nl",
     )
-    languages = ["en", "de"]
-    for lang in languages:
+    for lang in ["en", "de"]:
         logger.info(f"Learning BPE codes for {lang.upper()}")
         tokenizer.learn_bpe(
             input_path=f"local/data/training/tokenized_train.{lang}",
@@ -46,6 +49,15 @@ def main():
             input_path=f"local/data/test/tokenized_test.{lang}",
             output_path=f"local/data/test/bpe_test.{lang}",
             codes_path=f"local/data/training/{lang}_bpe_codes.txt",
+        )
+
+    # Apply BPE to OOD data
+    for lang in ["en", "nl"]:
+        logger.info(f"Applying BPE to {lang} out of distribution test data")
+        tokenizer.apply_bpe(
+            input_path=f"local/data/test_ood/tokenized_test_ood.{lang}",
+            output_path=f"local/data/test_ood/bpe_test_ood.{lang}",
+            codes_path=f"local/data/training/{"de" if lang=="nl" else lang}_bpe_codes.txt",
         )
 
     logger.info("Build and save vocab")

@@ -66,6 +66,10 @@ class ParallelCorpusTokenizer:
         output_train_de,
         output_test_en,
         output_test_de,
+        test_ood_en_path,
+        test_ood_nl_path,
+        output_test_ood_en,
+        output_test_ood_nl,
     ):
         """
         Tokenize training and test files.
@@ -86,6 +90,10 @@ class ParallelCorpusTokenizer:
         # Tokenize test files
         self.tokenize_file(test_en_path, output_test_en, "en")
         self.tokenize_file(test_de_path, output_test_de, "de")
+
+        # Tokenize out-of-domain test files
+        self.tokenize_file(test_ood_en_path, output_test_ood_en, "en")
+        self.tokenize_file(test_ood_nl_path, output_test_ood_nl, "de")
 
     def learn_bpe(self, input_path, output_codes_path, num_symbols=10000):
         """
