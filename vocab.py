@@ -118,12 +118,16 @@ def load_vocab(vocab_file):
 
 
 _vocab_en = None
+_vocab_de = None
 def output_to_text(output, lang="en"):
-    global _vocab_en
-    if _vocab_en is None:
+    global _vocab_en, _vocab_de
+    if lang == "de" and _vocab_de is None:
+        logger.debug("Loading vocab")
+        _vocab_de = load_vocab("local/vocab_de.pkl")
+    if lang == "en" and _vocab_en is None:
         logger.debug("Loading vocab")
         _vocab_en = load_vocab("local/vocab_en.pkl")
-    tokens = _vocab_en.decode(output)
+    tokens = _vocab_en.decode(output) if lang == "en" else _vocab_de.decode(output)
     
     for i in range(len(tokens) - 1, -1, -1):
         if tokens[i].endswith("@@") and i + 1 < len(tokens):
