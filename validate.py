@@ -34,6 +34,9 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
             all_hypotheses.extend(hypotheses)
             all_references.extend(references)
 
+            logger.warning("Validation on only one batch for now")
+            break
+
 
     avg_loss = total_loss / len(test_data)
     bleu_score = corpus_bleu(all_hypotheses, [all_references]).score

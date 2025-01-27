@@ -106,8 +106,8 @@ def main():
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Model number of parameters: {number_of_params/1e6:.2f}M")
     model.to(device)
-    if torch.cuda.is_available():
-        model = torch.compile(model)
+    # if torch.cuda.is_available():
+    #     model = torch.compile(model)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
