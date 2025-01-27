@@ -63,7 +63,7 @@ def main():
     logger.info(f"German vocab size: {len(de_vocab)}")
 
     logger.info("Create data loaders")
-    max_len=512,
+    max_len=512
     training_loader = get_data_loader(
         src_file="local/data/training/bpe_train.de",
         tgt_file="local/data/training/bpe_train.en",
