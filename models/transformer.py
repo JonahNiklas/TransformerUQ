@@ -243,6 +243,52 @@ class Decoder(nn.Module):
             x = layer(x, enc_output, tgt_mask=tgt_mask, memory_mask=memory_mask)
 
         return x
+    
+
+
+def make_padding_mask(seq: torch.Tensor, pad_idx: int) -> torch.Tensor:
+    """
+    Creates a mask for padding tokens in `seq`.
+    seq: (batch_size, seq_len)
+    Returns a binary mask of shape (batch_size, 1, 1, seq_len),
+    where '1' indicates "allowed to attend" and '0' indicates "PAD/masked out".
+    """
+    return (seq != pad_idx).unsqueeze(1).unsqueeze(2)  # shape -> (B, 1, 1, S)
+
+def make_subsequent_mask(size: int) -> torch.Tensor:
+    """
+    Creates a causal (look-ahead) mask of shape (size, size).
+    Lower triangular is 1 (allow), upper triangular is 0 (block).
+    """
+    return torch.tril(torch.ones(size, size)).bool()  # (S, S)
+
+
+def create_src_mask(src: torch.Tensor, pad_idx: int) -> torch.Tensor:
+    """
+    Create a source mask that masks out source <pad> tokens.
+    src: (batch_size, src_seq_len)
+    """
+    return make_padding_mask(src, pad_idx)  # (B, 1, 1, src_len)
+
+def create_tgt_mask(tgt: torch.Tensor, pad_idx: int) -> torch.Tensor:
+    """
+    Create a target mask that (1) masks out <pad> tokens
+    and (2) prevents the model from 'looking ahead' (causal mask).
+    tgt: (batch_size, tgt_seq_len)
+    """
+    # 1) Padding mask
+    tgt_pad_mask = make_padding_mask(tgt, pad_idx)  # (B, 1, 1, tgt_len)
+
+    # 2) Subsequent (causal) mask
+    seq_len = tgt.size(1)
+    causal_mask = make_subsequent_mask(seq_len).to(tgt.device)  # (tgt_len, tgt_len)
+    causal_mask = causal_mask.unsqueeze(0)  # (1, tgt_len, tgt_len), broadcast over batch
+
+    # Combine them by logical AND: 0's in either => block
+    # shape after broadcast: (B, 1, tgt_len, tgt_len)
+    combined_mask = tgt_pad_mask & causal_mask
+    return combined_mask
+
 
 
 class Transformer(nn.Module):
@@ -282,11 +328,17 @@ class Transformer(nn.Module):
         # Final linear layer to project decoder outputs to vocab
         self.output_projection = nn.Linear(d_model, tgt_vocab_size)
 
-    def forward(self, src: Tensor, tgt: Tensor, src_mask: Optional[Tensor] = None, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None) -> Tensor:
+    def forward(self, src: Tensor, tgt: Tensor) -> Tensor:
         """
         src: (batch_size, src_seq_length)
         tgt: (batch_size, tgt_seq_length)
         """
+
+        # src_mask: Optional[Tensor] = None, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None
+        src_mask = create_src_mask(src, pad_idx=0)
+        tgt_mask = create_tgt_mask(tgt, pad_idx=0)
+        memory_mask = src_mask
+
         enc_output = self.encoder(src, src_mask)
         dec_output = self.decoder(tgt, enc_output, tgt_mask, memory_mask)
         out = self.output_projection(dec_output)
