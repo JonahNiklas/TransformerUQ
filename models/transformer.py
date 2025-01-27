@@ -39,7 +39,7 @@ class MultiHeadAttention(nn.Module):
         # 3) Apply scaled dot-product attention
         #    Q, K, V shape: (batch_size, num_heads, seq_length, d_k)
         # attention_output, _ = scaled_dot_product_attention(Q, K, V, mask=mask)
-        attention_output, _ = nn.functional.scaled_dot_product_attention(Q, K, V, attn_mask=mask, dropout_p=hyperparameters.dropout)
+        attention_output = nn.functional.scaled_dot_product_attention(Q, K, V, attn_mask=mask, dropout_p=hyperparameters.dropout)
 
         # 4) Concatenate heads
         # (batch_size, num_heads, seq_length, d_k) -> (batch_size, seq_length, d_model)
