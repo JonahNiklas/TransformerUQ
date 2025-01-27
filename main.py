@@ -1,7 +1,8 @@
 import os
 import torch
+import wandb
 from dataloader import get_data_loader, load_vocab
-from hyperparameters import Hyperparameter
+from hyperparameters import hyperparameters
 from models.transformer import Transformer
 from tokenizer import ParallelCorpusTokenizer
 from train import train
@@ -103,7 +104,7 @@ def main():
     logger.info(f"Using device: {device}")
 
     logger.info("Creating model")
-    hyperparameters = Hyperparameter()
+
     model = Transformer(
         src_vocab_size=len(de_vocab),
         tgt_vocab_size=len(en_vocab),
@@ -123,6 +124,9 @@ def main():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1, ignore_index=0)
+
+    logger.info("Setting up weights and biases")
+    wandb.init(project="TransformerUQ", entity="sondresorbye-magson", config=hyperparameters.__dict__)
 
     train(
         model,

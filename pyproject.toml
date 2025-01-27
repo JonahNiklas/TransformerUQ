@@ -16,6 +16,7 @@ subword-nmt = "^0.3.8"
 requests = "^2.32.3"
 bs4 = "^0.0.2"
 sacrebleu = "^2.5.1"
+wandb = "^0.19.4"
 
 [build-system]
 requires = ["poetry-core"]

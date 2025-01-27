@@ -1,3 +1,4 @@
+from typing import Tuple
 import torch
 import torch.nn as nn
 import torch.utils.data.dataloader as DataLoader
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
+def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module) -> Tuple[float, float]:
     model.eval()
     total_loss = 0
     all_references = []
@@ -43,7 +44,7 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
 
     print(f"Validation Loss: {avg_loss} | BLEU Score: {bleu_score}")
 
-    return bleu_score
+    return bleu_score, avg_loss
 
 if __name__ == "__main__":
     dummy_hyptheses = [

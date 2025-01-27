@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import wandb
 
 from validate import validate
 import logging
@@ -20,7 +21,7 @@ def train(
     optimizer: optim.Optimizer,
     criterion: nn.Module,
     max_steps: int,
-    validate_every: int = 1000,
+    validate_every: int = 5000,
 ):
     logger.info(
         f"Training model for {max_steps} steps or {max_steps / len(training_loader):2f} epochs"
@@ -47,12 +48,16 @@ def train(
                 pbar.update(1)
                 pbar.set_postfix({"Loss": loss.item()})
 
+                wandb.log({"loss": loss.item(), "step": step_num})
+
                 if step_num % validate_every == 0:
-                    validate(model, test_loader, criterion)
+                    bleu, val_loss = validate(model, test_loader, criterion)
+                    wandb.log({"val_loss": val_loss, "bleu": bleu, "step": step_num})
                     os.makedirs("checkpoints", exist_ok=True)
                     save_checkpoint(
                         model, optimizer, f"checkpoints/checkpoint-{step_num}.pth"
                     )
+                    wandb.save(f"checkpoints/checkpoint-{step_num}.pth")
                     model.train()
 
 
