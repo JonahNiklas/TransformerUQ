@@ -36,9 +36,11 @@ def train(
                 src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
 
                 optimizer.zero_grad()
-                output = model(src_tokens, tgt_tokens)
-                output = output.transpose(1, 2)
-                loss = criterion(output, tgt_tokens)
+                decoder_input = tgt_tokens[:, :-1]
+                labels = tgt_tokens[:, 1:]
+                logits = model(src_tokens, decoder_input)
+                logits = logits.transpose(1, 2)
+                loss = criterion(logits, labels)
                 loss.backward()
                 optimizer.step()
 

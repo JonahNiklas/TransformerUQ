@@ -334,7 +334,6 @@ class Transformer(nn.Module):
         tgt: (batch_size, tgt_seq_length)
         """
 
-        # src_mask: Optional[Tensor] = None, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None
         src_mask = create_src_mask(src, pad_idx=0)
         tgt_mask = create_tgt_mask(tgt, pad_idx=0)
         memory_mask = src_mask

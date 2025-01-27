@@ -17,8 +17,12 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
             
         for t in tqdm(range(1, max_len), desc="Generating tokens"):
             output = model(src_tokens, tgt_tokens)
-            output = output.argmax(dim=-1)
-            tgt_tokens[:, t] = output[:, t-1]
+            assert output.shape == (batch_size, max_len, len(vocab_en))
+            output = output[:, t-1, :]
+            assert output.shape == (batch_size, len(vocab_en))
+            output = output.argmax(dim=1)
+            assert output.shape == (batch_size,)
+            tgt_tokens[:, t] = output
 
         for i in range(batch_size):
             for j in range(1, max_len):
@@ -30,8 +34,9 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
         for i in random_indices:
             print(f"Example {i+1} in batch")
             print(f"Source: {output_to_text(src_tokens[i].tolist(), lang='de')}")
-            print(f"Generated tokens: {tgt_tokens[i].tolist()}")
+            print(f"Source tokens: {src_tokens[i].tolist()}")
             print(f"Generated text: {output_to_text(tgt_tokens[i].tolist())}")
+            print(f"Generated tokens: {tgt_tokens[i].tolist()}")
             print("")
 
     return tgt_tokens

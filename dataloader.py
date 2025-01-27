@@ -54,7 +54,8 @@ if __name__ == "__main__":
         tgt_vocab=en_vocab,
         batch_size=64,
         add_bos_eos=True,
-        shuffle=True
+        shuffle=False,
+        max_len=512
     )
 
     test_loader = get_data_loader(
@@ -64,7 +65,8 @@ if __name__ == "__main__":
         tgt_vocab=en_vocab,
         batch_size=64,
         add_bos_eos=True,
-        shuffle=False
+        shuffle=False,
+        max_len=512
     )
 
     # Time the data loading
@@ -72,8 +74,9 @@ if __name__ == "__main__":
     start = time.time()
     for batch_idx, (src_batch, tgt_batch) in tqdm(enumerate(train_loader), total=len(train_loader)):
         if batch_idx == 0:
-            print(f"First src batch: {src_batch}")
-            print(f"First tgt batch: {tgt_batch}")
+            print(f"First src sentence: {src_batch[0]}")
+            print(f"First tgt sentence: {tgt_batch[0]}")
+            import os; os._exit(0)
     print(f"Time taken: {time.time() - start:.2f} seconds")
 
 
