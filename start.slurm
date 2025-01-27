@@ -8,9 +8,9 @@
 #SBATCH --cpus-per-task=16     # 2 CPU cores
 #SBATCH --mem=64G              # 5 gigabytes memory
 #SBATCH --gres=gpu:a100:1
-#SBATCH --output=repos/TransformerUQ/WMToutput.txt
+#SBATCH --output=TransformerUQ/WMToutput.txt
 
-cd repos/TransformerUQ
+cd TransformerUQ
 module load Python/3.12.3-GCCcore-13.3.0
 python -m venv venv
 source venv/bin/activate
