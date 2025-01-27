@@ -1,6 +1,7 @@
 import os
 import torch
 from dataloader import get_data_loader, load_vocab
+from hyperparameters import Hyperparameter
 from models.transformer import Transformer
 from tokenizer import ParallelCorpusTokenizer
 from train import train
@@ -90,13 +91,6 @@ def main():
     logger.info(f"Using device: {device}")
 
     logger.info("Creating model")
-    class Hyperparameter:
-        def __init__(self):
-            self.encoder_embed_dim: int = 512
-            self.encoder_ffn_embed_dim: int = 1024
-            self.encoder_attention_heads: int = 4
-            self.encoder_layers: int = 6
-
     hyperparameters = Hyperparameter()
     model = Transformer(
         src_vocab_size=len(de_vocab),
@@ -106,8 +100,8 @@ def main():
         d_ff=hyperparameters.encoder_ffn_embed_dim,
         num_encoder_layers=hyperparameters.encoder_layers,
         num_decoder_layers=hyperparameters.encoder_layers,
-        dropout=0.1,
-        max_len=max_len,
+        dropout=hyperparameters.dropout,
+        max_len=hyperparameters.max_len,
     )
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Model number of parameters: {number_of_params/1e6:.2f}M")

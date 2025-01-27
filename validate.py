@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.utils.data.dataloader as DataLoader
 from sacrebleu import corpus_bleu
 from tqdm import tqdm
+from generate import generate_autoregressivly
 
 from vocab import output_to_text
 import logging
@@ -23,11 +24,8 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
         for i, batch in tqdm(enumerate(test_data), desc="Running validation", total=len(test_data)):
             src_tokens, tgt_tokens = batch
             src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
-
-            output = model(src_tokens, tgt_tokens)
-            output = output.transpose(1, 2)
-            loss = criterion(output, tgt_tokens)
-            total_loss += loss.item()
+            
+            output = generate_autoregressivly(model, src_tokens, print_ex=1)
 
             # Convert output to text
             hypotheses = output.argmax(dim=1)
@@ -37,8 +35,6 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
             all_hypotheses.extend(hypotheses)
             all_references.extend(references)
 
-    random_sample_idx = torch.randint(0, len(hypotheses), (1,)).item()
-    logger.debug(f"Generation example: {hypotheses[random_sample_idx]} | Reference: {references[random_sample_idx]}")
 
     avg_loss = total_loss / len(test_data)
     bleu_score = corpus_bleu(all_hypotheses, [all_references]).score
