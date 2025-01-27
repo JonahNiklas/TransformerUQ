@@ -110,7 +110,7 @@ def main():
     #     model = torch.compile(model)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
+    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1, ignore_index=0)
 
     train(
         model,
