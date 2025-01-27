@@ -34,12 +34,13 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module) -> T
 
             all_hypotheses.extend(hypotheses)
             all_references.extend(references)
-
+            loss = criterion(output, tgt_tokens)
+            total_loss += loss.item()
             logger.warning("Validation on only one batch for now")
             break
 
 
-    avg_loss = total_loss / len(test_data)
+    avg_loss = total_loss # / len(test_data) TODO: change this when running on more than one batch
     bleu_score = corpus_bleu(all_hypotheses, [all_references]).score
 
     print(f"Validation Loss: {avg_loss} | BLEU Score: {bleu_score}")
