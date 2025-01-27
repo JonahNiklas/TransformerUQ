@@ -51,8 +51,9 @@ def train(
                 wandb.log({"loss": loss.item()}, step=step_num)
 
                 if step_num % validate_every == 0:
-                    bleu, val_loss = validate(model, test_loader, criterion)
-                    wandb.log({"val_loss": val_loss, "bleu": bleu}, step=step_num)
+                    bleu = validate(model, test_loader, criterion)
+                    # wandb.log({"val_loss": val_loss, "bleu": bleu}, step=step_num)
+                    wandb.log({"bleu": bleu}, step=step_num)
                     os.makedirs("checkpoints", exist_ok=True)
                     save_checkpoint(
                         model, optimizer, f"checkpoints/checkpoint-{step_num}.pth"

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module) -> Tuple[float, float]:
+def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module) -> float:
     model.eval()
     total_loss = 0
     all_references = []
@@ -34,18 +34,20 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module) -> T
 
             all_hypotheses.extend(hypotheses)
             all_references.extend(references)
-            loss = criterion(output, tgt_tokens)
-            total_loss += loss.item()
+            # loss = criterion(output, tgt_tokens) # cannot calculate loss after taking argmax
+            # total_loss += loss.item()
             logger.warning("Validation on only one batch for now")
             break
 
 
-    avg_loss = total_loss # / len(test_data) TODO: change this when running on more than one batch
+    # avg_loss = total_loss # / len(test_data) TODO: change this when running on more than one batch
     bleu_score = corpus_bleu(all_hypotheses, [all_references]).score
 
-    print(f"Validation Loss: {avg_loss} | BLEU Score: {bleu_score}")
+    # print(f"Validation Loss: {avg_loss} | BLEU Score: {bleu_score}")
+    logger.info(f"Validation BLEU Score: {bleu_score}")
 
-    return bleu_score, avg_loss
+    # return bleu_score, avg_loss
+    return bleu_score
 
 if __name__ == "__main__":
     dummy_hyptheses = [

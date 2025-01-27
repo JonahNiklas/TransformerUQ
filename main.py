@@ -126,7 +126,7 @@ def main():
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1, ignore_index=0)
 
     logger.info("Setting up weights and biases")
-    wandb.init(project="TransformerUQ", entity="sondresorbye-magson", config=hyperparameters.__dict__)
+    wandb.init(project="TransformerUQ", entity="sondresorbye-magson", config=hyperparameters.__dict__, dir="local")
 
     train(
         model,
