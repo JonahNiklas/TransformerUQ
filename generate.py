@@ -19,11 +19,19 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
             output = model(src_tokens, tgt_tokens)
             output = output.argmax(dim=-1)
             tgt_tokens[:, t] = output[:, t-1]
+
+        for i in range(batch_size):
+            for j in range(1, max_len):
+                if tgt_tokens[i, j] == vocab_en.token_to_id("<eos>"):
+                    tgt_tokens[i, j+1:] = vocab_en.token_to_id("<pad>")
+                    break
         
-        for i in range(print_ex):
-            print(f"Example {i+1}")
+        random_indices = torch.randperm(batch_size)[:print_ex]
+        for i in random_indices:
+            print(f"Example {i+1} in batch")
             print(f"Source: {output_to_text(src_tokens[i].tolist(), lang='de')}")
-            print(f"Generated: {output_to_text(tgt_tokens[i].tolist())}")
+            print(f"Generated tokens: {tgt_tokens[i].tolist()}")
+            print(f"Generated text: {output_to_text(tgt_tokens[i].tolist())}")
             print("")
 
     return tgt_tokens
