@@ -28,8 +28,7 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module):
             output = generate_autoregressivly(model, src_tokens, print_ex=1)
 
             # Convert output to text
-            hypotheses = output.argmax(dim=1)
-            hypotheses = [output_to_text(hyp) for hyp in hypotheses.tolist()]
+            hypotheses = [output_to_text(hyp) for hyp in output.tolist()]
             references = [output_to_text(ref) for ref in tgt_tokens.tolist()]
 
             all_hypotheses.extend(hypotheses)

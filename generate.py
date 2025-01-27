@@ -22,7 +22,7 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
         
         for i in range(print_ex):
             print(f"Example {i+1}")
-            print(f"Source: {output_to_text(src_tokens[i].tolist())}")
+            print(f"Source: {output_to_text(src_tokens[i].tolist(), lang='de')}")
             print(f"Generated: {output_to_text(tgt_tokens[i].tolist())}")
             print("")
 
