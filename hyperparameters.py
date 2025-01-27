@@ -6,3 +6,5 @@ class Hyperparameter:
         self.encoder_layers: int = 6
         self.dropout: float = 0.1
         self.max_len: int = 512
+
+hyperparameters = Hyperparameter()

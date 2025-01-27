@@ -4,26 +4,7 @@ import math
 from torch import Tensor
 from typing import Optional, Tuple
 
-
-def scaled_dot_product_attention(query: Tensor, key: Tensor, value: Tensor, mask: Optional[Tensor] = None) -> Tuple[Tensor, Tensor]:
-    """
-    query, key, value shape: (batch_size, num_heads, seq_length, d_k)
-    mask: same shape broadcastable to (batch_size, 1, seq_length, seq_length)
-    Returns:
-      - attention_output: (batch_size, num_heads, seq_length, d_k)
-      - attention_weights: (batch_size, num_heads, seq_length, seq_length)
-    """
-    d_k = query.size(-1)
-    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
-
-    if mask is not None:
-        # mask is typically applied by setting scores to a large negative value
-        scores = scores.masked_fill(mask == 0, float("-inf"))
-
-    attention_weights = torch.softmax(scores, dim=-1)
-    attention_output = torch.matmul(attention_weights, value)
-    return attention_output, attention_weights
-
+from hyperparameters import hyperparameters
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model: int, num_heads: int):
@@ -57,7 +38,8 @@ class MultiHeadAttention(nn.Module):
 
         # 3) Apply scaled dot-product attention
         #    Q, K, V shape: (batch_size, num_heads, seq_length, d_k)
-        attention_output, _ = scaled_dot_product_attention(Q, K, V, mask=mask)
+        # attention_output, _ = scaled_dot_product_attention(Q, K, V, mask=mask)
+        attention_output, _ = nn.functional.scaled_dot_product_attention(Q, K, V, attn_mask=mask, dropout_p=hyperparameters.dropout)
 
         # 4) Concatenate heads
         # (batch_size, num_heads, seq_length, d_k) -> (batch_size, seq_length, d_model)
@@ -345,19 +327,6 @@ class Transformer(nn.Module):
 
 
 if __name__ == "__main__":
-
-    class Hyperparameter:
-        def __init__(self):
-            self.encoder_embed_dim: int = 512
-            self.encoder_ffn_embed_dim: int = 1024
-            self.encoder_attention_heads: int = 4
-            self.encoder_layers: int = 6
-            self.src_vocab_size: int = 6632
-            self.trg_vocab_size: int = 8848
-
-
-    hyperparameters = Hyperparameter()
-
     src = torch.randint(0, hyperparameters.src_vocab_size, (2, 10))
     model = Transformer(
         src_vocab_size=hyperparameters.src_vocab_size,
