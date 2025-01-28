@@ -5,7 +5,7 @@ from vocab import BOS_TOKEN, load_vocab, output_to_text
 from acquisition_func import AcquisitionFunction, BLEU_mean_output_batch
 from hyperparameters import hyperparameters
 
-def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_ex: int, aq_func: AcquisitionFunction) -> torch.Tensor:
+def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, ground_truth: torch.Tensor, print_ex: int, aq_func: AcquisitionFunction) -> torch.Tensor:
     model.eval()
     device = next(model.parameters()).device
     vocab_en = load_vocab("local/vocab_en.pkl")
@@ -63,7 +63,7 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
         for i in random_indices:
             print(f"Example {i+1} in batch")
             print(f"Source: {output_to_text(src_tokens[i, 0].tolist(), lang='de')}")
-            print(f"Ground truth: {output_to_text(tgt_tokens[i].tolist())}")
+            print(f"Ground truth: {output_to_text(ground_truth[i].tolist())}")
             # print(f"Source tokens: {src_tokens[i, 0].tolist()}")
             if aq_func.multiple_inference:
                 for n in range(aq_func.num_inferences):

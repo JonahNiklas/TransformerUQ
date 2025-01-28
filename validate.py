@@ -33,17 +33,13 @@ def validate(
         for i, batch in tqdm(
             enumerate(test_data), desc="Running validation", total=len(test_data)
         ):
-            src_tokens, tgt_tokens = batch
-            src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
+            src_tokens, ground_truth = batch
+            src_tokens, ground_truth = src_tokens.to(device), ground_truth.to(device)
             
-            output = generate_autoregressivly(model, src_tokens, print_ex=1, aq_func=BLEUVariance())
+            output = generate_autoregressivly(model, src_tokens,ground_truth, print_ex=1, aq_func=BLEUVariance())
 
-            # Convert output to text
-            hypotheses = [output_to_text(hyp) for hyp in output.tolist()]
-            references = [output_to_text(ref) for ref in tgt_tokens.tolist()]
-
-            all_hypotheses.extend(hypotheses)
-            all_references.extend(references)
+            all_hypotheses.extend(output)
+            all_references.extend([output_to_text(ref) for ref in ground_truth.tolist()])
             # loss = criterion(output, tgt_tokens) # cannot calculate loss after taking argmax
             # total_loss += loss.item()
             # logger.warning("Validation on only one batch for now")
