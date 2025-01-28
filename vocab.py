@@ -8,6 +8,8 @@ from typing import Dict, List
 import torch
 from sacremoses import MosesDetokenizer
 
+from constants import constants
+
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +117,7 @@ def output_to_text(output: List[int], lang: str="en") -> str:
     global _vocab_shared
     if _vocab_shared is None:
         logger.debug("Loading shared vocab")
-        _vocab_shared = load_vocab("local/vocab_shared.pkl")
+        _vocab_shared = load_vocab(constants.file_output_paths.vocab)
 
     tokens = _vocab_shared.decode(output)
 

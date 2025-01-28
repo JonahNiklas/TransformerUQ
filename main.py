@@ -3,6 +3,7 @@ import os
 from sympy import hyper
 import torch
 import wandb
+from constants import constants
 from dataloader import get_data_loader, load_vocab
 from hyperparameters import hyperparameters
 from models.transformer import Transformer
@@ -80,16 +81,16 @@ def main() -> None:
         )
 
     logger.info("Build and save vocab")
-    if not os.path.exists("local/vocab_shared.pkl"):
+    if not os.path.exists(constants.file_output_paths.vocab):
         build_and_save_vocab(
             train_en_path="local/data/training/bpe_train.en",
             train_de_path="local/data/training/bpe_train.de",
             min_freq=hyperparameters.vocab.token_min_freq,
-            save_path="local/vocab_shared.pkl",
+            save_path=constants.file_output_paths.vocab,
         )
         logger.warning("Shared vocab file not found. Building vocab from training data.")
 
-    shared_vocab = load_vocab("local/vocab_shared.pkl")
+    shared_vocab = load_vocab(constants.file_output_paths.vocab)
     logger.info(f"Shared vocab size: {len(shared_vocab)}")
 
     logger.info("Create data loaders")
