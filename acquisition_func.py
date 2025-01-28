@@ -54,23 +54,27 @@ class BLEUVariance(AcquisitionFunction):
                     bleu_distances[b] += (1 - bleu_dist / 100) ** 2
         return bleu_distances
         
-    @staticmethod
-    def BLEU_mean_output(outputs: List[str]) -> str:
-        """
-        Given a list of outputs, find the output with the least BLEU distance to the rest
-        """
-        n = len(outputs)
+def BLEU_mean_output_batch(outputs: List[List[str]]) -> List[str]:
+    """
+    Given a batch of outputs, find the output with the least BLEU distance to the rest for each batch element
+    """
+    batch_size = len(outputs)
+    mean_outputs = []
+    for b in range(batch_size):
+        batch_outputs = outputs[b]
+        n = len(batch_outputs)
         min_bleu_distance = float('inf')
         min_index = -1
         for i in range(n):
             bleu_distance_sum = float(0)
             for j in range(n):
                 if i != j:
-                    bleu_distance_sum += sacrebleu.corpus_bleu(outputs[i], [outputs[j]]).score
-                    bleu_distance_sum += sacrebleu.corpus_bleu(outputs[j], [outputs[i]]).score
+                    bleu_distance_sum += sacrebleu.corpus_bleu(batch_outputs[i], [batch_outputs[j]]).score
+                    bleu_distance_sum += sacrebleu.corpus_bleu(batch_outputs[j], [batch_outputs[i]]).score
                 if bleu_distance_sum > min_bleu_distance:
                     break
             if bleu_distance_sum < min_bleu_distance:
                 min_bleu_distance = bleu_distance_sum
                 min_index = i
-        return outputs[min_index]
+        mean_outputs.append(batch_outputs[min_index])
+    return mean_outputs

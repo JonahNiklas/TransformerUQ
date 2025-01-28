@@ -29,6 +29,7 @@ def main() -> None:
     ).to(device)
     if torch.cuda.is_available():
         model = torch.compile(model)  # type: ignore
+        torch.set_float32_matmul_precision('high')
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     load_checkpoint(model, optimizer, "checkpoints/checkpoint-500000.pth",remove_orig_prefix= not torch.cuda.is_available())
 

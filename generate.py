@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 from vocab import BOS_TOKEN, load_vocab, output_to_text
-from acquisition_func import AcquisitionFunction
+from acquisition_func import AcquisitionFunction, BLEU_mean_output_batch
 from hyperparameters import hyperparameters
 
 def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_ex: int, aq_func: AcquisitionFunction) -> torch.Tensor:
@@ -62,13 +62,24 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
         random_indices = torch.randperm(batch_size)[:print_ex]
         for i in random_indices:
             print(f"Example {i+1} in batch")
-            print(f"Source: {output_to_text(src_tokens[i].tolist(), lang='de')}")
-            # print(f"Source tokens: {src_tokens[i].tolist()}")
+            print(f"Source: {output_to_text(src_tokens[i, 0].tolist(), lang='de')}")
             print(f"Ground truth: {output_to_text(tgt_tokens[i].tolist())}")
-            # print(f"Ground truth tokens: {tgt_tokens[i].tolist()}")
-            print(f"Generated text: {output_to_text(tgt_tokens[i].tolist())}")
+            # print(f"Source tokens: {src_tokens[i, 0].tolist()}")
+            if aq_func.multiple_inference:
+                for n in range(aq_func.num_inferences):
+                    print(f"Inference {n+1}:")
+                    print(f"Generated text: {text_output_n[i][n]}")
+                    # print(f"Generated tokens: {tgt_tokens[i, n].tolist()}")
+                    print("")
+                print("=====")
+            else:
+
+                # print(f"Ground truth tokens: {tgt_tokens[i].tolist()}")
+                print(f"Generated text: {text_output[i]}")
             print(f"Uncertainty: {uq[i]}")
             # print(f"Generated tokens: {tgt_tokens[i].tolist()}")
             print("")
 
+    if aq_func.multiple_inference:
+        return BLEU_mean_output_batch(text_output_n)
     return tgt_tokens
