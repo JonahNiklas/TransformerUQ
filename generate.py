@@ -53,8 +53,11 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
                         tgt_tokens[i, j+1:] = vocab_en.token_to_id("<pad>")
                         break
                 text_output[i] = output_to_text(tgt_tokens[i].tolist())
-                
-        uq = aq_func.__call__(text_output, probabilities)
+        
+        if aq_func.multiple_inference:
+            uq = aq_func.__call__(text_output_n, probabilities)
+        else:
+            uq = aq_func.__call__(text_output, probabilities) 
             
         random_indices = torch.randperm(batch_size)[:print_ex]
         for i in random_indices:

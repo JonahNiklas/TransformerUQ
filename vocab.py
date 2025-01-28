@@ -139,8 +139,13 @@ def output_to_text(output: List[int], lang: str="en") -> str:
     if lang == "en" and _vocab_en is None:
         logger.debug("Loading vocab")
         _vocab_en = load_vocab("local/vocab_en.pkl")
-    assert isinstance(_vocab_de, Vocabulary) and isinstance(_vocab_en, Vocabulary)
-    tokens = _vocab_en.decode(output) if lang == "en" else _vocab_de.decode(output)
+
+    if lang == "de":
+        assert _vocab_de is not None
+        tokens = _vocab_de.decode(output)
+    else:
+        assert _vocab_en is not None
+        tokens = _vocab_en.decode(output)
 
     for i in range(len(tokens) - 1, -1, -1):
         if tokens[i].endswith("@@") and i + 1 < len(tokens):

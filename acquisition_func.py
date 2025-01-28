@@ -50,7 +50,7 @@ class BLEUVariance(AcquisitionFunction):
         for b in range(batch):
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
-                    bleu_dist = sacrebleu.corpus_bleu(output[b][i], [output[b][j]]).score
+                    bleu_dist = sacrebleu.sentence_bleu(output[b][i], [output[b][j]]).score
                     bleu_distances[b] += (1 - bleu_dist / 100) ** 2
         return bleu_distances
         
