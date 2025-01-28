@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 import os
 import pickle
@@ -6,7 +7,6 @@ from typing import Dict, List
 
 import torch
 from sacremoses import MosesDetokenizer
-from __future__ import annotations
 
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
 import torch
-import wandb
 from torch import nn
 
+import wandb
 from dataloader import get_data_loader
 from hyperparameters import hyperparameters
 from models.transformer import Transformer
@@ -12,10 +12,7 @@ from vocab import load_vocab
 
 def main() -> None:
     # Load model from wandb
-    api = wandb.Api()
-    artifact = api.artifact('sondresorbye-magson/TransformerUQ/checkpoint-500000:latest', type='model')
-    artifact_dir = artifact.download("local")
-    checkpoint_path = f"{artifact_dir}/checkpoint-500000.pth"
+    wandb.restore("checkpoints/checkpoint-500000.pth", run_path="sondresorbye-magson/TransformerUQ/5k0r04m7")  # type: ignore
     en_vocab = load_vocab("local/vocab_en.pkl")
     de_vocab = load_vocab("local/vocab_de.pkl")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -30,7 +27,7 @@ def main() -> None:
         dropout=hyperparameters.transformer.dropout,
         max_len=hyperparameters.transformer.max_len,
     ).to(device)
-    model = torch.compile(model) # type: ignore
+    model = torch.compile(model)  # type: ignore
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     load_checkpoint(model, optimizer, "checkpoints/checkpoint-500000.pth")
 
@@ -49,5 +46,5 @@ def main() -> None:
     print(f"BLEU Score: {bleu}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
