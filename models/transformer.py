@@ -126,7 +126,7 @@ class EncoderLayer(nn.Module):
 class Encoder(nn.Module):
     def __init__(
         self,
-        vocab_size: int,
+        embedding: nn.Embedding,
         d_model: int,
         num_heads: int,
         d_ff: int,
@@ -136,12 +136,8 @@ class Encoder(nn.Module):
     ):
         super(Encoder, self).__init__()
         self.d_model = d_model
-
-        # Token embedding + positional encoding
-        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.embedding = embedding
         self.pos_encoding = PositionalEncoding(d_model, max_len)
-
-        # Encoder layers
         self.layers = nn.ModuleList(
             [EncoderLayer(d_model, num_heads, d_ff, dropout) for _ in range(num_layers)]
         )
@@ -205,7 +201,7 @@ class DecoderLayer(nn.Module):
 class Decoder(nn.Module):
     def __init__(
         self,
-        vocab_size: int,
+        embedding: nn.Embedding,
         d_model: int,
         num_heads: int,
         d_ff: int,
@@ -217,7 +213,7 @@ class Decoder(nn.Module):
         self.d_model = d_model
 
         # Token embedding + positional encoding
-        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.embedding = embedding
         self.pos_encoding = PositionalEncoding(d_model, max_len)
 
         # Decoder layers
@@ -309,28 +305,30 @@ class Transformer(nn.Module):
         max_len: int,
     ):
         super(Transformer, self).__init__()
-
+        # Single shared embedding
+        self.shared_embedding = nn.Embedding(src_vocab_size, d_model)
+        # Encoder and decoder now use the same embedding
         self.encoder = Encoder(
-            src_vocab_size,
-            d_model,
-            num_heads,
-            d_ff,
-            num_encoder_layers,
-            dropout,
-            max_len,
+            embedding=self.shared_embedding,
+            d_model=d_model,
+            num_heads=num_heads,
+            d_ff=d_ff,
+            num_layers=num_encoder_layers,
+            dropout=dropout,
+            max_len=max_len,
         )
         self.decoder = Decoder(
-            tgt_vocab_size,
-            d_model,
-            num_heads,
-            d_ff,
-            num_decoder_layers,
-            dropout,
-            max_len,
+            embedding=self.shared_embedding,
+            d_model=d_model,
+            num_heads=num_heads,
+            d_ff=d_ff,
+            num_layers=num_decoder_layers,
+            dropout=dropout,
+            max_len=max_len,
         )
-
-        # Final linear layer to project decoder outputs to vocab
-        self.output_projection = nn.Linear(d_model, tgt_vocab_size)
+        # Tie final projection to shared embedding
+        self.output_projection = nn.Linear(d_model, tgt_vocab_size, bias=False)
+        self.output_projection.weight = self.shared_embedding.weight
 
     def forward(self, src: Tensor, tgt: Tensor) -> Tensor:
         """

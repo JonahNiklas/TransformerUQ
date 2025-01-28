@@ -35,7 +35,7 @@ class TrainingHyperparameters(BaseModel):
     validate_every: int = 5000
     label_smoothing: float = 0.1  # found in t2t
     batch_size: int = (
-        64  # ALTERED found in t2t, batch size of 4096 means number of token per batch i.e. 4096/256 = 16
+        64  # ALTERED found in t2t, batch size of 4096 means number of examples per batch i.e. 4096/256 = 16
     )
     shuffle: bool = True
     learning_rate_decay_scheme: str = "warmup_cosine_decay" # found in nanoGPT
@@ -45,8 +45,8 @@ class TrainingHyperparameters(BaseModel):
 
 
 class VocabHyperparameters(BaseModel):
-    token_min_freq: int = 2000
-
+    token_min_freq: int = 100
+    bpe_num_symbols: int = 32000
 
 class Hyperparameter(BaseModel):
     transformer: TransformerHyperparameters = TransformerHyperparameters()
