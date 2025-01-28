@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 import torch
 from torch.utils.data import Dataset, DataLoader
 import os
@@ -72,7 +72,7 @@ class StreamingParallelDataset(Dataset):
     def __len__(self) -> int:
         return len(self.offsets_src)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Tuple[List[int], List[int]]:
         # Move to the correct offset for source & target
         with open(self.src_file, "r", encoding="utf-8") as f_src:
             f_src.seek(self.offsets_src[idx])
@@ -83,15 +83,11 @@ class StreamingParallelDataset(Dataset):
             tgt_line = f_tgt.readline().strip().split()
 
         # Encode
-        src_ids = torch.tensor(
-            self.src_vocab.encode(
-                src_line, add_bos=self.add_bos_eos, add_eos=self.add_bos_eos
-            )
+        src_ids = self.src_vocab.encode(
+            src_line, add_bos=self.add_bos_eos, add_eos=self.add_bos_eos
         )
-        tgt_ids = torch.tensor(
-            self.tgt_vocab.encode(
-                tgt_line, add_bos=self.add_bos_eos, add_eos=self.add_bos_eos
-            )
+        tgt_ids = self.tgt_vocab.encode(
+            tgt_line, add_bos=self.add_bos_eos, add_eos=self.add_bos_eos
         )
 
         # Clip to max_len

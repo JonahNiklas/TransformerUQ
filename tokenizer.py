@@ -1,12 +1,14 @@
-import os
-from venv import logger
-import sacremoses
-import subword_nmt.learn_bpe
-import subword_nmt.apply_bpe
-from tqdm import tqdm
-import multiprocessing
-from functools import partial
 from __future__ import annotations
+
+import multiprocessing
+import os
+from functools import partial
+from venv import logger
+
+import sacremoses
+import subword_nmt.apply_bpe
+import subword_nmt.learn_bpe
+from tqdm import tqdm
 
 
 class ParallelCorpusTokenizer:
