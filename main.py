@@ -1,3 +1,4 @@
+import math
 import os
 from sympy import hyper
 import torch
@@ -133,25 +134,23 @@ def main() -> None:
         betas=hyperparameters.training.adam_betas,
     )
 
-    # Implement Noam learning rate schedule
-    def noam_schedule(step: int) -> float:
+    def get_lr(it: int) -> float:
         warmup_steps = hyperparameters.training.learning_rate_warm_up_steps
-        if hyperparameters.training.learning_rate_decay_scheme == "noam":
-            # Noam scheme from "Attention is All You Need" paper
-            lr: float = (
-                5000.0
-                * hyperparameters.transformer.hidden_size**-0.5
-                * min(
-                    float(step + 1) ** (-0.5),
-                    float(step + 1) * (warmup_steps ** (-1.5)),
-                )
-            )
-            return lr
-        else:
-            # Simple linear warmup
-            return min(step / warmup_steps, 1.0)
-
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, noam_schedule)
+        max_lr_factor = 1.0
+        min_lr_factor = 0.1
+        max_steps = hyperparameters.training.max_steps
+        # 1) linear warmup for warmup_iters steps
+        if it < warmup_steps:
+            return (it + 1) / warmup_steps
+        # 2) if it > lr_decay_iters, return min learning rate
+        if it > max_steps:
+            return min_lr_factor
+        # 3) in between, use cosine decay down to min learning rate
+        decay_ratio = (it - warmup_steps) / (max_steps - warmup_steps)
+        assert 0 <= decay_ratio <= 1
+        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff starts at 1 and goes to 0
+        return min_lr_factor + coeff * (max_lr_factor - min_lr_factor)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, get_lr)
 
     criterion = torch.nn.CrossEntropyLoss(
         label_smoothing=hyperparameters.training.label_smoothing, ignore_index=0

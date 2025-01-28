@@ -38,8 +38,8 @@ class TrainingHyperparameters(BaseModel):
         64  # ALTERED found in t2t, batch size of 4096 means number of examples per batch i.e. 4096/256 = 16
     )
     shuffle: bool = True
-    learning_rate_decay_scheme: str = "noam"
-    learning_rate: float = 0.1  # found in t2t
+    learning_rate_decay_scheme: str = "warmup_cosine_decay" # found in nanoGPT
+    learning_rate: float = 6e-4  # found in nanogpt
     learning_rate_warm_up_steps: int = 4000  # found in t2t
     adam_betas: Tuple[float, float] = (0.9, 0.98)  # found in t2t
 

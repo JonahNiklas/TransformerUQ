@@ -36,7 +36,7 @@ def validate(
             src_tokens, ground_truth = batch
             src_tokens, ground_truth = src_tokens.to(device), ground_truth.to(device)
             
-            output = generate_autoregressivly(model, src_tokens,ground_truth, print_ex=1, aq_func=BLEUVariance())
+            output = generate_autoregressivly(model, src_tokens, print_ex=1)
 
             all_hypotheses.extend(output)
             all_references.extend([output_to_text(ref) for ref in ground_truth.tolist()])

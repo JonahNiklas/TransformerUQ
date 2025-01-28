@@ -51,7 +51,8 @@ def train(
                 pbar.set_postfix({"Loss": loss.item()})
 
                 wandb.log({
-                    "loss": loss.item()
+                    "loss": loss.item(),
+                    "learning_rate": scheduler.get_last_lr()[0]
                 }, step=step_num)
 
                 if step_num % validate_every == 0:
