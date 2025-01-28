@@ -1,19 +1,19 @@
 from tqdm import tqdm
 from collate import collate_fn
 from streaming_parallell_dataset import StreamingParallelDataset
-from vocab import PAD_TOKEN, load_vocab
+from vocab import PAD_TOKEN, Vocabulary, load_vocab
 from torch.utils.data import DataLoader
 
 def get_data_loader(
-    src_file, 
-    tgt_file,
-    src_vocab, 
-    tgt_vocab,
-    batch_size,
-    add_bos_eos,
-    shuffle,
-    max_len,
-):
+    src_file: str, 
+    tgt_file: str,
+    src_vocab: Vocabulary, 
+    tgt_vocab: Vocabulary,
+    batch_size: int,
+    add_bos_eos: bool,
+    shuffle: bool,
+    max_len: int,
+) -> DataLoader:
     dataset = StreamingParallelDataset(
         src_file=src_file,
         tgt_file=tgt_file,

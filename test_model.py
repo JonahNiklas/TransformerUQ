@@ -12,7 +12,10 @@ from vocab import load_vocab
 
 def main() -> None:
     # Load model from wandb
-    wandb.restore("checkpoints/checkpoint-500000.pth", run_path="sondresorbye-magson/TransformerUQ/5k0r04m7")
+    api = wandb.Api()
+    artifact = api.artifact('sondresorbye-magson/TransformerUQ/checkpoint-500000:latest', type='model')
+    artifact_dir = artifact.download("local")
+    checkpoint_path = f"{artifact_dir}/checkpoint-500000.pth"
     en_vocab = load_vocab("local/vocab_en.pkl")
     de_vocab = load_vocab("local/vocab_de.pkl")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -27,7 +30,7 @@ def main() -> None:
         dropout=hyperparameters.transformer.dropout,
         max_len=hyperparameters.transformer.max_len,
     ).to(device)
-    model = torch.compile(model)
+    model = torch.compile(model) # type: ignore
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     load_checkpoint(model, optimizer, "checkpoints/checkpoint-500000.pth")
 

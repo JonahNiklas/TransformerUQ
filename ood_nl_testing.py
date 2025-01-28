@@ -1,4 +1,4 @@
-from hyperparameters import Hyperparameter
+from hyperparameters import hyperparameters
 from vocab import PAD_TOKEN, load_vocab
 from dataloader import get_data_loader
 from models.transformer import Transformer
@@ -6,10 +6,9 @@ import torch
 import torch.nn as nn
 from validate import validate
 
-def main():
+def main() -> None:
     de_vocab = load_vocab("local/vocab_de.pkl")
     en_vocab = load_vocab("local/vocab_en.pkl")
-    hyperparameters = Hyperparameter()
 
     test_ood_loader = get_data_loader(
         src_file="local/data/test_ood/bpe_test_ood.nl",
@@ -19,7 +18,7 @@ def main():
         batch_size=64,
         add_bos_eos=True,
         shuffle=False,
-        max_len=hyperparameters.max_len,
+        max_len=hyperparameters.transformer.max_len,
     )
 
     # Load model model weights from checkpoint
@@ -27,13 +26,13 @@ def main():
     model = Transformer(
         src_vocab_size=len(de_vocab),
         tgt_vocab_size=len(en_vocab),
-        d_model=hyperparameters.encoder_embed_dim,
-        num_heads=hyperparameters.encoder_attention_heads,
-        d_ff=hyperparameters.encoder_ffn_embed_dim,
-        num_encoder_layers=hyperparameters.encoder_layers,
-        num_decoder_layers=hyperparameters.encoder_layers,
-        dropout=hyperparameters.dropout,
-        max_len=hyperparameters.max_len,
+        d_model=hyperparameters.transformer.encoder_embed_dim,
+        num_heads=hyperparameters.transformer.encoder_attention_heads,
+        d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
+        num_encoder_layers=hyperparameters.transformer.encoder_layers,
+        num_decoder_layers=hyperparameters.transformer.encoder_layers,
+        dropout=hyperparameters.transformer.dropout,
+        max_len=hyperparameters.transformer.max_len,
     )
 
     model.to(device)

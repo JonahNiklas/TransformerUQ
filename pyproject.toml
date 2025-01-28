@@ -18,6 +18,9 @@ bs4 = "^0.0.2"
 sacrebleu = "^2.5.1"
 wandb = "^0.19.4"
 
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.14.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

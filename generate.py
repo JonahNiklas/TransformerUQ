@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from hyperparameters import Hyperparameter
+from hyperparameters import hyperparameters
 from vocab import  BOS_TOKEN, load_vocab, output_to_text
 
 def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_ex:int) -> torch.Tensor:
@@ -10,7 +10,7 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
     device = next(model.parameters()).device
     vocab_en = load_vocab("local/vocab_en.pkl")
     batch_size = src_tokens.size(0)
-    max_len = Hyperparameter().max_len
+    max_len = hyperparameters.transformer.max_len
     with torch.no_grad():
         tgt_tokens = torch.zeros(batch_size, max_len).long().to(device)
         tgt_tokens[:, 0] = vocab_en.token_to_id(BOS_TOKEN)

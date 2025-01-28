@@ -13,7 +13,13 @@ logger = logging.getLogger(__name__)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module) -> float:
+
+def validate(
+    model: nn.Module,
+    test_data: DataLoader,
+    criterion: nn.Module | None,
+    save_hypotheses_to_file: bool = False,
+) -> float:
     model.eval()
     total_loss = 0
     all_references = []
@@ -22,10 +28,12 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module) -> f
     logger.debug("Started validating models")
 
     with torch.no_grad():
-        for i, batch in tqdm(enumerate(test_data), desc="Running validation", total=len(test_data)):
+        for i, batch in tqdm(
+            enumerate(test_data), desc="Running validation", total=len(test_data)
+        ):
             src_tokens, tgt_tokens = batch
             src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
-            
+
             output = generate_autoregressivly(model, src_tokens, print_ex=1)
 
             # Convert output to text
@@ -36,9 +44,14 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module) -> f
             all_references.extend(references)
             # loss = criterion(output, tgt_tokens) # cannot calculate loss after taking argmax
             # total_loss += loss.item()
-            logger.warning("Validation on only one batch for now")
-            break
+            # logger.warning("Validation on only one batch for now")
+            # break
 
+    if save_hypotheses_to_file:
+        logger.info("Saving hypotheses to file")
+        with open("local/data/test/hypotheses.en", "w") as f:
+            for hyp in all_hypotheses:
+                f.write(hyp + "\n")
 
     # avg_loss = total_loss # / len(test_data) TODO: change this when running on more than one batch
     bleu_score = corpus_bleu(all_hypotheses, [all_references]).score
@@ -48,6 +61,7 @@ def validate(model: nn.Module, test_data: DataLoader, criterion: nn.Module) -> f
 
     # return bleu_score, avg_loss
     return bleu_score
+
 
 if __name__ == "__main__":
     dummy_hyptheses = [

@@ -1,3 +1,4 @@
+from numpy import isin
 import torch
 import torch.nn as nn
 import math
@@ -5,6 +6,7 @@ from torch import Tensor
 from typing import Optional, Tuple
 
 from hyperparameters import hyperparameters
+
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model: int, num_heads: int):
@@ -23,7 +25,9 @@ class MultiHeadAttention(nn.Module):
         # Final linear layer after concat of all heads
         self.out = nn.Linear(d_model, d_model)
 
-    def forward(self, query: Tensor, key: Tensor, value: Tensor, mask: Optional[Tensor] = None) -> Tensor:
+    def forward(
+        self, query: Tensor, key: Tensor, value: Tensor, mask: Optional[Tensor] = None
+    ) -> Tensor:
         batch_size = query.size(0)
 
         # 1) Linear projections: (batch_size, seq_length, d_model) -> (batch_size, seq_length, num_heads * d_k)
@@ -39,7 +43,9 @@ class MultiHeadAttention(nn.Module):
         # 3) Apply scaled dot-product attention
         #    Q, K, V shape: (batch_size, num_heads, seq_length, d_k)
         # attention_output, _ = scaled_dot_product_attention(Q, K, V, mask=mask)
-        attention_output = nn.functional.scaled_dot_product_attention(Q, K, V, attn_mask=mask, dropout_p=hyperparameters.dropout)
+        attention_output = nn.functional.scaled_dot_product_attention(
+            Q, K, V, attn_mask=mask, dropout_p=hyperparameters.transformer.dropout
+        )
 
         # 4) Concatenate heads
         # (batch_size, num_heads, seq_length, d_k) -> (batch_size, seq_length, d_model)
@@ -48,7 +54,7 @@ class MultiHeadAttention(nn.Module):
 
         # 5) Final linear layer
         output = self.out(attention_output)
-
+        assert isinstance(output, torch.Tensor)
         return output
 
 
@@ -61,7 +67,9 @@ class PositionwiseFeedForward(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.linear2(self.dropout(self.relu(self.linear1(x))))
+        output = self.linear2(self.dropout(self.relu(self.linear1(x))))
+        assert isinstance(output, torch.Tensor)
+        return output
 
 
 class PositionalEncoding(nn.Module):
@@ -144,7 +152,7 @@ class Encoder(nn.Module):
         src: (batch_size, src_seq_length)
         src_mask: (batch_size, 1, 1, src_seq_length) or (batch_size, 1, src_seq_length, src_seq_length)
         """
-        x = self.embedding(src) * math.sqrt(self.d_model)
+        x: Tensor = self.embedding(src) * math.sqrt(self.d_model)
         x = self.pos_encoding(x)
         x = self.dropout(x)
 
@@ -166,7 +174,13 @@ class DecoderLayer(nn.Module):
         self.norm3 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: Tensor, enc_output: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        enc_output: Tensor,
+        tgt_mask: Optional[Tensor] = None,
+        memory_mask: Optional[Tensor] = None,
+    ) -> Tensor:
         # 1) Masked self-attention
         _x = x
         x = self.self_attn(x, x, x, tgt_mask)
@@ -212,7 +226,13 @@ class Decoder(nn.Module):
         )
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, tgt: Tensor, enc_output: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None) -> Tensor:
+    def forward(
+        self,
+        tgt: Tensor,
+        enc_output: Tensor,
+        tgt_mask: Optional[Tensor] = None,
+        memory_mask: Optional[Tensor] = None,
+    ) -> Tensor:
         """
         tgt: (batch_size, tgt_seq_length)
         enc_output: (batch_size, src_seq_length, d_model)
@@ -223,9 +243,8 @@ class Decoder(nn.Module):
 
         for layer in self.layers:
             x = layer(x, enc_output, tgt_mask=tgt_mask, memory_mask=memory_mask)
-
+        assert isinstance(x, torch.Tensor)
         return x
-    
 
 
 def make_padding_mask(seq: torch.Tensor, pad_idx: int) -> torch.Tensor:
@@ -236,6 +255,7 @@ def make_padding_mask(seq: torch.Tensor, pad_idx: int) -> torch.Tensor:
     where '1' indicates "allowed to attend" and '0' indicates "PAD/masked out".
     """
     return (seq != pad_idx).unsqueeze(1).unsqueeze(2)  # shape -> (B, 1, 1, S)
+
 
 def make_subsequent_mask(size: int) -> torch.Tensor:
     """
@@ -252,6 +272,7 @@ def create_src_mask(src: torch.Tensor, pad_idx: int) -> torch.Tensor:
     """
     return make_padding_mask(src, pad_idx)  # (B, 1, 1, src_len)
 
+
 def create_tgt_mask(tgt: torch.Tensor, pad_idx: int) -> torch.Tensor:
     """
     Create a target mask that (1) masks out <pad> tokens
@@ -264,13 +285,14 @@ def create_tgt_mask(tgt: torch.Tensor, pad_idx: int) -> torch.Tensor:
     # 2) Subsequent (causal) mask
     seq_len = tgt.size(1)
     causal_mask = make_subsequent_mask(seq_len).to(tgt.device)  # (tgt_len, tgt_len)
-    causal_mask = causal_mask.unsqueeze(0)  # (1, tgt_len, tgt_len), broadcast over batch
+    causal_mask = causal_mask.unsqueeze(
+        0
+    )  # (1, tgt_len, tgt_len), broadcast over batch
 
     # Combine them by logical AND: 0's in either => block
     # shape after broadcast: (B, 1, tgt_len, tgt_len)
     combined_mask = tgt_pad_mask & causal_mask
     return combined_mask
-
 
 
 class Transformer(nn.Module):
@@ -322,20 +344,22 @@ class Transformer(nn.Module):
 
         enc_output = self.encoder(src, src_mask)
         dec_output = self.decoder(tgt, enc_output, tgt_mask, memory_mask)
-        out = self.output_projection(dec_output)
+        out: Tensor = self.output_projection(dec_output)
         return out
 
 
 if __name__ == "__main__":
-    src = torch.randint(0, hyperparameters.src_vocab_size, (2, 10))
+    src_vocab_size = 8000
+    tgt_vocab_size = 8000
+    src = torch.randint(0, src_vocab_size, (2, 10))
     model = Transformer(
-        src_vocab_size=hyperparameters.src_vocab_size,
-        tgt_vocab_size=hyperparameters.trg_vocab_size,
-        d_model=hyperparameters.encoder_embed_dim,
-        num_heads=hyperparameters.encoder_attention_heads,
-        d_ff=hyperparameters.encoder_ffn_embed_dim,
-        num_encoder_layers=hyperparameters.encoder_layers,
-        num_decoder_layers=hyperparameters.encoder_layers,
+        src_vocab_size=src_vocab_size,
+        tgt_vocab_size=tgt_vocab_size,
+        d_model=hyperparameters.transformer.encoder_embed_dim,
+        num_heads=hyperparameters.transformer.encoder_attention_heads,
+        d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
+        num_encoder_layers=hyperparameters.transformer.encoder_layers,
+        num_decoder_layers=hyperparameters.transformer.encoder_layers,
         dropout=0.1,
         max_len=512,
     )

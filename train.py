@@ -22,7 +22,7 @@ def train(
     criterion: nn.Module,
     max_steps: int,
     validate_every: int = 5000,
-):
+) -> None:
     logger.info(
         f"Training model for {max_steps} steps or {max_steps / len(training_loader):2f} epochs"
     )
@@ -54,15 +54,15 @@ def train(
                     bleu = validate(model, test_loader, criterion)
                     # wandb.log({"val_loss": val_loss, "bleu": bleu}, step=step_num)
                     wandb.log({"bleu": bleu}, step=step_num)
-                    os.makedirs("checkpoints", exist_ok=True)
+                    os.makedirs("local/checkpoints", exist_ok=True)
                     save_checkpoint(
-                        model, optimizer, f"checkpoints/checkpoint-{step_num}.pth"
+                        model, optimizer, f"local/checkpoints/checkpoint-{step_num}.pth"
                     )
-                    wandb.save(f"checkpoints/checkpoint-{step_num}.pth")
+                    wandb.save(f"local/checkpoints/checkpoint-{step_num}.pth")
                     model.train()
 
 
-def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
+def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str) -> None:
     torch.save(
         {
             "model_state_dict": model.state_dict(),
@@ -72,8 +72,7 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
     )
 
 
-def load_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str):
+def load_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str) -> None:
     checkpoint = torch.load(path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    return model, optimizer

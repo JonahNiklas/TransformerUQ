@@ -8,7 +8,7 @@ from tokenizer import ParallelCorpusTokenizer
 from train import train
 import logging
 from torch.utils.data import DataLoader
-
+from torch import nn
 from vocab import build_and_save_vocab
 
 logging.basicConfig(level=logging.DEBUG)
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 torch.set_float32_matmul_precision('high')
 
-def main():
+def main() -> None:
     logger.info("Tokenize data")
     tokenizer = ParallelCorpusTokenizer()
     tokenizer.tokenize_files(
@@ -77,7 +77,6 @@ def main():
     logger.info(f"German vocab size: {len(de_vocab)}")
 
     logger.info("Create data loaders")
-    max_len=512
     training_loader = get_data_loader(
         src_file="local/data/training/bpe_train.de",
         tgt_file="local/data/training/bpe_train.en",
@@ -86,7 +85,7 @@ def main():
         batch_size=64,
         add_bos_eos=True,
         shuffle=False,
-        max_len=max_len,
+        max_len=hyperparameters.transformer.max_len,
     )
 
     test_loader = get_data_loader(
@@ -97,7 +96,7 @@ def main():
         batch_size=64,
         add_bos_eos=True,
         shuffle=False,
-        max_len=max_len,
+        max_len=hyperparameters.transformer.max_len,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -105,22 +104,22 @@ def main():
 
     logger.info("Creating model")
 
-    model = Transformer(
+    model: nn.Module = Transformer(
         src_vocab_size=len(de_vocab),
         tgt_vocab_size=len(en_vocab),
-        d_model=hyperparameters.encoder_embed_dim,
-        num_heads=hyperparameters.encoder_attention_heads,
-        d_ff=hyperparameters.encoder_ffn_embed_dim,
-        num_encoder_layers=hyperparameters.encoder_layers,
-        num_decoder_layers=hyperparameters.encoder_layers,
-        dropout=hyperparameters.dropout,
-        max_len=hyperparameters.max_len,
+        d_model=hyperparameters.transformer.encoder_embed_dim,
+        num_heads=hyperparameters.transformer.encoder_attention_heads,
+        d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
+        num_encoder_layers=hyperparameters.transformer.encoder_layers,
+        num_decoder_layers=hyperparameters.transformer.encoder_layers,
+        dropout=hyperparameters.transformer.dropout,
+        max_len=hyperparameters.transformer.max_len,
     )
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Model number of parameters: {number_of_params/1e6:.2f}M")
     model.to(device)
     if torch.cuda.is_available():
-        model = torch.compile(model)
+        model = torch.compile(model)  # type: ignore
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1, ignore_index=0)

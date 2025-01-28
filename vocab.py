@@ -1,8 +1,10 @@
+import logging
 import os
-import torch
 import pickle
 from collections import Counter
-import logging
+from typing import Dict, List
+
+import torch
 from sacremoses import MosesDetokenizer
 
 logger = logging.getLogger(__name__)
@@ -12,17 +14,18 @@ UNK_TOKEN = "<unk>"
 BOS_TOKEN = "<bos>"
 EOS_TOKEN = "<eos>"
 
+
 class Vocabulary:
-    def __init__(self, min_freq, specials=None):
+    def __init__(self, min_freq: int, specials: List[str] | None = None) -> None:
         if specials is None:
             specials = [PAD_TOKEN, UNK_TOKEN, BOS_TOKEN, EOS_TOKEN]
         self.min_freq = min_freq
         self.specials = specials
-        self.token2id = {}
-        self.id2token = []
-        self.freqs = Counter()
+        self.token2id: Dict[str, int] = {}
+        self.id2token: List[str] = []
+        self.freqs: Counter = Counter()
 
-    def build_vocab_from_freqs(self):
+    def build_vocab_from_freqs(self) -> None:
         """
         Once self.freqs is updated with all tokens, build vocabulary.
         """
@@ -39,11 +42,11 @@ class Vocabulary:
                 idx += 1
 
         # Build id2token
-        self.id2token = [None] * len(self.token2id)
+        self.id2token = [None] * len(self.token2id) # type: ignore
         for t, i in self.token2id.items():
             self.id2token[i] = t
 
-    def update_freqs_from_file(self, filepath):
+    def update_freqs_from_file(self, filepath: str) -> None:
         """
         Updates the frequency counter by reading tokens line by line.
         """
@@ -52,18 +55,18 @@ class Vocabulary:
                 tokens = line.strip().split()
                 self.freqs.update(tokens)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.token2id)
 
-    def token_to_id(self, token):
+    def token_to_id(self, token: str) -> int:
         return self.token2id.get(token, self.token2id[UNK_TOKEN])
 
-    def id_to_token(self, idx):
+    def id_to_token(self, idx: int) -> str:
         if 0 <= idx < len(self.id2token):
             return self.id2token[idx]
         return UNK_TOKEN
 
-    def encode(self, tokens, add_bos=False, add_eos=False):
+    def encode(self, tokens: List[str], add_bos: bool, add_eos: bool) -> List[int]:
         out = []
         if add_bos:
             out.append(self.token2id[BOS_TOKEN])
@@ -72,15 +75,20 @@ class Vocabulary:
             out.append(self.token2id[EOS_TOKEN])
         return out
 
-    def decode(self, ids, remove_special=True):
+    def decode(self, ids: List[int], remove_special: bool = True) -> List[str]:
         tokens = [self.id2token[i] if i < len(self) else UNK_TOKEN for i in ids]
         if remove_special:
             tokens = [t for t in tokens if t not in self.specials]
         return tokens
 
 
-def build_and_save_vocab(train_en_path, train_de_path, min_freq, 
-                         save_en_path, save_de_path):
+def build_and_save_vocab(
+    train_en_path: str,
+    train_de_path: str,
+    min_freq: int,
+    save_en_path: str,
+    save_de_path: str,
+) -> None:
     """
     Build English & German vocabularies from streaming of training data.
     Saves them to disk as pickle or torch file.
@@ -110,16 +118,18 @@ def build_and_save_vocab(train_en_path, train_de_path, min_freq,
     logger.info(f"Saved German vocab  to {save_de_path}")
 
 
-def load_vocab(vocab_file):
-    import pickle
+def load_vocab(vocab_file: str) -> Vocabulary:
     with open(vocab_file, "rb") as f:
         vocab = pickle.load(f)
+    assert isinstance(vocab, Vocabulary)
     return vocab
 
 
 _vocab_en = None
 _vocab_de = None
-def output_to_text(output, lang="en"):
+
+
+def output_to_text(output: List[int], lang: str="en") -> str:
     global _vocab_en, _vocab_de
     if lang == "de" and _vocab_de is None:
         logger.debug("Loading vocab")
@@ -127,14 +137,16 @@ def output_to_text(output, lang="en"):
     if lang == "en" and _vocab_en is None:
         logger.debug("Loading vocab")
         _vocab_en = load_vocab("local/vocab_en.pkl")
+    assert isinstance(_vocab_de, Vocabulary) and isinstance(_vocab_en, Vocabulary)
     tokens = _vocab_en.decode(output) if lang == "en" else _vocab_de.decode(output)
-    
+
     for i in range(len(tokens) - 1, -1, -1):
         if tokens[i].endswith("@@") and i + 1 < len(tokens):
             tokens[i] = tokens[i][:-2] + tokens.pop(i + 1)
-            
+
     detokenizer = MosesDetokenizer(lang=lang)
-    return detokenizer.detokenize(tokens)
+    text: str = detokenizer.detokenize(tokens)
+    return text
 
 
 if __name__ == "__main__":
@@ -143,4 +155,3 @@ if __name__ == "__main__":
     text = output_to_text(output)
     print("The 15 most common words in our vocabulary are:")
     print(text)
-    

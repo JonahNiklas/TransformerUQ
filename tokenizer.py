@@ -9,7 +9,7 @@ from functools import partial
 
 
 class ParallelCorpusTokenizer:
-    def __init__(self, num_processes=None, chunksize=1000):
+    def __init__(self, num_processes: int | None =None, chunksize: int=1000) -> None:
         """
         :param num_processes: Number of processes to use for tokenization.
                               Defaults to all available CPU cores.
@@ -20,11 +20,11 @@ class ParallelCorpusTokenizer:
         self.num_processes = num_processes or multiprocessing.cpu_count()
         self.chunksize = chunksize
 
-    def _tokenize_line(self, line, tokenizer):
+    def _tokenize_line(self, line: str, tokenizer: sacremoses.MosesTokenizer) -> str:
         """Tokenize a single line (helper for multiprocessing)."""
         return " ".join(tokenizer.tokenize(line.strip())) + "\n"
 
-    def tokenize_file(self, input_path, output_path, lang="en"):
+    def tokenize_file(self, input_path: str, output_path: str, lang: str ="en") -> None:
         """
         Tokenize a file line by line using multiprocessing.
 
@@ -58,19 +58,19 @@ class ParallelCorpusTokenizer:
 
     def tokenize_files(
         self,
-        train_en_path,
-        train_de_path,
-        test_en_path,
-        test_de_path,
-        output_train_en,
-        output_train_de,
-        output_test_en,
-        output_test_de,
-        test_ood_en_path,
-        test_ood_nl_path,
-        output_test_ood_en,
-        output_test_ood_nl,
-    ):
+        train_en_path: str,
+        train_de_path: str,
+        test_en_path: str,
+        test_de_path: str,
+        output_train_en: str,
+        output_train_de: str,
+        output_test_en: str,
+        output_test_de: str,
+        test_ood_en_path: str,
+        test_ood_nl_path: str,
+        output_test_ood_en: str,
+        output_test_ood_nl: str,
+    ) -> None:
         """
         Tokenize training and test files.
 
@@ -95,7 +95,7 @@ class ParallelCorpusTokenizer:
         self.tokenize_file(test_ood_en_path, output_test_ood_en, "en")
         self.tokenize_file(test_ood_nl_path, output_test_ood_nl, "de")
 
-    def learn_bpe(self, input_path, output_codes_path, num_symbols=10000):
+    def learn_bpe(self, input_path: str, output_codes_path: str, num_symbols=10000) -> None:
         """
         Learn BPE codes from a tokenized file.
 
@@ -117,7 +117,7 @@ class ParallelCorpusTokenizer:
         """Apply BPE to a single line."""
         return bpe.process_line(line.strip())
 
-    def apply_bpe(self, input_path, output_path, codes_path):
+    def apply_bpe(self, input_path: str, output_path: str, codes_path: str) -> None:
         """
         Apply BPE to a tokenized corpus line by line, using multiprocessing.
         """
