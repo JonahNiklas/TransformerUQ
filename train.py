@@ -19,6 +19,7 @@ def train(
     training_loader: DataLoader,
     test_loader: DataLoader,
     optimizer: optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler,  # Add scheduler parameter
     criterion: nn.Module,
     max_steps: int,
     validate_every: int,
@@ -44,11 +45,14 @@ def train(
                 loss = criterion(logits, labels)
                 loss.backward()
                 optimizer.step()
+                scheduler.step()  # Update learning rate
 
                 pbar.update(1)
                 pbar.set_postfix({"Loss": loss.item()})
 
-                wandb.log({"loss": loss.item()}, step=step_num)
+                wandb.log({
+                    "loss": loss.item()
+                }, step=step_num)
 
                 if step_num % validate_every == 0:
                     bleu = validate(model, test_loader, criterion)

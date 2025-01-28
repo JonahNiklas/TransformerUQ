@@ -102,6 +102,8 @@ def main() -> None:
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
+    logger.info(f"Training set size: {len(training_loader.dataset)}")  # type: ignore
+    logger.info(f"Test set size: {len(test_loader.dataset)}")  # type: ignore
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
@@ -111,11 +113,11 @@ def main() -> None:
     model: nn.Module = Transformer(
         src_vocab_size=len(de_vocab),
         tgt_vocab_size=len(en_vocab),
-        d_model=hyperparameters.transformer.encoder_embed_dim,
-        num_heads=hyperparameters.transformer.encoder_attention_heads,
+        d_model=hyperparameters.transformer.hidden_size,
+        num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
-        num_encoder_layers=hyperparameters.transformer.encoder_layers,
-        num_decoder_layers=hyperparameters.transformer.encoder_layers,
+        num_encoder_layers=hyperparameters.transformer.num_hidden_layers,
+        num_decoder_layers=hyperparameters.transformer.num_hidden_layers,
         dropout=hyperparameters.transformer.dropout,
         max_len=hyperparameters.transformer.max_len,
     )
@@ -125,7 +127,32 @@ def main() -> None:
     if torch.cuda.is_available():
         model = torch.compile(model)  # type: ignore
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=hyperparameters.training.learning_rate)
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=hyperparameters.training.learning_rate,
+        betas=hyperparameters.training.adam_betas,
+    )
+
+    # Implement Noam learning rate schedule
+    def noam_schedule(step: int) -> float:
+        warmup_steps = hyperparameters.training.learning_rate_warm_up_steps
+        if hyperparameters.training.learning_rate_decay_scheme == "noam":
+            # Noam scheme from "Attention is All You Need" paper
+            lr: float = (
+                5000.0
+                * hyperparameters.transformer.hidden_size**-0.5
+                * min(
+                    float(step + 1) ** (-0.5),
+                    float(step + 1) * (warmup_steps ** (-1.5)),
+                )
+            )
+            return lr
+        else:
+            # Simple linear warmup
+            return min(step / warmup_steps, 1.0)
+
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, noam_schedule)
+
     criterion = torch.nn.CrossEntropyLoss(
         label_smoothing=hyperparameters.training.label_smoothing, ignore_index=0
     )
@@ -134,7 +161,7 @@ def main() -> None:
     wandb.init(
         project="TransformerUQ",
         entity="sondresorbye-magson",
-        config=hyperparameters.__dict__,
+        config=hyperparameters.model_dump(),
         dir="local",
     )
 
@@ -143,6 +170,7 @@ def main() -> None:
         training_loader,
         test_loader,
         optimizer,
+        scheduler,
         criterion,
         max_steps=hyperparameters.training.max_steps,
         validate_every=hyperparameters.training.validate_every,

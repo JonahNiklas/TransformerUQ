@@ -355,13 +355,13 @@ if __name__ == "__main__":
     model = Transformer(
         src_vocab_size=src_vocab_size,
         tgt_vocab_size=tgt_vocab_size,
-        d_model=hyperparameters.transformer.encoder_embed_dim,
-        num_heads=hyperparameters.transformer.encoder_attention_heads,
+        d_model=hyperparameters.transformer.hidden_size,
+        num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
-        num_encoder_layers=hyperparameters.transformer.encoder_layers,
-        num_decoder_layers=hyperparameters.transformer.encoder_layers,
-        dropout=0.1,
-        max_len=512,
+        num_encoder_layers=hyperparameters.transformer.num_hidden_layers,
+        num_decoder_layers=hyperparameters.transformer.num_hidden_layers,
+        dropout=hyperparameters.transformer.dropout,
+        max_len=hyperparameters.transformer.max_len,
     )
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Number of parameters: {number_of_params/1e6:.2f}M")

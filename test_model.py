@@ -19,11 +19,11 @@ def main() -> None:
     model: nn.Module = Transformer(
         src_vocab_size=len(de_vocab),
         tgt_vocab_size=len(en_vocab),
-        d_model=hyperparameters.transformer.encoder_embed_dim,
-        num_heads=hyperparameters.transformer.encoder_attention_heads,
+        d_model=hyperparameters.transformer.hidden_size,
+        num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
-        num_encoder_layers=hyperparameters.transformer.encoder_layers,
-        num_decoder_layers=hyperparameters.transformer.encoder_layers,
+        num_encoder_layers=hyperparameters.transformer.num_hidden_layers,
+        num_decoder_layers=hyperparameters.transformer.num_hidden_layers,
         dropout=hyperparameters.transformer.dropout,
         max_len=hyperparameters.transformer.max_len,
     ).to(device)
