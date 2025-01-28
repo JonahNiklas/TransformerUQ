@@ -27,9 +27,10 @@ def main() -> None:
         dropout=hyperparameters.transformer.dropout,
         max_len=hyperparameters.transformer.max_len,
     ).to(device)
-    model = torch.compile(model)  # type: ignore
+    if torch.cuda.is_available():
+        model = torch.compile(model)  # type: ignore
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-    load_checkpoint(model, optimizer, "checkpoints/checkpoint-500000.pth")
+    load_checkpoint(model, optimizer, "checkpoints/checkpoint-500000.pth",remove_orig_prefix= not torch.cuda.is_available())
 
     test_loader = get_data_loader(
         src_file="local/data/test/bpe_test.de",

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Tuple
-
 import torch
 import torch.nn as nn
 import torch.utils.data as data
@@ -11,6 +9,7 @@ from tqdm import tqdm
 
 from generate import generate_autoregressivly
 from vocab import output_to_text
+from acquisition_func import BLEUVariance
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +35,8 @@ def validate(
         ):
             src_tokens, tgt_tokens = batch
             src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
-
-            output = generate_autoregressivly(model, src_tokens, print_ex=1)
+            
+            output = generate_autoregressivly(model, src_tokens, print_ex=1, aq_func=BLEUVariance())
 
             # Convert output to text
             hypotheses = [output_to_text(hyp) for hyp in output.tolist()]
@@ -68,7 +67,9 @@ def validate(
 
 if __name__ == "__main__":
     dummy_hyptheses = [
-        "<pos> This is goof the the the the",
+        "This is a string for BLEU metric computation",
+        "Banana is nice for health",
+        "cat makes sounds"
     ]
     dummy_references = [
         "This is a test sentence for BLEU score calculation",
