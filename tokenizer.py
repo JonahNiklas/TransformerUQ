@@ -6,6 +6,7 @@ import subword_nmt.apply_bpe
 from tqdm import tqdm
 import multiprocessing
 from functools import partial
+from __future__ import annotations
 
 
 class ParallelCorpusTokenizer:
@@ -95,7 +96,7 @@ class ParallelCorpusTokenizer:
         self.tokenize_file(test_ood_en_path, output_test_ood_en, "en")
         self.tokenize_file(test_ood_nl_path, output_test_ood_nl, "de")
 
-    def learn_bpe(self, input_path: str, output_codes_path: str, num_symbols=10000) -> None:
+    def learn_bpe(self, input_path: str, output_codes_path: str, num_symbols: int=10000) -> None:
         """
         Learn BPE codes from a tokenized file.
 
@@ -115,7 +116,8 @@ class ParallelCorpusTokenizer:
 
     def _apply_bpe_line(self, line: str, bpe: subword_nmt.apply_bpe.BPE) -> str:
         """Apply BPE to a single line."""
-        return bpe.process_line(line.strip())
+        bpe_line: str = bpe.process_line(line.strip())
+        return bpe_line
 
     def apply_bpe(self, input_path: str, output_path: str, codes_path: str) -> None:
         """
@@ -143,31 +145,3 @@ class ParallelCorpusTokenizer:
                 desc=f"Applying BPE to {os.path.basename(input_path)}",
             ):
                 output_file.write(bpe_line + "\n")
-
-
-# Example usage
-if __name__ == "__main__":
-    tokenizer = ParallelCorpusTokenizer()
-
-    # Tokenize train and test files
-    tokenizer.tokenize_files(
-        "train_english.txt",
-        "train_german.txt",
-        "test_english.txt",
-        "test_german.txt",
-        "tokenized_train_english.txt",
-        "tokenized_train_german.txt",
-        "tokenized_test_english.txt",
-        "tokenized_test_german.txt",
-    )
-
-    # Learn BPE codes from training data
-    tokenizer.learn_bpe("tokenized_train_english.txt", "en_bpe_codes.txt")
-
-    # Apply BPE to train and test files
-    tokenizer.apply_bpe(
-        "tokenized_train_english.txt", "bpe_train_english.txt", "en_bpe_codes.txt"
-    )
-    tokenizer.apply_bpe(
-        "tokenized_test_english.txt", "bpe_test_english.txt", "en_bpe_codes.txt"
-    )

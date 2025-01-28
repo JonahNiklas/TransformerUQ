@@ -1,13 +1,14 @@
 from typing import Tuple
 import torch
 import torch.nn as nn
-import torch.utils.data.dataloader as DataLoader
+import torch.utils.data as data
 from sacrebleu import corpus_bleu
 from tqdm import tqdm
 from generate import generate_autoregressivly
 
 from vocab import output_to_text
 import logging
+from __future__ import annotations
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def validate(
     model: nn.Module,
-    test_data: DataLoader,
+    test_data: data.DataLoader,
     criterion: nn.Module | None,
     save_hypotheses_to_file: bool = False,
 ) -> float:

@@ -6,6 +6,8 @@ from typing import Dict, List
 
 import torch
 from sacremoses import MosesDetokenizer
+from __future__ import annotations
+
 
 logger = logging.getLogger(__name__)
 

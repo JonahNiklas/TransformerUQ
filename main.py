@@ -1,4 +1,5 @@
 import os
+from sympy import hyper
 import torch
 import wandb
 from dataloader import get_data_loader, load_vocab
@@ -14,7 +15,8 @@ from vocab import build_and_save_vocab
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-torch.set_float32_matmul_precision('high')
+torch.set_float32_matmul_precision("high")
+
 
 def main() -> None:
     logger.info("Tokenize data")
@@ -62,13 +64,15 @@ def main() -> None:
         )
 
     logger.info("Build and save vocab")
-    if not os.path.exists("local/vocab_en.pkl") or not os.path.exists("local/vocab_de.pkl"):
+    if not os.path.exists("local/vocab_en.pkl") or not os.path.exists(
+        "local/vocab_de.pkl"
+    ):
         build_and_save_vocab(
             train_en_path="local/data/training/bpe_train.en",
             train_de_path="local/data/training/bpe_train.de",
-            min_freq=2000,
+            min_freq=hyperparameters.vocab.token_min_freq,
             save_en_path="local/vocab_en.pkl",
-            save_de_path="local/vocab_de.pkl"
+            save_de_path="local/vocab_de.pkl",
         )
         logger.warning("Vocab files not found. Building vocab from training data.")
     en_vocab = load_vocab("local/vocab_en.pkl")
@@ -82,9 +86,9 @@ def main() -> None:
         tgt_file="local/data/training/bpe_train.en",
         src_vocab=de_vocab,
         tgt_vocab=en_vocab,
-        batch_size=64,
+        batch_size=hyperparameters.training.batch_size,
         add_bos_eos=True,
-        shuffle=False,
+        shuffle=hyperparameters.training.shuffle,
         max_len=hyperparameters.transformer.max_len,
     )
 
@@ -121,11 +125,18 @@ def main() -> None:
     if torch.cuda.is_available():
         model = torch.compile(model)  # type: ignore
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1, ignore_index=0)
+    optimizer = torch.optim.Adam(model.parameters(), lr=hyperparameters.training.learning_rate)
+    criterion = torch.nn.CrossEntropyLoss(
+        label_smoothing=hyperparameters.training.label_smoothing, ignore_index=0
+    )
 
     logger.info("Setting up weights and biases")
-    wandb.init(project="TransformerUQ", entity="sondresorbye-magson", config=hyperparameters.__dict__, dir="local")
+    wandb.init(
+        project="TransformerUQ",
+        entity="sondresorbye-magson",
+        config=hyperparameters.__dict__,
+        dir="local",
+    )
 
     train(
         model,
@@ -133,7 +144,8 @@ def main() -> None:
         test_loader,
         optimizer,
         criterion,
-        max_steps=500_000,
+        max_steps=hyperparameters.training.max_steps,
+        validate_every=hyperparameters.training.validate_every,
     )
 
 
