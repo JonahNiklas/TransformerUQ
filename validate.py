@@ -38,12 +38,12 @@ def validate(
             
             output = generate_autoregressivly(model, src_tokens, print_ex=1)
 
-            all_hypotheses.extend(output)
+            all_hypotheses.extend([output_to_text(hyp) for hyp in output.tolist()])
             all_references.extend([output_to_text(ref) for ref in ground_truth.tolist()])
             # loss = criterion(output, tgt_tokens) # cannot calculate loss after taking argmax
             # total_loss += loss.item()
-            # logger.warning("Validation on only one batch for now")
-            # break
+            logger.warning("Validation on only one batch for now")
+            break
 
     if save_hypotheses_to_file:
         logger.info("Saving hypotheses to file")

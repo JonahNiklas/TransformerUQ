@@ -98,7 +98,7 @@ def main() -> None:
         tgt_file="local/data/test/bpe_test.en",
         src_vocab=de_vocab,
         tgt_vocab=en_vocab,
-        batch_size=64,
+        batch_size=124,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
