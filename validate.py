@@ -24,8 +24,8 @@ def validate(
 ) -> float:
     model.eval()
     total_loss = 0
-    all_references = []
-    all_hypotheses = []
+    all_references: list[str] = []
+    all_hypotheses: list[str] = []
 
     logger.debug("Started validating models")
 

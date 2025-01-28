@@ -81,5 +81,5 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, ground_
             print("")
 
     if aq_func.multiple_inference:
-        return BLEU_mean_output_batch(text_output_n)
+        return torch.tensor(BLEU_mean_output_batch(text_output_n))
     return tgt_tokens
