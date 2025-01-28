@@ -35,6 +35,8 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
             print(f"Example {i+1} in batch")
             print(f"Source: {output_to_text(src_tokens[i].tolist(), lang='de')}")
             print(f"Source tokens: {src_tokens[i].tolist()}")
+            print(f"Ground truth: {output_to_text(tgt_tokens[i].tolist())}")
+            print(f"Ground truth tokens: {tgt_tokens[i].tolist()}")
             print(f"Generated text: {output_to_text(tgt_tokens[i].tolist())}")
             print(f"Generated tokens: {tgt_tokens[i].tolist()}")
             print("")
