@@ -291,11 +291,10 @@ def create_tgt_mask(tgt: torch.Tensor, pad_idx: int) -> torch.Tensor:
     return combined_mask
 
 
-class Transformer(nn.Module):
+class  Transformer(nn.Module):
     def __init__(
         self,
-        src_vocab_size: int,
-        tgt_vocab_size: int,
+        vocab_size: int,
         d_model: int,
         num_heads: int,
         d_ff: int,
@@ -306,7 +305,7 @@ class Transformer(nn.Module):
     ):
         super(Transformer, self).__init__()
         # Single shared embedding
-        self.shared_embedding = nn.Embedding(src_vocab_size, d_model)
+        self.shared_embedding = nn.Embedding(vocab_size, d_model)
         # Encoder and decoder now use the same embedding
         self.encoder = Encoder(
             embedding=self.shared_embedding,
@@ -327,7 +326,7 @@ class Transformer(nn.Module):
             max_len=max_len,
         )
         # Tie final projection to shared embedding
-        self.output_projection = nn.Linear(d_model, tgt_vocab_size, bias=False)
+        self.output_projection = nn.Linear(d_model, vocab_size, bias=False)
         self.output_projection.weight = self.shared_embedding.weight
 
     def forward(self, src: Tensor, tgt: Tensor) -> Tensor:
@@ -351,8 +350,7 @@ if __name__ == "__main__":
     tgt_vocab_size = 8000
     src = torch.randint(0, src_vocab_size, (2, 10))
     model = Transformer(
-        src_vocab_size=src_vocab_size,
-        tgt_vocab_size=tgt_vocab_size,
+        vocab_size=src_vocab_size,
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,

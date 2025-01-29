@@ -17,8 +17,7 @@ def main() -> None:
     de_vocab = load_vocab("local/vocab_de.pkl")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model: nn.Module = Transformer(
-        src_vocab_size=len(de_vocab),
-        tgt_vocab_size=len(en_vocab),
+        vocab_size=len(de_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,

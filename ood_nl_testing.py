@@ -24,7 +24,7 @@ def main() -> None:
     # Load model model weights from checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Transformer(
-        src_vocab_size=len(de_vocab),
+        vocab_size=len(de_vocab),
         tgt_vocab_size=len(en_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,

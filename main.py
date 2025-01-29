@@ -124,8 +124,7 @@ def main() -> None:
     logger.info("Creating model")
 
     model: nn.Module = Transformer(
-        src_vocab_size=len(shared_vocab),
-        tgt_vocab_size=len(shared_vocab),
+        vocab_size=len(shared_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
