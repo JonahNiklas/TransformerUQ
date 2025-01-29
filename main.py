@@ -152,26 +152,17 @@ def main() -> None:
 
     optimizer = torch.optim.Adam(
         model.parameters(),
-        lr=hyperparameters.training.learning_rate,
+        lr=1,
         betas=hyperparameters.training.adam_betas,
+        eps=hyperparameters.training.adam_eps,
     )
 
-    def get_lr(it: int) -> float:
+    def get_lr(step: int) -> float:
+        d_model = hyperparameters.transformer.hidden_size
         warmup_steps = hyperparameters.training.learning_rate_warm_up_steps
-        max_lr_factor = 1.0
-        min_lr_factor = 0.1
-        max_steps = hyperparameters.training.max_steps
-        # 1) linear warmup for warmup_iters steps
-        if it < warmup_steps:
-            return (it + 1) / warmup_steps
-        # 2) if it > lr_decay_iters, return min learning rate
-        if it > max_steps:
-            return min_lr_factor
-        # 3) in between, use cosine decay down to min learning rate
-        decay_ratio = (it - warmup_steps) / (max_steps - warmup_steps)
-        assert 0 <= decay_ratio <= 1
-        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff starts at 1 and goes to 0
-        return min_lr_factor + coeff * (max_lr_factor - min_lr_factor)
+        out: float = (d_model ** -0.5) * min(step ** -0.5, step * (warmup_steps ** -1.5))
+        return out
+
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, get_lr)
 
     criterion = torch.nn.CrossEntropyLoss(

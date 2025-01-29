@@ -20,17 +20,15 @@ class StreamingParallelDataset(Dataset):
         self,
         src_file: str,
         tgt_file: str,
-        src_vocab: Vocabulary,
-        tgt_vocab: Vocabulary,
+        vocab: Vocabulary,
         max_len: int,
-        add_bos_eos: bool = True,
-        store_offsets: bool = True,
+        add_bos_eos: bool,
+        store_offsets: bool,
     ) -> None:
         super().__init__()
         self.src_file = src_file
         self.tgt_file = tgt_file
-        self.src_vocab = src_vocab
-        self.tgt_vocab = tgt_vocab
+        self.vocab = vocab
         self.add_bos_eos = add_bos_eos
         self.max_len = max_len
 
@@ -83,10 +81,10 @@ class StreamingParallelDataset(Dataset):
             tgt_line = f_tgt.readline().strip().split()
 
         # Encode
-        src_ids = self.src_vocab.encode(
+        src_ids = self.vocab.encode(
             src_line, add_bos=self.add_bos_eos, add_eos=self.add_bos_eos
         )
-        tgt_ids = self.tgt_vocab.encode(
+        tgt_ids = self.vocab.encode(
             tgt_line, add_bos=self.add_bos_eos, add_eos=self.add_bos_eos
         )
 

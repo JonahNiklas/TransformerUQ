@@ -23,7 +23,7 @@ from pydantic import BaseModel
 # Taken from tensor2tensor: https://github.com/tensorflow/tensor2tensor/blob/28adf2690c551ef0f570d41bef2019d9c502ec7e/tensor2tensor/models/transformer.py#L1627
 class TransformerHyperparameters(BaseModel):
     hidden_size: int = 512  # found in t2t
-    max_len: int = 256  # found in t2t
+    max_len: int = 124  # ALTERED - 256 found in t2t
     encoder_ffn_embed_dim: int = 2048  # found in t2t, known as filter_size in t2t
     num_heads: int = 8  # found in t2t
     num_hidden_layers: int = 6  # found in t2t
@@ -38,11 +38,11 @@ class TrainingHyperparameters(BaseModel):
         64  # ALTERED found in t2t, batch size of 4096 means number of examples per batch i.e. 4096/256 = 16
     )
     shuffle: bool = True
-    learning_rate_decay_scheme: str = "warmup_cosine_decay" # found in nanoGPT
-    learning_rate: float = 6e-4  # found in nanogpt
+    # learning_rate_decay_scheme: str = "warmup_cosine_decay" # found in nanoGPT
+    # learning_rate: float = 6e-4  # found in nanogpt
     learning_rate_warm_up_steps: int = 4000  # found in t2t
     adam_betas: Tuple[float, float] = (0.9, 0.98)  # found in t2t
-
+    adam_eps: float = 1e-9  # found in attention
 
 class VocabHyperparameters(BaseModel):
     token_min_freq: int = 100
