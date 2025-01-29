@@ -7,6 +7,7 @@ from constants import constants
 from dataloader import get_data_loader, load_vocab
 from hyperparameters import hyperparameters
 from models.transformer import Transformer
+from models.transformer_pytorch import TransformerPyTorch
 from tokenizer import ParallelCorpusTokenizer
 from train import train
 import logging
@@ -123,7 +124,17 @@ def main() -> None:
 
     logger.info("Creating model")
 
-    model: nn.Module = Transformer(
+    # model: nn.Module = Transformer(
+    #     vocab_size=len(shared_vocab),
+    #     d_model=hyperparameters.transformer.hidden_size,
+    #     num_heads=hyperparameters.transformer.num_heads,
+    #     d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
+    #     num_encoder_layers=hyperparameters.transformer.num_hidden_layers,
+    #     num_decoder_layers=hyperparameters.transformer.num_hidden_layers,
+    #     dropout=hyperparameters.transformer.dropout,
+    #     max_len=hyperparameters.transformer.max_len,
+    # )
+    model: nn.Module = TransformerPyTorch(
         vocab_size=len(shared_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
