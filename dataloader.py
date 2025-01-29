@@ -43,7 +43,7 @@ if __name__ == "__main__":
     test_de_path  = "local/data/test/bpe_test.de"
 
     # Load the saved vocabularies
-    vocab = load_vocab(constants.file_output_paths.vocab)
+    vocab = load_vocab(constants.file_paths.vocab)
 
     # Build PyTorch DataLoaders for training, test
     train_loader = get_data_loader(

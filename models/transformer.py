@@ -305,6 +305,7 @@ class  Transformer(nn.Module):
     ):
         super(Transformer, self).__init__()
         # Single shared embedding
+        self.vocab_size = vocab_size
         self.shared_embedding = nn.Embedding(vocab_size, d_model)
         # Encoder and decoder now use the same embedding
         self.encoder = Encoder(

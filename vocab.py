@@ -117,7 +117,7 @@ def output_to_text(output: List[int], lang: str="en") -> str:
     global _vocab_shared
     if _vocab_shared is None:
         logger.debug("Loading shared vocab")
-        _vocab_shared = load_vocab(constants.file_output_paths.vocab)
+        _vocab_shared = load_vocab(constants.file_paths.vocab)
 
     tokens = _vocab_shared.decode(output)
 

@@ -5,6 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import wandb
+from hyperparameters import hyperparameters
 
 from validate import validate
 import logging
@@ -37,11 +38,18 @@ def train(
                 src_tokens, tgt_tokens = batch
                 src_tokens, tgt_tokens = src_tokens.to(device), tgt_tokens.to(device)
 
+                batch_size = src_tokens.shape[0]
+                tgt_len = tgt_tokens.shape[1]
+                vocab_size = model.vocab_size
+                assert vocab_size > 10_000
+
                 optimizer.zero_grad()
                 decoder_input = tgt_tokens[:, :-1]
                 labels = tgt_tokens[:, 1:]
                 logits = model(src_tokens, decoder_input)
                 logits = logits.transpose(1, 2)
+                assert logits.shape == (batch_size, vocab_size, tgt_len - 1)
+                assert labels.shape == (batch_size, tgt_len - 1)
                 loss = criterion(logits, labels)
                 loss.backward()
                 optimizer.step()

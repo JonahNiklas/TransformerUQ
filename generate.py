@@ -9,7 +9,7 @@ from constants import constants
 def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_ex:int) -> torch.Tensor:
     model.eval()
     device = next(model.parameters()).device
-    vocab = load_vocab(constants.file_output_paths.vocab)
+    vocab = load_vocab(constants.file_paths.vocab)
     batch_size = src_tokens.size(0)
     max_len = hyperparameters.transformer.max_len
     with torch.no_grad():

@@ -29,7 +29,8 @@ class TransformerPyTorch(nn.Module):
         max_len: int,
     ) -> None:
         super().__init__()
-        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.vocab_size = vocab_size
+        self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=0)
         self.pos_encoder = PositionalEncoding(d_model, max_len)
         self.transformer = nn.Transformer(
             d_model=d_model,
@@ -41,7 +42,7 @@ class TransformerPyTorch(nn.Module):
             batch_first=True,
         )
         self.out = nn.Linear(d_model, vocab_size, bias=False)
-        self.out.weight = self.embedding.weight
+        self.embedding.weight = self.out.weight
 
     def forward(self, src: torch.Tensor, tgt: torch.Tensor, pad_idx: int=0) -> torch.Tensor:
         src_key_padding_mask = (src == pad_idx)

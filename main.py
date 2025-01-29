@@ -1,5 +1,6 @@
 import math
 import os
+from typing import Literal
 from sympy import hyper
 import torch
 import wandb
@@ -20,31 +21,32 @@ logger = logging.getLogger(__name__)
 
 torch.set_float32_matmul_precision("high")
 
+torch_compile = os.getenv("TORCH_COMPILE", "TRUE") != "FALSE"
+use_wandb = os.getenv("USE_WANDB", "TRUE") != "FALSE"
 
 def main() -> None:
     logger.info("Tokenize data")
     tokenizer = ParallelCorpusTokenizer()
     tokenizer.tokenize_files(
-        train_en_path="local/data/training/train.de",
-        train_de_path="local/data/training/train.en",
-        test_en_path="local/data/test/test.de",
-        test_de_path="local/data/test/test.en",
-        output_train_en="local/data/training/tokenized_train.de",
-        output_train_de="local/data/training/tokenized_train.en",
-        output_test_en="local/data/test/tokenized_test.de",
-        output_test_de="local/data/test/tokenized_test.en",
-        test_ood_en_path="local/data/test_ood/test_ood.en",
-        test_ood_nl_path="local/data/test_ood/test_ood.nl",
-        output_test_ood_en="local/data/test_ood/tokenized_test_ood.en",
-        output_test_ood_nl="local/data/test_ood/tokenized_test_ood.nl",
+        train_en_path=constants.file_paths.train_en,
+        train_de_path=constants.file_paths.train_de,
+        test_en_path=constants.file_paths.test_en,
+        test_de_path=constants.file_paths.test_de,
+        output_train_en=constants.file_paths.tokenized_train_en,
+        output_train_de=constants.file_paths.tokenized_train_de,
+        output_test_en=constants.file_paths.tokenized_test_en,
+        output_test_de=constants.file_paths.tokenized_test_de,
+        test_ood_en_path=constants.file_paths.ood_en,
+        test_ood_nl_path=constants.file_paths.ood_nl,
+        output_test_ood_en=constants.file_paths.tokenized_ood_en,
+        output_test_ood_nl=constants.file_paths.tokenized_ood_nl,
     )
 
     logger.info("Merge the tokenized training data")
-    merged_train_file = "local/data/training/tokenized_train_merged.txt"
-    if not os.path.exists(merged_train_file):
-        with open("local/data/training/tokenized_train.en", "r", encoding="utf-8") as f_en, \
-            open("local/data/training/tokenized_train.de", "r", encoding="utf-8") as f_de, \
-            open(merged_train_file, "w", encoding="utf-8") as f_out:
+    if not os.path.exists(constants.file_paths.tokenized_train_merged):
+        with open(constants.file_paths.tokenized_train_en, "r", encoding="utf-8") as f_en, \
+            open(constants.file_paths.tokenized_train_de, "r", encoding="utf-8") as f_de, \
+            open(constants.file_paths.tokenized_train_merged, "w", encoding="utf-8") as f_out:
             for line in f_en:
                 f_out.write(line)
             for line in f_de:
@@ -53,7 +55,7 @@ def main() -> None:
     logger.info("Learn a single set of BPE codes from merged data")
     shared_bpe_codes = "local/data/training/shared_bpe_codes.txt"
     tokenizer.learn_bpe(
-        input_path=merged_train_file,
+        input_path=constants.file_paths.tokenized_train_merged,
         output_codes_path=shared_bpe_codes,
     )
 
@@ -82,16 +84,16 @@ def main() -> None:
         )
 
     logger.info("Build and save vocab")
-    if not os.path.exists(constants.file_output_paths.vocab):
+    if not os.path.exists(constants.file_paths.vocab):
         build_and_save_vocab(
             train_en_path="local/data/training/bpe_train.en",
             train_de_path="local/data/training/bpe_train.de",
             min_freq=hyperparameters.vocab.token_min_freq,
-            save_path=constants.file_output_paths.vocab,
+            save_path=constants.file_paths.vocab,
         )
         logger.warning("Shared vocab file not found. Building vocab from training data.")
 
-    shared_vocab = load_vocab(constants.file_output_paths.vocab)
+    shared_vocab = load_vocab(constants.file_paths.vocab)
     logger.info(f"Shared vocab size: {len(shared_vocab)}")
 
     logger.info("Create data loaders")
@@ -145,7 +147,8 @@ def main() -> None:
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Model number of parameters: {number_of_params/1e6:.2f}M")
     model.to(device)
-    if torch.cuda.is_available():
+    if torch.cuda.is_available() and torch_compile:
+        logger.info("Compiling model with torch compile")
         model = torch.compile(model)  # type: ignore
 
     optimizer = torch.optim.Adam(
@@ -169,11 +172,13 @@ def main() -> None:
     )
 
     logger.info("Setting up weights and biases")
+    wandb_mode: Literal["online", "disabled"] = "online" if use_wandb else "disabled"
     wandb.init(
         project="TransformerUQ",
         entity="sondresorbye-magson",
         config=hyperparameters.model_dump(),
         dir="local",
+        mode=wandb_mode,
     )
 
     train(
