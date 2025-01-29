@@ -13,6 +13,7 @@
 # - news-commentary-v14.nl-en
 
 # %%
+from __future__ import annotations
 from typing import Dict, List
 from pydantic import BaseModel
 import requests
@@ -21,7 +22,6 @@ import gzip
 import shutil
 import os
 import logging
-from __future__ import annotations
 
 logger = logging.getLogger(__name__)
 
