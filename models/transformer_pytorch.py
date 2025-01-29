@@ -21,10 +21,10 @@ class TransformerPyTorch(nn.Module):
         self,
         vocab_size: int,
         d_model: int,
-        nhead: int,
+        num_heads: int,
         num_encoder_layers: int,
         num_decoder_layers: int,
-        dim_feedforward: int,
+        d_ff: int,
         dropout: float,
         max_len: int,
     ) -> None:
@@ -33,10 +33,10 @@ class TransformerPyTorch(nn.Module):
         self.pos_encoder = PositionalEncoding(d_model, max_len)
         self.transformer = nn.Transformer(
             d_model=d_model,
-            nhead=nhead,
+            nhead=num_heads,
             num_encoder_layers=num_encoder_layers,
             num_decoder_layers=num_decoder_layers,
-            dim_feedforward=dim_feedforward,
+            dim_feedforward=d_ff,
             dropout=dropout,
             batch_first=True,
         )
