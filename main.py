@@ -98,8 +98,7 @@ def main() -> None:
     training_loader = get_data_loader(
         src_file="local/data/training/bpe_train.de",
         tgt_file="local/data/training/bpe_train.en",
-        src_vocab=shared_vocab,
-        tgt_vocab=shared_vocab,
+        vocab=shared_vocab,
         batch_size=hyperparameters.training.batch_size,
         add_bos_eos=True,
         shuffle=hyperparameters.training.shuffle,
@@ -109,8 +108,7 @@ def main() -> None:
     test_loader = get_data_loader(
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
-        src_vocab=shared_vocab,
-        tgt_vocab=shared_vocab,
+        vocab=shared_vocab,
         batch_size=124,
         add_bos_eos=True,
         shuffle=False,
