@@ -27,17 +27,21 @@ class BeamScore(AcquisitionFunction):
         log_prob = torch.sum(torch.log_softmax(logits, dim=1), dim=1) # (batch_size)
         return log_prob / _length_penalty(output, self.alpha)
 
-class SequenceProbability(AcquisitionFunction):
-    def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
-        super().__init__(multiple_inference, num_inferences, alpha)
+# class SequenceProbability(AcquisitionFunction):
+#     def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
+#         super().__init__(multiple_inference, num_inferences, alpha)
 
-    def __call__(self, output: Union[List[str], List[List[str]]], logits: torch.Tensor) -> torch.Tensor:
-        # logits dim: (batch_size, num_inferences, max_len)
-        assert isinstance(output[0], str), "Output should be a list of strings"
-        probabilities = torch.softmax(logits, dim=2) # (batch_size, num_inferences, max_len)
-        probability = torch.prod(probabilities, dim=2) # (batch_size, num_inferences)
-        probability_sum = torch.sum(probability, dim=1) # (batch_size)
-        return torch.log(probability_sum) / _length_penalty(output, self.alpha)
+#     def __call__(self, output: torch.Tensor, logits: torch.Tensor) -> torch.Tensor:
+#         # logits dim: (batch_size, num_inferences, max_len, vocab_size)
+#         # output dim: (batch_size, num_inferences, max_len)
+#         assert isinstance(output[0], str), "Output should be a list of strings"
+
+#         logits = logits[:, :, :, ouptut.idx]
+
+#         probabilities = torch.softmax(logits, dim=2) # (batch_size, num_inferences, max_len)
+#         probability = torch.prod(probabilities, dim=2) # (batch_size, num_inferences)
+#         probability_sum = torch.sum(probability, dim=1) # (batch_size)
+#         return torch.log(probability_sum) / _length_penalty(output, self.alpha)
 
 class BLEUVariance(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
