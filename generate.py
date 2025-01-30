@@ -18,9 +18,9 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, ground_
             
         for t in tqdm(range(1, max_len), desc="Generating tokens"):
             output = model(src_tokens, tgt_tokens)
-            # assert output.shape == (batch_size, max_len, len(vocab))
+            assert output.shape == (batch_size, max_len, len(vocab))
             output = output[:, t-1, :]
-            # assert output.shape == (batch_size, len(vocab))
+            assert output.shape == (batch_size, len(vocab))
             output = output.argmax(dim=1)
             assert output.shape == (batch_size,)
             tgt_tokens[:, t] = output

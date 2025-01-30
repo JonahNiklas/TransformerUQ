@@ -11,17 +11,10 @@ from vocab import load_vocab
 
 def main() -> None:
     # Load shared vocabulary
-    # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
+    wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
     shared_vocab = load_vocab("local/vocab_shared.pkl")
     print(f"Shared vocab size: {len(shared_vocab)}")
-    # Ensure shared_vocab length is 32181
-    if len(shared_vocab) > 32181:
-        token, _ = shared_vocab.token2id.popitem()
-        shared_vocab.id2token.pop(shared_vocab.id2token.index(token))
-    elif len(shared_vocab) < 32181:
-        raise ValueError(f"Expected shared_vocab size to be at least 32181, but got {len(shared_vocab)}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(torch.version.cuda)
 
     print(f"Device: {device}")
 
@@ -38,7 +31,7 @@ def main() -> None:
     ).to(device)
 
     if torch.cuda.is_available():
-        # model = torch.compile(model)  # type: ignore
+        model = torch.compile(model)  # type: ignore
         torch.set_float32_matmul_precision("high")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
