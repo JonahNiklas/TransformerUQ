@@ -1,5 +1,6 @@
 from typing import List, Tuple
 from pydantic import BaseModel
+import torch
 
 # 30.01.2025:
 # next run I would like to increase batch size
@@ -33,11 +34,16 @@ class TrainingHyperparameters(BaseModel):
 class VocabHyperparameters(BaseModel):
     token_min_freq: int = 100
     bpe_num_symbols: int = 32000
+    
+class UncertaintyQuantificationHyperparameters(BaseModel):
+    num_inferences: int = 5
 
 class Hyperparameter(BaseModel):
     transformer: TransformerHyperparameters = TransformerHyperparameters()
     training: TrainingHyperparameters = TrainingHyperparameters()
     vocab: VocabHyperparameters = VocabHyperparameters()
+    uq:  UncertaintyQuantificationHyperparameters = UncertaintyQuantificationHyperparameters()
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 hyperparameters = Hyperparameter()

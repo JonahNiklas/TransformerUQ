@@ -2,6 +2,7 @@ import torch
 from torch import nn
 
 import wandb
+from acquisition_func import BeamScore,BLEUVariance
 from dataloader import get_data_loader
 from hyperparameters import hyperparameters
 from models.transformer_pytorch import TransformerPyTorch
@@ -14,8 +15,7 @@ def main() -> None:
     wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
     shared_vocab = load_vocab("local/vocab_shared.pkl")
     print(f"Shared vocab size: {len(shared_vocab)}")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    device = hyperparameters.device
     print(f"Device: {device}")
 
     # Initialize the model with shared vocab size
@@ -41,7 +41,7 @@ def main() -> None:
         model, 
         optimizer, 
         "checkpoints/checkpoint-175000.pth",
-        remove_orig_prefix=torch.cuda.is_available()
+        remove_orig_prefix=not torch.cuda.is_available()
     )
 
     # Set up the test data loader with the shared vocabulary
@@ -56,7 +56,7 @@ def main() -> None:
     )
 
     # Validate the model and calculate BLEU score
-    bleu = validate(model, test_loader, None)
+    bleu = validate(model, test_loader, None,aq_func=BLEUVariance())
     print(f"BLEU Score: {bleu}")
 
 if __name__ == "__main__":
