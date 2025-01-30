@@ -3,14 +3,10 @@
 import numpy as np
 import sacrebleu
 import torch
-from typing import Union, List
+from typing import Union, List, cast
 
-def _length_penalty(output: Union[List[str], List[List[str]]], alpha: float) -> torch.Tensor:
-    if isinstance(output[0], list):
-        lengths = torch.tensor([np.mean([len(out) for out in outs]) for outs in output])
-    else:
-        lengths = torch.tensor([len(out) for out in output])
-    
+def _length_penalty(output: List[str], alpha: float) -> torch.Tensor:
+    lengths = torch.tensor([len(out) for out in output])
     return torch.tensor(((5 + lengths) / 6) ** alpha)
 
 class AcquisitionFunction:
@@ -25,19 +21,27 @@ class AcquisitionFunction:
 class BeamScore(AcquisitionFunction):
     def __call__(self, output: Union[List[str], List[List[str]]], logits: torch.Tensor) -> torch.Tensor:
         # logits dim: (batch_size, max_len)
+        assert isinstance(output[0], str), "Output should be a list of strings"
+        output = cast(List[str], output)
+
         log_prob = torch.sum(torch.log_softmax(logits, dim=1), dim=1) # (batch_size)
         return log_prob / _length_penalty(output, self.alpha)
 
-class SequenceProbability(AcquisitionFunction):
-    def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
-        super().__init__(multiple_inference, num_inferences, alpha)
+# class SequenceProbability(AcquisitionFunction):
+#     def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
+#         super().__init__(multiple_inference, num_inferences, alpha)
 
-    def __call__(self, output: Union[List[str], List[List[str]]], logits: torch.Tensor) -> torch.Tensor:
-        assert isinstance(output[0], list), "Output should be a list of lists"
-        probabilities = torch.softmax(logits, dim=2) # (batch_size, num_inferences, max_len)
-        probability = torch.prod(probabilities, dim=2) # (batch_size, num_inferences)
-        probability_sum = torch.sum(probability, dim=1) # (batch_size)
-        return torch.log(probability_sum) / _length_penalty(output, self.alpha)
+#     def __call__(self, output: torch.Tensor, logits: torch.Tensor) -> torch.Tensor:
+#         # logits dim: (batch_size, num_inferences, max_len, vocab_size)
+#         # output dim: (batch_size, num_inferences, max_len)
+#         assert isinstance(output[0], str), "Output should be a list of strings"
+
+#         logits = logits[:, :, :, ouptut.idx]
+
+#         probabilities = torch.softmax(logits, dim=2) # (batch_size, num_inferences, max_len)
+#         probability = torch.prod(probabilities, dim=2) # (batch_size, num_inferences)
+#         probability_sum = torch.sum(probability, dim=1) # (batch_size)
+#         return torch.log(probability_sum) / _length_penalty(output, self.alpha)
 
 class BLEUVariance(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
