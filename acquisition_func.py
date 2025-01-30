@@ -4,9 +4,10 @@ import numpy as np
 import sacrebleu
 import torch
 from typing import Union, List, cast
+from hyperparameters import hyperparameters
 
 def _length_penalty(output: List[str], alpha: float) -> torch.Tensor:
-    lengths = torch.tensor([len(out) for out in output])
+    lengths = torch.tensor([len(out) for out in output]).to(hyperparameters.device)
     return torch.tensor(((5 + lengths) / 6) ** alpha)
 
 class AcquisitionFunction:
