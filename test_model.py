@@ -2,13 +2,15 @@ import torch
 from torch import nn
 
 import wandb
-from acquisition_func import BeamScore,BLEUVariance
+from acquisition_func import BeamScore, BLEUVariance
+from beam_search import beam_search_unbatched, beam_search_batched
 from dataloader import get_data_loader
 from hyperparameters import hyperparameters
 from models.transformer_pytorch import TransformerPyTorch
 from train import load_checkpoint
 from validate import validate
-from vocab import load_vocab
+from vocab import load_vocab, output_to_text
+
 
 def main() -> None:
     # Load shared vocabulary
@@ -38,10 +40,10 @@ def main() -> None:
 
     # Load the checkpoint
     load_checkpoint(
-        model, 
-        optimizer, 
+        model,
+        optimizer,
         "checkpoints/checkpoint-175000.pth",
-        remove_orig_prefix=not torch.cuda.is_available()
+        remove_orig_prefix=not torch.cuda.is_available(),
     )
 
     # Set up the test data loader with the shared vocabulary
@@ -49,15 +51,16 @@ def main() -> None:
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
         vocab=shared_vocab,
-        batch_size=124,
+        batch_size=64,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
 
     # Validate the model and calculate BLEU score
-    bleu = validate(model, test_loader, None,aq_func=BLEUVariance())
+    bleu = validate(model, test_loader, None, aq_func=BLEUVariance())
     print(f"BLEU Score: {bleu}")
+
 
 if __name__ == "__main__":
     main()

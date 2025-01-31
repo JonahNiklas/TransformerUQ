@@ -7,6 +7,7 @@ from hyperparameters import hyperparameters
 from constants import constants
 from typing import List
 
+# Please set private functions below public ones
 def _enable_test_time_dropout(model: nn.Module) -> None:
     for module in model.modules():
         if isinstance(module, nn.Dropout):
