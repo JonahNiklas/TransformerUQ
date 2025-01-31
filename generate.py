@@ -1,3 +1,4 @@
+from typing import List
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -13,7 +14,7 @@ def generate_autoregressivly(
     ground_truth: torch.Tensor,
     search_method: BeamSearchFunction,
     print_ex: int,
-) -> torch.Tensor:
+) -> List[str]:
     model.eval()
     device = next(model.parameters()).device
     vocab = load_vocab(constants.file_paths.vocab)
@@ -21,6 +22,8 @@ def generate_autoregressivly(
     max_len = hyperparameters.transformer.max_len
     
     tgt_tokens = search_method(model, src_tokens, max_len, vocab, 4)
+
+    output = [output_to_text(tgt_tokens[i].tolist()) for i in range(batch_size)]
 
     random_indices = torch.randperm(batch_size)[:print_ex]
     for i in random_indices:
@@ -33,4 +36,4 @@ def generate_autoregressivly(
         print(f"Generated tokens: {tgt_tokens[i].tolist()}")
         print("")
 
-    return tgt_tokens
+    return output

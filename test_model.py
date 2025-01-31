@@ -11,10 +11,14 @@ from train import load_checkpoint
 from validate import validate
 from vocab import load_vocab, output_to_text
 
+# RESULTS
+# - embedding_fix:
+#    - Greedy BLEU: 22.24
+#    - Beam BLEU: 22.42
 
 def main() -> None:
     # Load shared vocabulary
-    wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
+    # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
     shared_vocab = load_vocab("local/vocab_shared.pkl")
     print(f"Shared vocab size: {len(shared_vocab)}")
     device = hyperparameters.device
@@ -33,7 +37,7 @@ def main() -> None:
     ).to(device)
 
     if torch.cuda.is_available():
-        model = torch.compile(model)  # type: ignore
+        # model = torch.compile(model)  # type: ignore
         torch.set_float32_matmul_precision("high")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
@@ -42,8 +46,8 @@ def main() -> None:
     load_checkpoint(
         model,
         optimizer,
-        "checkpoints/checkpoint-175000.pth",
-        remove_orig_prefix=not torch.cuda.is_available(),
+        "checkpoint-175000.pth",
+        remove_orig_prefix=True,
     )
 
     # Set up the test data loader with the shared vocabulary
@@ -51,14 +55,14 @@ def main() -> None:
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
         vocab=shared_vocab,
-        batch_size=64,
+        batch_size=32,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
 
     # Validate the model and calculate BLEU score
-    bleu = validate(model, test_loader, None, aq_func=BLEUVariance())
+    bleu = validate(model, test_loader, False, aq_func=BLEUVariance())
     print(f"BLEU Score: {bleu}")
 
 

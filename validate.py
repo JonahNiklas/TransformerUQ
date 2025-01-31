@@ -7,7 +7,7 @@ import torch.utils.data as data
 from sacrebleu import corpus_bleu
 from tqdm import tqdm
 
-from beam_search import beam_search_batched
+from beam_search import beam_search_batched, beam_search_unbatched, greedy_search
 from generate import generate_autoregressivly
 from generate_with_uq import generate_autoregressivly_with_uq
 from vocab import output_to_text
@@ -41,9 +41,6 @@ def validate(
 
             all_hypotheses.extend(output)
             all_references.extend([output_to_text(ref) for ref in ground_truth.tolist()])
-
-            logger.warning("Validation on only one batch for now")
-            break
 
     if save_hypotheses_to_file:
         logger.info("Saving hypotheses to file")
