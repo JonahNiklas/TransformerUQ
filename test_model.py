@@ -58,7 +58,7 @@ def main() -> None:
     )
 
     # Validate the model and calculate BLEU score
-    bleu = validate(model, test_loader, aq_func=BLEUVariance())
+    bleu = validate(model, test_loader)
     print(f"BLEU Score on test_set: {bleu}")
 
 if __name__ == "__main__":
