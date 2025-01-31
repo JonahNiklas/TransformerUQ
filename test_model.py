@@ -37,17 +37,17 @@ def main() -> None:
     ).to(device)
 
     if torch.cuda.is_available():
-        # model = torch.compile(model)  # type: ignore
+        model = torch.compile(model)  # type: ignore
         torch.set_float32_matmul_precision("high")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
     # Load the checkpoint
     load_checkpoint(
-        model,
-        optimizer,
-        "checkpoint-175000.pth",
-        remove_orig_prefix=True,
+        model, 
+        optimizer, 
+        "checkpoints/checkpoint-175000.pth",
+        remove_orig_prefix=not torch.cuda.is_available()
     )
 
     # Set up the test data loader with the shared vocabulary
@@ -61,10 +61,23 @@ def main() -> None:
         max_len=hyperparameters.transformer.max_len,
     )
 
+    test_ood_loader = get_data_loader(
+        src_file="local/data/test_ood/bpe_test_ood.nl",
+        tgt_file="local/data/test_ood/bpe_test_ood.en",
+        vocab=shared_vocab,
+        batch_size=hyperparameters.training.batch_size,
+        add_bos_eos=True,
+        shuffle=False,
+        max_len=hyperparameters.transformer.max_len,
+    )
     # Validate the model and calculate BLEU score
-    bleu = validate(model, test_loader, False, aq_func=BLEUVariance())
-    print(f"BLEU Score: {bleu}")
-
+    bleu, avg_uq = validate(model, test_loader, None,aq_func=BLEUVariance())
+    print(f"BLEU Score on test_set: {bleu}")
+    print(f"Average UQ on test_set: {avg_uq}")
+    
+    bleu, avg_uq = validate(model, test_ood_loader, None,aq_func=BLEUVariance())
+    print(f"BLEU Score on test_ood: {bleu}")
+    print(f"Average UQ on test_ood: {avg_uq}")
 
 if __name__ == "__main__":
     main()

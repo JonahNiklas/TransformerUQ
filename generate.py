@@ -16,7 +16,6 @@ def generate_autoregressivly(
     print_ex: int,
 ) -> List[str]:
     model.eval()
-    device = next(model.parameters()).device
     vocab = load_vocab(constants.file_paths.vocab)
     batch_size = src_tokens.size(0)
     max_len = hyperparameters.transformer.max_len

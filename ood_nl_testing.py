@@ -1,4 +1,6 @@
+from constants import constants
 from hyperparameters import hyperparameters
+from models.transformer_pytorch import TransformerPyTorch
 from vocab import PAD_TOKEN, load_vocab
 from dataloader import get_data_loader
 from models.transformer import Transformer
@@ -7,15 +9,13 @@ import torch.nn as nn
 from validate import validate
 
 def main() -> None:
-    de_vocab = load_vocab("local/vocab_de.pkl")
-    en_vocab = load_vocab("local/vocab_en.pkl")
+    vocab = load_vocab(constants.file_paths.vocab)
 
     test_ood_loader = get_data_loader(
         src_file="local/data/test_ood/bpe_test_ood.nl",
         tgt_file="local/data/test_ood/bpe_test_ood.en",
-        src_vocab=de_vocab,
-        tgt_vocab=en_vocab,
-        batch_size=64,
+        vocab=vocab,
+        batch_size=hyperparameters.training.batch_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -23,9 +23,8 @@ def main() -> None:
 
     # Load model model weights from checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = Transformer(
-        vocab_size=len(de_vocab),
-        tgt_vocab_size=len(en_vocab),
+    model: nn.Module = TransformerPyTorch(
+        vocab_size=len(vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
@@ -33,15 +32,15 @@ def main() -> None:
         num_decoder_layers=hyperparameters.transformer.num_hidden_layers,
         dropout=hyperparameters.transformer.dropout,
         max_len=hyperparameters.transformer.max_len,
-    )
+    ).to(device)
 
     model.to(device)
 
-    checkpoint_to_load = 2000
+    checkpoint_to_load = 175000
     model.load_state_dict(torch.load(f"checkpoints/checkpoint-{checkpoint_to_load}.pth")["model_state_dict"])
 
     # Validate model on OOD data
-    criterion = nn.CrossEntropyLoss(ignore_index=en_vocab.token_to_id(PAD_TOKEN))
+    criterion = nn.CrossEntropyLoss(ignore_index=vocab.token_to_id(PAD_TOKEN))
     validate(model, test_ood_loader, criterion)
 
 
