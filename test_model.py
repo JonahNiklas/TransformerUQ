@@ -71,11 +71,11 @@ def main() -> None:
         max_len=hyperparameters.transformer.max_len,
     )
     # Validate the model and calculate BLEU score
-    bleu, avg_uq = validate(model, test_loader, None,aq_func=BLEUVariance())
+    bleu, avg_uq = validate(model, test_loader, aq_func=BLEUVariance())
     print(f"BLEU Score on test_set: {bleu}")
     print(f"Average UQ on test_set: {avg_uq}")
     
-    bleu, avg_uq = validate(model, test_ood_loader, None,aq_func=BLEUVariance())
+    bleu, avg_uq = validate(model, test_ood_loader, aq_func=BLEUVariance())
     print(f"BLEU Score on test_ood: {bleu}")
     print(f"Average UQ on test_ood: {avg_uq}")
 

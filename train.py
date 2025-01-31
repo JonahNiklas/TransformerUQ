@@ -64,7 +64,7 @@ def train(
                 }, step=step_num)
 
                 if step_num % validate_every == 0:
-                    bleu = validate(model, test_loader, criterion)
+                    bleu = validate(model, test_loader)
                     # wandb.log({"val_loss": val_loss, "bleu": bleu}, step=step_num)
                     wandb.log({"bleu": bleu}, step=step_num)
                     os.makedirs("local/checkpoints", exist_ok=True)
