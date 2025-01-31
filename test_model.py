@@ -12,7 +12,7 @@ from vocab import load_vocab
 
 def main() -> None:
     # Load shared vocabulary
-    wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
+    # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
     shared_vocab = load_vocab("local/vocab_shared.pkl")
     print(f"Shared vocab size: {len(shared_vocab)}")
     device = hyperparameters.device
@@ -49,7 +49,7 @@ def main() -> None:
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
         vocab=shared_vocab,
-        batch_size=124,
+        batch_size=hyperparameters.training.batch_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,

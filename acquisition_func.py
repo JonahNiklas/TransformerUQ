@@ -45,7 +45,7 @@ class BeamScore(AcquisitionFunction):
 #         return torch.log(probability_sum) / _length_penalty(output, self.alpha)
 
 class BLEUVariance(AcquisitionFunction):
-    def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
+    def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
 
     def __call__(self, output: Union[List[str], List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
@@ -57,7 +57,7 @@ class BLEUVariance(AcquisitionFunction):
                 for j in range(i + 1, self.num_inferences):
                     bleu_dist = sacrebleu.sentence_bleu(output[b][i], [output[b][j]]).score
                     bleu_distances[b] += (1 - bleu_dist / 100) ** 2
-        return bleu_distances
+        return bleu_distances/self.num_inferences
         
 def BLEU_mean_output_batch(outputs: List[List[str]]) -> List[str]:
     """
@@ -74,8 +74,8 @@ def BLEU_mean_output_batch(outputs: List[List[str]]) -> List[str]:
             bleu_distance_sum = float(0)
             for j in range(n):
                 if i != j:
-                    bleu_distance_sum += sacrebleu.corpus_bleu(batch_outputs[i], [batch_outputs[j]]).score
-                    bleu_distance_sum += sacrebleu.corpus_bleu(batch_outputs[j], [batch_outputs[i]]).score
+                    bleu_distance_sum += 1-sacrebleu.corpus_bleu([batch_outputs[i]], [[batch_outputs[j]]]).score/100
+                    bleu_distance_sum += 1- sacrebleu.corpus_bleu([batch_outputs[j]], [[batch_outputs[i]]]).score/100
                 if bleu_distance_sum > min_bleu_distance:
                     break
             if bleu_distance_sum < min_bleu_distance:
