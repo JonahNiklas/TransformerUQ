@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Tuple
 import torch
 import torch.nn as nn
 import torch.utils.data as data
@@ -22,10 +23,11 @@ def validate(
     criterion: nn.Module | None,
     save_hypotheses_to_file: bool = False,
     aq_func: AcquisitionFunction = BLEUVariance(),
-) -> float:
+) -> Tuple[float, torch.Tensor]:
     total_loss = 0
     all_references: list[str] = []
     all_hypotheses: list[str] = []
+    all_uq: list[torch.Tensor] = []
 
     logger.debug("Started validating models")
 
@@ -36,14 +38,14 @@ def validate(
             src_tokens, ground_truth = batch
             src_tokens, ground_truth = src_tokens.to(device), ground_truth.to(device)
             
-            output = generate_autoregressivly_with_uq(model, src_tokens, ground_truth, print_ex=1, aq_func=aq_func)
-
+            output,uq = generate_autoregressivly_with_uq(model, src_tokens, ground_truth, print_ex=1, aq_func=aq_func)
+            all_uq.extend(uq)
             all_hypotheses.extend(output)
             all_references.extend([output_to_text(ref) for ref in ground_truth.tolist()])
             # loss = criterion(output, tgt_tokens) # cannot calculate loss after taking argmax
             # total_loss += loss.item()
-            logger.warning("Validation on only one batch for now")
-            break
+            # logger.warning("Validation on only one batch for now")
+            # break
 
     if save_hypotheses_to_file:
         logger.info("Saving hypotheses to file")
@@ -57,8 +59,9 @@ def validate(
     # print(f"Validation Loss: {avg_loss} | BLEU Score: {bleu_score}")
     logger.info(f"Validation BLEU Score: {bleu_score}")
 
+    avg_uq = torch.stack(all_uq).mean()
     # return bleu_score, avg_loss
-    return bleu_score
+    return bleu_score, avg_uq
 
 
 if __name__ == "__main__":

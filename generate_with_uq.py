@@ -5,14 +5,14 @@ from vocab import BOS_TOKEN, load_vocab, output_to_text
 from acquisition_func import AcquisitionFunction, BLEU_mean_output_batch
 from hyperparameters import hyperparameters
 from constants import constants
-from typing import List
+from typing import List, Tuple
 
 def _enable_test_time_dropout(model: nn.Module) -> None:
     for module in model.modules():
         if isinstance(module, nn.Dropout):
             module.train()
 
-def generate_autoregressivly_with_uq(model: nn.Module, src_tokens: torch.Tensor, ground_truth: torch.Tensor, print_ex: int, aq_func: AcquisitionFunction) -> List[str]:
+def generate_autoregressivly_with_uq(model: nn.Module, src_tokens: torch.Tensor, ground_truth: torch.Tensor, print_ex: int, aq_func: AcquisitionFunction) -> Tuple[List[str], torch.Tensor]:
     model.eval()
     device = hyperparameters.device
     vocab_shared = load_vocab(constants.file_paths.vocab)
@@ -94,5 +94,5 @@ def generate_autoregressivly_with_uq(model: nn.Module, src_tokens: torch.Tensor,
             print("")
 
     if aq_func.multiple_inference:
-        return BLEU_mean_output_batch(text_output_n)
-    return text_output
+        return BLEU_mean_output_batch(text_output_n), uq
+    return text_output, uq
