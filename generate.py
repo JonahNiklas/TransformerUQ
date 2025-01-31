@@ -6,7 +6,7 @@ from hyperparameters import hyperparameters
 from vocab import  BOS_TOKEN, load_vocab, output_to_text
 from constants import constants
 
-def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_ex:int) -> torch.Tensor:
+def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, ground_truth: torch.Tensor, print_ex:int) -> torch.Tensor:
     model.eval()
     device = next(model.parameters()).device
     vocab = load_vocab(constants.file_paths.vocab)
@@ -36,8 +36,8 @@ def generate_autoregressivly(model: nn.Module, src_tokens: torch.Tensor, print_e
             print(f"Example {i+1} in batch")
             print(f"Source: {output_to_text(src_tokens[i].tolist(), lang='de')}")
             print(f"Source tokens: {src_tokens[i].tolist()}")
-            print(f"Ground truth: {output_to_text(tgt_tokens[i].tolist())}")
-            print(f"Ground truth tokens: {tgt_tokens[i].tolist()}")
+            print(f"Ground truth: {output_to_text(ground_truth[i].tolist())}")
+            print(f"Ground truth tokens: {ground_truth[i].tolist()}")
             print(f"Generated text: {output_to_text(tgt_tokens[i].tolist())}")
             print(f"Generated tokens: {tgt_tokens[i].tolist()}")
             print("")
