@@ -22,6 +22,7 @@ def validate_uq(
     test_data: data.DataLoader,
     save_hypotheses_to_file: bool = False,
     aq_func: AcquisitionFunction = BLEUVariance(),
+    num_batches_to_validate_on: int | None = None,
 ) -> Tuple[float, torch.Tensor, list[Tuple[str,str, torch.Tensor]]]:
     total_loss = 0
     all_references: list[str] = []
@@ -42,6 +43,10 @@ def validate_uq(
             all_hypotheses.extend(output)
             all_references.extend([output_to_text(ref) for ref in ground_truth.tolist()])
 
+            if num_batches_to_validate_on is not None and i + 1 >= num_batches_to_validate_on:
+                logger.info(f"Only  validating on {num_batches_to_validate_on} batches, stopping")
+                break
+
     if save_hypotheses_to_file:
         logger.info("Saving hypotheses to file")
         with open("local/data/test/hypotheses.en", "w") as f:
@@ -54,9 +59,9 @@ def validate_uq(
 
     avg_uq = torch.stack(all_uq).mean()
     
-    flattened_uq = [uq_item for sublist in all_uq for uq_item in sublist]
-    hypothesis_uq_pairs = list(zip(all_hypotheses,all_references, flattened_uq))
-    return bleu_score, avg_uq, hypothesis_uq_pairs
+    flattened_uq: list[float] = [uq.item() for uq in all_uq]
+    hyp_ref_uq_pair = list(zip(all_hypotheses,all_references, flattened_uq))
+    return bleu_score, avg_uq, hyp_ref_uq_pair
 
 
 if __name__ == "__main__":

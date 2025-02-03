@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 from sympy import plot
 import torch
 from torch import nn
@@ -54,7 +55,7 @@ def main() -> None:
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
         vocab=shared_vocab,
-        batch_size=32,
+        batch_size=hyperparameters.training.batch_size // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -64,27 +65,53 @@ def main() -> None:
         src_file="local/data/test_ood/bpe_test_ood.nl",
         tgt_file="local/data/test_ood/bpe_test_ood.en",
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size,
+        batch_size=hyperparameters.training.batch_size // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
     # Validate the model and calculate BLEU score
-    bleu, avg_uq,hypothesis_uq_pairs = validate_uq(model, test_loader, aq_func=BLEUVariance())
+    cache_file = "local/results/validation_cache.pth"
+    if os.path.exists(cache_file):
+        print("Loading cached validation results...")
+        cache = torch.load(cache_file)
+        bleu = cache["bleu"]
+        avg_uq = cache["avg_uq"]
+        hyp_ref_uq_pair = cache["hyp_ref_uq_pair"]
+    else:
+        bleu, avg_uq, hyp_ref_uq_pair = validate_uq(model, test_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
+        cache_validation_results(bleu, avg_uq, hyp_ref_uq_pair, "validation_cache")
+    
+
+
+    cache_file = "local/results/validation_cache_ood.pth"
+    if os.path.exists(cache_file):
+        print("Loading cached validation ood results...")
+        cache = torch.load(cache_file)
+        bleu_ood = cache["bleu"]
+        avg_uq_ood = cache["avg_uq"]
+        hyp_ref_uq_pair_ood = cache["hyp_ref_uq_pair"]
+    else:
+        bleu, avg_uq, hyp_ref_uq_pair = validate_uq(model, test_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
+        cache_validation_results(bleu, avg_uq, hyp_ref_uq_pair, "validation_cache_ood")
+    bleu_ood, avg_uq_ood,hyp_ref_uq_pair_ood = validate_uq(model, test_ood_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
+    
     print(f"BLEU Score on test_set: {bleu}")
     print(f"Average UQ on test_set: {avg_uq}")
     
-
-    bleu_ood, avg_uq_ood,hypothesis_uq_pairs_ood = validate_uq(model, test_ood_loader, aq_func=BLEUVariance())
     print(f"BLEU Score on test_ood: {bleu_ood}")
     print(f"Average UQ on test_ood: {avg_uq_ood}")
 
     os.makedirs("local/results", exist_ok=True)
 
-    plot_data_retained_curve(hypothesis_uq_pairs, "local/results/hypotheses_uq_pairs.csv")
-    plot_data_retained_curve(hypothesis_uq_pairs_ood, "local/results/hypotheses_uq_pairs_ood.csv")
+    plot_data_retained_curve(hyp_ref_uq_pair, "local/results/hypotheses_uq_pairs.png")
+    plot_data_retained_curve(hyp_ref_uq_pair_ood, "local/results/hypotheses_uq_pairs_ood.png")
 
-    plot_uq_histogram(hypothesis_uq_pairs,hypothesis_uq_pairs_ood, "local/results/uq_histogram.csv")
+    plot_uq_histogram(hyp_ref_uq_pair,hyp_ref_uq_pair_ood, "local/results/uq_histogram.png")
 
+
+def cache_validation_results(bleu: float, avg_uq: float, hyp_ref_uq_pair: list[Tuple[str,str, torch.Tensor]], filename: str) -> None:
+    os.makedirs("local/results", exist_ok=True)
+    torch.save({"bleu": bleu, "avg_uq": avg_uq, "hyp_ref_uq_pair": hyp_ref_uq_pair}, f"local/results/{filename}.pth")
 if __name__ == "__main__":
     main()
