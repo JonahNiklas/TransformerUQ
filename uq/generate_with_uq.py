@@ -19,11 +19,11 @@ def generate_autoregressivly_with_uq(
     vocab_shared = load_vocab(constants.file_paths.vocab)
     batch_size = src_tokens.size(0)
     max_len = hyperparameters.transformer.max_len
-
+    text_output: Union[List[str], List[List[str]]] | None = None
     if aq_func.multiple_inference:
         text_output, logits = _generate_multiple_inference(model, src_tokens, vocab_shared, batch_size, max_len)
     else:
-        text_output1, logits = _generate_single_inference(model, src_tokens, vocab_shared, batch_size, max_len)
+        text_output, logits = _generate_single_inference(model, src_tokens, vocab_shared, batch_size, max_len)
 
     uq = aq_func.__call__(text_output, logits)
 
@@ -31,7 +31,7 @@ def generate_autoregressivly_with_uq(
     if aq_func.multiple_inference:
         return BLEU_mean_output_batch(text_output), uq
     else:
-        return text_output1, uq
+        return text_output, uq
 
 def _generate_single_inference(
     model: nn.Module,

@@ -82,6 +82,7 @@ def main() -> None:
         bleu, avg_uq, hyp_ref_uq_pair = validate_uq(model, test_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
         cache_validation_results(bleu, avg_uq, hyp_ref_uq_pair, "validation_cache")
     
+    bleu_bs, avg_uq_bs, hyp_ref_uq_pair_bs = validate_uq(model, test_loader, aq_func=BeamScore(), num_batches_to_validate_on=None)
 
 
     cache_file = "local/results/validation_cache_ood.pth"
@@ -92,9 +93,10 @@ def main() -> None:
         avg_uq_ood = cache["avg_uq"]
         hyp_ref_uq_pair_ood = cache["hyp_ref_uq_pair"]
     else:
-        bleu, avg_uq, hyp_ref_uq_pair = validate_uq(model, test_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
+        bleu_ood, avg_uq_ood, hyp_ref_uq_pair_ood = validate_uq(model, test_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
         cache_validation_results(bleu, avg_uq, hyp_ref_uq_pair, "validation_cache_ood")
-    bleu_ood, avg_uq_ood,hyp_ref_uq_pair_ood = validate_uq(model, test_ood_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
+    
+    bleu_ood_bs, avg_uq_ood_bs,hyp_ref_uq_pair_ood_bs = validate_uq(model, test_ood_loader, aq_func=BeamScore(), num_batches_to_validate_on=None)
     
     print(f"BLEU Score on test_set: {bleu}")
     print(f"Average UQ on test_set: {avg_uq}")
@@ -104,11 +106,11 @@ def main() -> None:
 
     os.makedirs("local/results", exist_ok=True)
 
-    plot_data_retained_curve(hyp_ref_uq_pair, "local/results/hypotheses_uq_pairs.png")
-    plot_data_retained_curve(hyp_ref_uq_pair_ood, "local/results/hypotheses_uq_pairs_ood.png")
+    plot_data_retained_curve([hyp_ref_uq_pair,hyp_ref_uq_pair_bs],methods=["BLUEvar","BeamScore"], save_path="local/results/hypotheses_uq_pairs.png")
+    plot_data_retained_curve([hyp_ref_uq_pair_ood,hyp_ref_uq_pair_ood_bs], methods=["BLUEvar","BeamScore"],save_path="local/results/hypotheses_uq_pairs_ood.png")
 
-    plot_uq_histogram(hyp_ref_uq_pair,hyp_ref_uq_pair_ood, "local/results/uq_histogram.png")
-
+    plot_uq_histogram(hyp_ref_uq_pair,hyp_ref_uq_pair_ood, method="BLUEvar",save_path="local/results/uq_histogram_bluevar.png")
+    plot_uq_histogram(hyp_ref_uq_pair_bs,hyp_ref_uq_pair_ood_bs, method="BeamScore",save_path="local/results/uq_histogram_bs.png")
 
 def cache_validation_results(bleu: float, avg_uq: float, hyp_ref_uq_pair: List[Tuple[str,str, torch.Tensor]], filename: str) -> None:
     os.makedirs("local/results", exist_ok=True)
