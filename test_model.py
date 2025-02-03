@@ -2,13 +2,19 @@ import torch
 from torch import nn
 
 import wandb
-from acquisition_func import BeamScore,BLEUVariance
+from acquisition_func import BeamScore, BLEUVariance
+from beam_search import beam_search_unbatched, beam_search_batched
 from dataloader import get_data_loader
 from hyperparameters import hyperparameters
 from models.transformer_pytorch import TransformerPyTorch
 from train import load_checkpoint
 from validate import validate
-from vocab import load_vocab
+from vocab import load_vocab, output_to_text
+
+# RESULTS
+# - embedding_fix:
+#    - Greedy BLEU: 22.24
+#    - Beam BLEU: 22.42
 
 def main() -> None:
     # Load shared vocabulary
@@ -49,7 +55,7 @@ def main() -> None:
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size,
+        batch_size=32,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -65,11 +71,11 @@ def main() -> None:
         max_len=hyperparameters.transformer.max_len,
     )
     # Validate the model and calculate BLEU score
-    bleu, avg_uq = validate(model, test_loader, None,aq_func=BLEUVariance())
+    bleu, avg_uq = validate(model, test_loader, aq_func=BLEUVariance())
     print(f"BLEU Score on test_set: {bleu}")
     print(f"Average UQ on test_set: {avg_uq}")
     
-    bleu, avg_uq = validate(model, test_ood_loader, None,aq_func=BLEUVariance())
+    bleu, avg_uq = validate(model, test_ood_loader, aq_func=BLEUVariance())
     print(f"BLEU Score on test_ood: {bleu}")
     print(f"Average UQ on test_ood: {avg_uq}")
 

@@ -41,7 +41,7 @@ def main() -> None:
 
     # Validate model on OOD data
     criterion = nn.CrossEntropyLoss(ignore_index=vocab.token_to_id(PAD_TOKEN))
-    validate(model, test_ood_loader, criterion)
+    validate(model, test_ood_loader)
 
 
 if __name__ == "__main__":
