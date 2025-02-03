@@ -119,7 +119,7 @@ def print_sample_sentences(batch_size: int, src_tokens: torch.Tensor, ground_tru
     for i in random_indices:
         
         print(f"Example {i+1} in batch")
-        print(f"Source: {output_to_text(src_tokens[i], lang='de')}")
+        print(f"Source: {output_to_text(src_tokens[i].tolist(), lang='de')}")
         print(f"Ground truth: {output_to_text(ground_truth[i].tolist())}")
         # print(f"Source tokens: {src_tokens[i, 0].tolist()}")
         if aq_func.multiple_inference:

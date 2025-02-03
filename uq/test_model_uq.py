@@ -1,5 +1,5 @@
 import os
-from typing import Tuple
+from typing import List, Tuple
 from sympy import plot
 import torch
 from torch import nn
@@ -110,7 +110,7 @@ def main() -> None:
     plot_uq_histogram(hyp_ref_uq_pair,hyp_ref_uq_pair_ood, "local/results/uq_histogram.png")
 
 
-def cache_validation_results(bleu: float, avg_uq: float, hyp_ref_uq_pair: list[Tuple[str,str, torch.Tensor]], filename: str) -> None:
+def cache_validation_results(bleu: float, avg_uq: float, hyp_ref_uq_pair: List[Tuple[str,str, torch.Tensor]], filename: str) -> None:
     os.makedirs("local/results", exist_ok=True)
     torch.save({"bleu": bleu, "avg_uq": avg_uq, "hyp_ref_uq_pair": hyp_ref_uq_pair}, f"local/results/{filename}.pth")
 if __name__ == "__main__":

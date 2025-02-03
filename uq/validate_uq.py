@@ -23,7 +23,7 @@ def validate_uq(
     save_hypotheses_to_file: bool = False,
     aq_func: AcquisitionFunction = BLEUVariance(),
     num_batches_to_validate_on: int | None = None,
-) -> Tuple[float, torch.Tensor, list[Tuple[str,str, torch.Tensor]]]:
+) -> Tuple[float, torch.Tensor, list[Tuple[str,str, float]]]:
     total_loss = 0
     all_references: list[str] = []
     all_hypotheses: list[str] = []
