@@ -89,8 +89,8 @@ def _generate_multiple_inference(
 
     _enable_test_time_dropout(model)
     with torch.no_grad():
-        for n in range(num_inferences):
-            for t in tqdm(range(1, max_len), desc="Generating tokens"):
+        for n in tqdm(range(num_inferences), desc="Generating inferences"):
+            for t in range(1, max_len):
                 output = model(src_tokens[:, n, :], tgt_tokens[:, n, :])
                 assert output.shape == (batch_size, max_len, len(vocab_shared))
                 logits[:, n, t] = output[:, t - 1, :].max(dim=1).values
@@ -119,7 +119,6 @@ def print_sample_sentences(batch_size: int, src_tokens: torch.Tensor, ground_tru
     for i in random_indices:
         
         print(f"Example {i+1} in batch")
-        print(src_tokens[i])
         print(f"Source: {output_to_text(src_tokens[i], lang='de')}")
         print(f"Ground truth: {output_to_text(ground_truth[i].tolist())}")
         # print(f"Source tokens: {src_tokens[i, 0].tolist()}")
