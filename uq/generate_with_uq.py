@@ -28,7 +28,6 @@ def generate_autoregressivly_with_uq(
     uq = aq_func.__call__(text_output, logits)
 
     print_sample_sentences(batch_size, src_tokens, ground_truth, text_output, uq, aq_func, print_ex)
-
     if aq_func.multiple_inference:
         return BLEU_mean_output_batch(text_output), uq
     else:
@@ -62,7 +61,6 @@ def _generate_single_inference(
                     tgt_tokens[i, j + 1 :] = vocab_shared.token_to_id("<pad>")
                     break
             text_output[i] = output_to_text(tgt_tokens[i].tolist())
-
     return text_output, logits
 
 def _generate_multiple_inference(
@@ -106,7 +104,6 @@ def _generate_multiple_inference(
                         tgt_tokens[i, n, j + 1 :] = vocab_shared.token_to_id("<pad>")
                         break
                 text_output_n[i][n] = output_to_text(tgt_tokens[i, n].tolist())
-
     model.eval()
     return text_output_n, logits
 
@@ -120,12 +117,10 @@ def print_sample_sentences(batch_size: int, src_tokens: torch.Tensor, ground_tru
 
     random_indices = torch.randperm(batch_size)[:print_ex]
     for i in random_indices:
-        if aq_func.multiple_inference:
-            src = src_tokens[i, 0].tolist()
-        else:
-            src = src_tokens[i].tolist()
+        
         print(f"Example {i+1} in batch")
-        print(f"Source: {output_to_text(src, lang='de')}")
+        print(src_tokens[i])
+        print(f"Source: {output_to_text(src_tokens[i], lang='de')}")
         print(f"Ground truth: {output_to_text(ground_truth[i].tolist())}")
         # print(f"Source tokens: {src_tokens[i, 0].tolist()}")
         if aq_func.multiple_inference:
