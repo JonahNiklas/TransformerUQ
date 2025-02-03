@@ -1,11 +1,10 @@
-import torch
 from typing import List, Tuple
 import matplotlib.pyplot as plt
 from sacrebleu import corpus_bleu
 
-def plot_data_retained_curve(hyp_ref_uq_pairs: List[List[Tuple[str,str, float]]],methods: list[str],save_path: str) -> None:
+def plot_data_retained_curve(hyp_ref_uq_pairs: List[List[Tuple[str,str, float]]],methods: List[str],save_path: str) -> None:
     # Sort the hypothesis-UQ pairs by UQ value
-    bleu_scores = [[] for _ in range(len(hyp_ref_uq_pairs))]
+    bleu_scores: List[List[float]] = [[] for _ in range(len(hyp_ref_uq_pairs))]
     interval = 0.05
     for idx,hyp_ref_uq_pair in enumerate(hyp_ref_uq_pairs):
         hyp_ref_uq_pair.sort(key=lambda x: x[2])

@@ -19,19 +19,16 @@ def generate_autoregressivly_with_uq(
     vocab_shared = load_vocab(constants.file_paths.vocab)
     batch_size = src_tokens.size(0)
     max_len = hyperparameters.transformer.max_len
-    text_output: Union[List[str], List[List[str]]] | None = None
     if aq_func.multiple_inference:
-        text_output, logits = _generate_multiple_inference(model, src_tokens, vocab_shared, batch_size, max_len)
-    else:
-        text_output, logits = _generate_single_inference(model, src_tokens, vocab_shared, batch_size, max_len)
+        text_output_multiple, logits = _generate_multiple_inference(model, src_tokens, vocab_shared, batch_size, max_len)
+        uq = aq_func.__call__(text_output_multiple, logits)
+        print_sample_sentences(batch_size, src_tokens, ground_truth, text_output_multiple, uq, aq_func, print_ex)
+        return BLEU_mean_output_batch(text_output_multiple), uq
 
-    uq = aq_func.__call__(text_output, logits)
-
-    print_sample_sentences(batch_size, src_tokens, ground_truth, text_output, uq, aq_func, print_ex)
-    if aq_func.multiple_inference:
-        return BLEU_mean_output_batch(text_output), uq
-    else:
-        return text_output, uq
+    text_output_single, logits = _generate_single_inference(model, src_tokens, vocab_shared, batch_size, max_len)
+    uq = aq_func.__call__(text_output_single, logits)
+    print_sample_sentences(batch_size, src_tokens, ground_truth, text_output_single, uq, aq_func, print_ex)
+    return text_output_single, uq
 
 def _generate_single_inference(
     model: nn.Module,
