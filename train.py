@@ -67,10 +67,10 @@ def train(
                     bleu = validate(model, test_loader)
                     # wandb.log({"val_loss": val_loss, "bleu": bleu}, step=step_num)
                     wandb.log({"bleu": bleu}, step=step_num)
+                    model.train()
                 if step_num % hyperparameters.training.save_every == 0:
                     os.makedirs("local/checkpoints", exist_ok=True)
                     save_checkpoint(
                         model, optimizer, f"local/checkpoints/checkpoint-{step_num}.pth"
                     )
                     wandb.save(f"local/checkpoints/checkpoint-{step_num}.pth")
-                    model.train()
