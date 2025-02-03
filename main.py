@@ -189,7 +189,6 @@ def main() -> None:
         scheduler,
         criterion,
         max_steps=hyperparameters.training.max_steps,
-        validate_every=hyperparameters.training.validate_every,
     )
 
 

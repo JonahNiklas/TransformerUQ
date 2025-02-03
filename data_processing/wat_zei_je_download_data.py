@@ -203,3 +203,42 @@ for root, dirs, files in os.walk(data_directory, topdown=False):
             os.rmdir(dir_path)
 
 print("Data downloaded and merged successfully")
+
+# %%
+# Ensure test_ood is the same length as test
+test_file_path = os.path.join(data_directory, "test", "test.en")
+test_ood_en_file_path = os.path.join(data_directory, "test_ood", "test_ood.en")
+test_ood_nl_file_path = os.path.join(data_directory, "test_ood", "test_ood.nl")
+
+with open(test_file_path, "r", encoding="utf-8") as test_f:
+    test_lines = test_f.readlines()
+
+with open(test_ood_en_file_path, "r", encoding="utf-8") as test_ood_en_f:
+    test_ood_en_lines = test_ood_en_f.readlines()
+
+with open(test_ood_nl_file_path, "r", encoding="utf-8") as test_ood_nl_f:
+    test_ood_nl_lines = test_ood_nl_f.readlines()
+
+min_length = min(len(test_lines), len(test_ood_en_lines), len(test_ood_nl_lines))
+
+test_ood_en_lines_short = test_ood_en_lines[:min_length]
+test_ood_nl_lines_short = test_ood_nl_lines[:min_length]
+
+with open(test_ood_en_file_path, "w", encoding="utf-8") as test_ood_en_f:
+    test_ood_en_f.writelines(test_ood_en_lines_short)
+
+with open(test_ood_nl_file_path, "w", encoding="utf-8") as test_ood_nl_f:
+    test_ood_nl_f.writelines(test_ood_nl_lines_short)
+
+# Write the old test_ood files as test_ood_long.en and test_ood_long.nl
+test_ood_long_en_file_path = os.path.join(data_directory, "test_ood", "test_ood_long.en")
+test_ood_long_nl_file_path = os.path.join(data_directory, "test_ood", "test_ood_long.nl")
+
+with open(test_ood_long_en_file_path, "w", encoding="utf-8") as test_ood_long_en_f:
+    test_ood_long_en_f.writelines(test_ood_en_lines)
+
+with open(test_ood_long_nl_file_path, "w", encoding="utf-8") as test_ood_long_nl_f:
+    test_ood_long_nl_f.writelines(test_ood_nl_lines)
+
+print("Test OOD set adjusted to the same length as test set")
+# %%

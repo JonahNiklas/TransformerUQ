@@ -1,3 +1,5 @@
+import os
+from sympy import plot
 import torch
 from torch import nn
 
@@ -7,6 +9,7 @@ from beam_search import beam_search_unbatched, beam_search_batched
 from data_processing.dataloader import get_data_loader
 from hyperparameters import hyperparameters
 from models.transformer_pytorch import TransformerPyTorch
+from uq.plot_uq import plot_data_retained_curve, plot_uq_histogram
 from utils.checkpoints import load_checkpoint
 from uq.validate_uq import validate_uq
 from data_processing.vocab import load_vocab, output_to_text
@@ -67,13 +70,21 @@ def main() -> None:
         max_len=hyperparameters.transformer.max_len,
     )
     # Validate the model and calculate BLEU score
-    bleu, avg_uq = validate_uq(model, test_loader, aq_func=BLEUVariance())
+    bleu, avg_uq,hypothesis_uq_pairs = validate_uq(model, test_loader, aq_func=BLEUVariance())
     print(f"BLEU Score on test_set: {bleu}")
     print(f"Average UQ on test_set: {avg_uq}")
     
-    bleu, avg_uq = validate_uq(model, test_ood_loader, aq_func=BLEUVariance())
-    print(f"BLEU Score on test_ood: {bleu}")
-    print(f"Average UQ on test_ood: {avg_uq}")
+
+    bleu_ood, avg_uq_ood,hypothesis_uq_pairs_ood = validate_uq(model, test_ood_loader, aq_func=BLEUVariance())
+    print(f"BLEU Score on test_ood: {bleu_ood}")
+    print(f"Average UQ on test_ood: {avg_uq_ood}")
+
+    os.makedirs("local/results", exist_ok=True)
+
+    plot_data_retained_curve(hypothesis_uq_pairs, "local/results/hypotheses_uq_pairs.csv")
+    plot_data_retained_curve(hypothesis_uq_pairs_ood, "local/results/hypotheses_uq_pairs_ood.csv")
+
+    plot_uq_histogram(hypothesis_uq_pairs,hypothesis_uq_pairs_ood, "local/results/uq_histogram.csv")
 
 if __name__ == "__main__":
     main()

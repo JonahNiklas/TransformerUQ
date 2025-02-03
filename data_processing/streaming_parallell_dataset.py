@@ -4,7 +4,7 @@ from torch.utils.data import Dataset, DataLoader
 import os
 import logging
 
-from vocab import Vocabulary
+from data_processing.vocab import Vocabulary
 
 logger = logging.getLogger(__name__)
 
