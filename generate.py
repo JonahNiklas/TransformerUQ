@@ -4,35 +4,23 @@ import torch.nn as nn
 from tqdm import tqdm
 
 from hyperparameters import hyperparameters
-from vocab import BOS_TOKEN, load_vocab, output_to_text
+from data_processing.vocab import BOS_TOKEN, Vocabulary, load_vocab, output_to_text
 from constants import constants
 from beam_search import BeamSearchFunction
+from utils.print_random_generated_sentences import print_random_generated_sentences
 
 def generate_autoregressivly(
     model: nn.Module,
     src_tokens: torch.Tensor,
     ground_truth: torch.Tensor,
     search_method: BeamSearchFunction,
+    vocab: Vocabulary,
     print_ex: int,
 ) -> List[str]:
     model.eval()
-    vocab = load_vocab(constants.file_paths.vocab)
+    tgt_tokens = search_method(model, src_tokens, vocab)
     batch_size = src_tokens.size(0)
-    max_len = hyperparameters.transformer.max_len
-    
-    tgt_tokens = search_method(model, src_tokens, max_len, vocab, 4)
+    output_sentences = [output_to_text(tgt_tokens[i].tolist()) for i in range(batch_size)]
+    print_random_generated_sentences(src_tokens, ground_truth, tgt_tokens, print_ex)
 
-    output = [output_to_text(tgt_tokens[i].tolist()) for i in range(batch_size)]
-
-    random_indices = torch.randperm(batch_size)[:print_ex]
-    for i in random_indices:
-        print(f"Example {i+1} in batch")
-        print(f"Source: {output_to_text(src_tokens[i].tolist(), lang='de')}")
-        print(f"Source tokens: {src_tokens[i].tolist()}")
-        print(f"Ground truth: {output_to_text(ground_truth[i].tolist())}")
-        print(f"Ground truth tokens: {ground_truth[i].tolist()}")
-        print(f"Generated text: {output_to_text(tgt_tokens[i].tolist())}")
-        print(f"Generated tokens: {tgt_tokens[i].tolist()}")
-        print("")
-
-    return output
+    return output_sentences

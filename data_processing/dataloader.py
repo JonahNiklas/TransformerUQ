@@ -1,5 +1,5 @@
 from tqdm import tqdm
-from collate import collate_fn
+from data_processing.collate import collate_fn
 from hyperparameters import hyperparameters
 from streaming_parallell_dataset import StreamingParallelDataset
 from vocab import PAD_TOKEN, Vocabulary, load_vocab, output_to_text

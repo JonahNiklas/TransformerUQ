@@ -3,23 +3,23 @@ from typing import Callable, List, Tuple, cast
 import torch
 import torch.nn as nn
 
-from vocab import BOS_TOKEN, EOS_TOKEN, PAD_TOKEN, Vocabulary
+from data_processing.vocab import BOS_TOKEN, EOS_TOKEN, PAD_TOKEN, Vocabulary
 from tqdm import tqdm
 import torch.nn.functional as F
+
+from hyperparameters import hyperparameters
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 BeamSearchFunction = Callable[
-    [nn.Module, torch.Tensor, int, Vocabulary, int], torch.Tensor
+    [nn.Module, torch.Tensor, Vocabulary], torch.Tensor
 ]
 
 
 def beam_search_batched(
     model: nn.Module,
     src_tokens: torch.Tensor,
-    max_len: int,
     vocab: Vocabulary,
-    beam_size: int = 4,
 ) -> torch.Tensor:
     """
     Performs a batched beam search on a Transformer-based model.
@@ -40,6 +40,8 @@ def beam_search_batched(
     """
     batch_size = src_tokens.size(0)
     src_tokens = src_tokens.to(device)
+    beam_size = hyperparameters.beam_search.beam_size
+    max_len = hyperparameters.transformer.max_len
 
     # 2) Prepare beams
     #    Each beam is a partial hypothesis of shape (batch_size, beam_size, current_tgt_len).
@@ -168,7 +170,7 @@ def beam_search_batched(
     for b in range(batch_size):
         if end_symbol in output_sequences[b]:
             output_sequences[b] = output_sequences[b][
-                : output_sequences[b].index(end_symbol)
+                : output_sequences[b].index(end_symbol) + 1
             ]
 
     # Pad output sequences to max_len
@@ -189,10 +191,10 @@ def beam_search_batched(
 def beam_search_unbatched(
     model: nn.Module,
     src_tokens: torch.Tensor,
-    max_len: int,
     vocab: Vocabulary,
-    beam_size: int = 4,
 ) -> torch.Tensor:
+    max_len = hyperparameters.transformer.max_len
+    beam_size = hyperparameters.beam_search.beam_size
     model.eval()
     with torch.no_grad():
         batch_size = src_tokens.size(0)
@@ -266,10 +268,9 @@ def beam_search_unbatched(
 def greedy_search(
     model: nn.Module,
     src_tokens: torch.Tensor,
-    max_len: int,
     vocab: Vocabulary,
-    _: int,
 ) -> torch.Tensor:
+    max_len = hyperparameters.transformer.max_len
     model.eval()
     with torch.no_grad():
         batch_size = src_tokens.size(0)

@@ -1,28 +1,28 @@
 import torch
-import wandb
 from torch import nn
 
-from beam_search import beam_search_batched, beam_search_unbatched
-from constants import constants
+import wandb
+from uq.acquisition_func import BeamScore, BLEUVariance
+from beam_search import beam_search_unbatched, beam_search_batched
 from data_processing.dataloader import get_data_loader
-from data_processing.vocab import load_vocab, output_to_text
 from hyperparameters import hyperparameters
 from models.transformer_pytorch import TransformerPyTorch
 from utils.checkpoints import load_checkpoint
-from uq.acquisition_func import BeamScore, BLEUVariance
-from validate import validate
-
-# RESULTS
-# - embedding_fix:
-#    - Greedy BLEU: 22.24
-#    - Beam BLEU: 22.42
+from uq.validate_uq import validate_uq
+from data_processing.vocab import load_vocab, output_to_text
+from constants import constants
 
 def main() -> None:
     # Load shared vocabulary
     # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
-    vocab = load_vocab(constants.file_paths.vocab)
+    shared_vocab = load_vocab(constants.file_paths.vocab)
+    print(f"Shared vocab size: {len(shared_vocab)}")
+    device = hyperparameters.device
+    print(f"Device: {device}")
+
+    # Initialize the model with shared vocab size
     model: nn.Module = TransformerPyTorch(
-        vocab_size=len(vocab),
+        vocab_size=len(shared_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
@@ -30,7 +30,7 @@ def main() -> None:
         num_decoder_layers=hyperparameters.transformer.num_hidden_layers,
         dropout=hyperparameters.transformer.dropout,
         max_len=hyperparameters.transformer.max_len,
-    ).to(hyperparameters.device)
+    ).to(device)
 
     if torch.cuda.is_available():
         model = torch.compile(model)  # type: ignore
@@ -48,18 +48,32 @@ def main() -> None:
 
     # Set up the test data loader with the shared vocabulary
     test_loader = get_data_loader(
-        src_file=constants.file_paths.bpe_test_de,
-        tgt_file=constants.file_paths.bpe_test_en,
-        vocab=vocab,
-        batch_size=32, # Needs to be low due to beam search
+        src_file="local/data/test/bpe_test.de",
+        tgt_file="local/data/test/bpe_test.en",
+        vocab=shared_vocab,
+        batch_size=32,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
 
+    test_ood_loader = get_data_loader(
+        src_file="local/data/test_ood/bpe_test_ood.nl",
+        tgt_file="local/data/test_ood/bpe_test_ood.en",
+        vocab=shared_vocab,
+        batch_size=hyperparameters.training.batch_size,
+        add_bos_eos=True,
+        shuffle=False,
+        max_len=hyperparameters.transformer.max_len,
+    )
     # Validate the model and calculate BLEU score
-    bleu = validate(model, test_loader)
+    bleu, avg_uq = validate_uq(model, test_loader, aq_func=BLEUVariance())
     print(f"BLEU Score on test_set: {bleu}")
+    print(f"Average UQ on test_set: {avg_uq}")
+    
+    bleu, avg_uq = validate_uq(model, test_ood_loader, aq_func=BLEUVariance())
+    print(f"BLEU Score on test_ood: {bleu}")
+    print(f"Average UQ on test_ood: {avg_uq}")
 
 if __name__ == "__main__":
     main()
