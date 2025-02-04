@@ -1,14 +1,12 @@
 import math
 import os
 from typing import Literal
-from sympy import hyper
 import torch
 import wandb
 from constants import constants
 from data_processing.dataloader import get_data_loader, load_vocab
 from hyperparameters import hyperparameters
-from models.transformer import Transformer
-from models.transformer_pytorch import TransformerPyTorch
+from models.transformer_model import TransformerPyTorch
 from data_processing.tokenizer import ParallelCorpusTokenizer
 from train import train
 import logging
@@ -189,7 +187,6 @@ def main() -> None:
         scheduler,
         criterion,
         max_steps=hyperparameters.training.max_steps,
-        validate_every=hyperparameters.training.validate_every,
     )
 
 

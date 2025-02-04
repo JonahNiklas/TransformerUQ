@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Literal, Tuple
 from pydantic import BaseModel
 import torch
 
@@ -16,7 +16,7 @@ class TransformerHyperparameters(BaseModel):
     num_heads: int = 8  # found in t2t
     num_hidden_layers: int = 6  # found in t2t
     dropout: float = 0.2  # 0.1 in attention  # 0.2found in t2t, transformer_base_v1()
-
+    transformer_implementation: Literal["pytorch", "own", "bayesformer"] = "own"
 
 class TrainingHyperparameters(BaseModel):
     max_steps: int = 350_000  # known from wat zei je

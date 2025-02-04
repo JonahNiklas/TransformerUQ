@@ -6,7 +6,7 @@ from uq.acquisition_func import BeamScore, BLEUVariance
 from beam_search import beam_search_unbatched, beam_search_batched
 from data_processing.dataloader import get_data_loader
 from hyperparameters import hyperparameters
-from models.transformer_pytorch import TransformerPyTorch
+from models.transformer_model import TransformerPyTorch
 from utils.checkpoints import load_checkpoint
 from uq.validate_uq import validate_uq
 from data_processing.vocab import load_vocab, output_to_text
