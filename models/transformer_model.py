@@ -2,7 +2,9 @@ import math
 import torch
 import torch.nn as nn
 
+from torch.nn import functional as F
 from hyperparameters import hyperparameters
+from models.bayesformer import BayesTransformer
 from models.transformer import Transformer as TransformerOwn
 
 
@@ -44,6 +46,15 @@ class TransformerPyTorch(nn.Module):
                 dim_feedforward=d_ff,
                 dropout=dropout,
             )
+        elif hyperparameters.transformer.transformer_implementation == "bayesformer":
+            self.transformer = BayesTransformer(
+                d_model=d_model,
+                nhead=num_heads,
+                num_encoder_layers=num_encoder_layers,
+                num_decoder_layers=num_decoder_layers,
+                dim_feedforward=d_ff,
+                dropout=dropout,
+            )
         else:
             raise ValueError("Invalid transformer implementation")
         self.out = nn.Linear(d_model, vocab_size, bias=False)
@@ -52,18 +63,32 @@ class TransformerPyTorch(nn.Module):
     def forward(
         self, src: torch.Tensor, tgt: torch.Tensor, pad_idx: int = 0
     ) -> torch.Tensor:
-        src = self.dropout(src)
-        tgt = self.dropout(tgt)
-        
+
         src_key_padding_mask = src == pad_idx
         tgt_key_padding_mask = tgt == pad_idx
         causal_mask = nn.Transformer.generate_square_subsequent_mask(tgt.size(1)).to(
             tgt.device
         )
+
+        # Apply dropout to the rows of the embedding matrix
+        if hyperparameters.transformer.transformer_implementation == "bayesformer":
+            src = self.dropout(src)
+            tgt = self.dropout(tgt)
+
         src = self.embedding(src) * math.sqrt(self.d_model)
         tgt = self.embedding(tgt) * math.sqrt(self.d_model)
-        src = self.pos_encoder(src)
-        tgt = self.pos_encoder(tgt)
+        positional_dropout = (
+            hyperparameters.transformer.dropout
+            if hyperparameters.transformer.transformer_implementation == "bayesformer"
+            else 0
+        )
+        src = self.pos_encoder(src, dropout=positional_dropout)
+        tgt = self.pos_encoder(tgt, dropout=positional_dropout)
+
+        if hyperparameters.transformer.transformer_implementation in ["pytorch", "own"]:
+            src = self.dropout(src)
+            tgt = self.dropout(tgt)
+
         out = self.transformer(
             src,
             tgt,
@@ -76,8 +101,20 @@ class TransformerPyTorch(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, max_len: int = 5000) -> None:
+    """
+    If a dropout rate is provided, this module will apply row dropout (i.e., drop entire position vectors)
+    independently for each sample. This simulates dropping rows from the positional encoding matrix before
+    it is added to the token embeddings.
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        dropout: float = 0.0,
+        max_len: int = hyperparameters.transformer.max_len,
+    ) -> None:
         super().__init__()
+        self.dropout_rate = dropout
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(
@@ -88,5 +125,15 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x + self.pe[: x.size(1), :].unsqueeze(0)
+        # x: (batch_size, seq_len, d_model)
+        batch_size, seq_len, _ = x.size()
+        pe = (
+            self.pe[:seq_len, :].unsqueeze(0).expand(batch_size, -1, -1)
+        )  # (batch_size, seq_len, d_model)
+        if self.training and self.dropout_rate > 0:
+            mask = (
+                torch.rand(batch_size, seq_len, 1, device=x.device) > self.dropout_rate
+            ).float()  # (batch_size, seq_len, 1)
+            pe = pe * mask / (1 - self.dropout_rate)
+        x = x + pe
         return x
