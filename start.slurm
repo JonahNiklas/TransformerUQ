@@ -10,10 +10,9 @@
 #SBATCH --gres=gpu:a100:1
 #SBATCH --output=TransformerUQ/WMToutput.txt
 
-cd TransformerUQ
 module load Python/3.12.3-GCCcore-13.3.0
 python -m venv venv
 source venv/bin/activate
 poetry install
-python wat_zei_je_download_data.py
+python data_processing/wat_zei_je_download_data.py
 python main.py
