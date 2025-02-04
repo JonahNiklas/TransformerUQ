@@ -7,7 +7,7 @@ def plot_data_retained_curve(hyp_ref_uq_pairs: List[List[Tuple[str,str, float]]]
     bleu_scores: List[List[float]] = [[] for _ in range(len(hyp_ref_uq_pairs))]
     interval = 0.05
     for idx,hyp_ref_uq_pair in enumerate(hyp_ref_uq_pairs):
-        hyp_ref_uq_pair.sort(key=lambda x: x[2])
+        hyp_ref_uq_pair.sort(key=lambda x: abs(x[2]))
         
         for i in range(0, len(hyp_ref_uq_pair), int(interval * len(hyp_ref_uq_pair))):
             interval_pairs = hyp_ref_uq_pair[:i + int(interval * len(hyp_ref_uq_pair))]
@@ -21,6 +21,7 @@ def plot_data_retained_curve(hyp_ref_uq_pairs: List[List[Tuple[str,str, float]]]
     plt.figure()
     for i in range(len(bleu_scores)):
         plt.plot([i * interval for i in range(len(bleu_scores[i]))], bleu_scores[i], label=f"{methods[i]}")
+    plt.legend()
     plt.xlabel("Data retained")
     plt.ylabel("BLEU Score")
     plt.title("Data Retained Curve")

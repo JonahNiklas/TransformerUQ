@@ -1,10 +1,8 @@
 import os
 from typing import List, Tuple
-from sympy import plot
 import torch
 from torch import nn
 
-import wandb
 from uq.acquisition_func import BeamScore, BLEUVariance
 from beam_search import beam_search_unbatched, beam_search_batched
 from data_processing.dataloader import get_data_loader
@@ -93,16 +91,22 @@ def main() -> None:
         avg_uq_ood = cache["avg_uq"]
         hyp_ref_uq_pair_ood = cache["hyp_ref_uq_pair"]
     else:
-        bleu_ood, avg_uq_ood, hyp_ref_uq_pair_ood = validate_uq(model, test_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
+        bleu_ood, avg_uq_ood, hyp_ref_uq_pair_ood = validate_uq(model, test_ood_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
         cache_validation_results(bleu, avg_uq, hyp_ref_uq_pair, "validation_cache_ood")
     
     bleu_ood_bs, avg_uq_ood_bs,hyp_ref_uq_pair_ood_bs = validate_uq(model, test_ood_loader, aq_func=BeamScore(), num_batches_to_validate_on=None)
     
     print(f"BLEU Score on test_set: {bleu}")
     print(f"Average UQ on test_set: {avg_uq}")
+
+    print(f"BLEU Score on test_set_bs: {bleu_bs}")
+    print(f"Average UQ on test_set_bs: {avg_uq_bs}")
     
     print(f"BLEU Score on test_ood: {bleu_ood}")
     print(f"Average UQ on test_ood: {avg_uq_ood}")
+
+    print(f"BLEU Score on test_ood_bs: {bleu_ood_bs}")
+    print(f"Average UQ on test_ood_bs: {avg_uq_ood_bs}")
 
     os.makedirs("local/results", exist_ok=True)
 
@@ -115,5 +119,6 @@ def main() -> None:
 def cache_validation_results(bleu: float, avg_uq: float, hyp_ref_uq_pair: List[Tuple[str,str, torch.Tensor]], filename: str) -> None:
     os.makedirs("local/results", exist_ok=True)
     torch.save({"bleu": bleu, "avg_uq": avg_uq, "hyp_ref_uq_pair": hyp_ref_uq_pair}, f"local/results/{filename}.pth")
+    print(f"Cached validation results in local/results/{filename}.pth")
 if __name__ == "__main__":
     main()
