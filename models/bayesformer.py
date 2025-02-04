@@ -1,245 +1,263 @@
-# import torch
-# import torch.nn as nn
-# import torch.nn.functional as F
+from __future__ import annotations
+
+import torch
+import torch.nn as nn
+from torch import Tensor
+from typing import Optional
+
+from hyperparameters import hyperparameters
+from models.masks import create_transformer_masks
 
 
-# class Hyperparameter():
-#     def __init__(self):
-#         self.encoder_embed_dim = 512
-#         self.encoder_ffn_embed_dim = 1024
-#         self.encoder_attention_heads = 4
-#         self.encoder_layers = 6
-#         # self.decoder_embed_dim = 512
-#         # self.decoder_ffn_embed_dim = 1024
-#         # self.decoder_attention_heads = 4
-#         # self.decoder_layers = 6
+class BayesMultiheadAttention(nn.Module):
+    def __init__(self, d_model: int, num_heads: int, p_dropout: float) -> None:
+        super(BayesMultiheadAttention, self).__init__()
+        assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
 
-# hyperparameters = Hyperparameter()
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads
 
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
 
-# class BayesMultiheadAttention(nn.Module):
-#     """
-#     Multi-head self-attention with per-head dropout masks on Q, K, and V.
-#     """
-#     def __init__(self, d_model, num_heads, p_dropout):
-#         super().__init__()
-#         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
-#         self.d_model = d_model
-#         self.num_heads = num_heads
-#         self.head_dim = d_model // num_heads
-#         # self.head_dim = d_model
-        
-#         # Linear projections for Q, K, V (one per head) 
-#         # For simplicity, we just use a single large projection
-#         # and reshape into heads. But we will apply dropout masks
-#         # *after* we split them for each head.
-#         self.W_q = nn.Linear(d_model, d_model, bias=False)
-#         self.W_k = nn.Linear(d_model, d_model, bias=False)
-#         self.W_v = nn.Linear(d_model, d_model, bias=False)
-        
-#         # Output projection
-#         self.out_proj = nn.Linear(d_model, d_model, bias=False)
-        
-#         # Dropout probability
-#         self.p_dropout = p_dropout
-        
-#     def forward(self, x, mask=None):
-#         """
-#         x: (batch_size, seq_len, d_model)
-#         mask: optional attention mask
-#         """
-#         B, T, D = x.shape
-        
-#         # 1. Compute Q, K, V 
-#         #    shape => (batch_size, seq_len, d_model)
-#         q = self.W_q(x)#; assert q.shape == (B, T, self.d_model)
-#         k = self.W_k(x)#; assert k.shape == (B, T, self.d_model)
-#         v = self.W_v(x)#; assert v.shape == (B, T, self.d_model)
-        
-#         # 2. Reshape into (batch_size, num_heads, seq_len, head_dim)
-#         q = q.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)  # (B, num_heads, T, head_dim)
-#         k = k.view(B, T, self.num_heads, self.head_dim).transpose(1, 2); assert k.shape == (B, self.num_heads, T, self.head_dim)
-#         v = v.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
-        
-#         # 3. Apply an *independent* dropout mask to q, k, v for each head
-#         #    The easiest way is to sample a mask of shape (B, num_heads, 1, head_dim)
-#         #    (or (B, num_heads, T, head_dim) if you want *per-token* dropout).
-#         #    Here we do per-head/feature dropout for demonstration.
-        
-#         if self.training and self.p_dropout > 0:
-#             # Create masks of shape (B, num_heads, 1, head_dim)
-#             q_mask = (torch.rand(B, self.num_heads, 1, self.head_dim, device=x.device) 
-#                       > self.p_dropout).float()
-#             k_mask = (torch.rand(B, self.num_heads, 1, self.head_dim, device=x.device)
-#                       > self.p_dropout).float()
-#             v_mask = (torch.rand(B, self.num_heads, 1, self.head_dim, device=x.device)
-#                       > self.p_dropout).float()
-            
-#             q = q * q_mask
-#             k = k * k_mask
-#             v = v * v_mask
-        
-#         # 4. Scaled dot-product attention
-#         #    q, k: (B, num_heads, T, head_dim)
-#         #    v: (B, num_heads, T, head_dim)
-        
-#         att_scores = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)  # (B, nH, T, T)
-#         if mask is not None:
-#             att_scores = att_scores.masked_fill(mask == 0, float('-inf'))
-            
-#         att_weights = F.softmax(att_scores, dim=-1)  # (B, nH, T, T)
-        
-#         # 5. Multiply by V
-#         out = torch.matmul(att_weights, v); assert out.shape == (B, self.num_heads, T, self.head_dim)
-        
-#         # 6. Recombine heads by Hadamard product
-#         assert out.shape == (B, self.num_heads, T, self.head_dim)
-#         out = torch.prod(out, dim=1) # B, T, d_mode
-#         assert out.shape == (B, T, self.d_model)
-        
-#         # 7. Final output projection (usually followed by dropout,
-#         #    but in BayesFormer the main dropout is in the Q,K,V projections).
-#         out = self.out_proj(out)
-        
-#         return out
+        self.out = nn.Linear(d_model, d_model)
 
-# class BayesFeedForward(nn.Module):
-#     """A simple 2-layer MLP block used inside the Transformer encoder."""
-#     def __init__(self, d_model, dim_feedforward, p_dropout):
-#         super().__init__()
-#         self.linear1 = nn.Linear(d_model, dim_feedforward)
-#         self.linear2 = nn.Linear(dim_feedforward, d_model)
-#         self.dropout = nn.Dropout(p_dropout)
-#         self.activation = nn.ReLU()   # or GELU, etc.
-        
-#     def forward(self, x):
-#         x = self.linear1(x)
-#         x = self.activation(x)
-#         x = self.dropout(x)
-#         x = self.linear2(x)
-#         return x
+        self.dropout = nn.Dropout(p_dropout)
 
-# class BayesTransformerEncoderLayer(nn.Module):
-#     """
-#     A single layer of the "BayesFormer" style Transformer encoder:
-#       - Independent dropout on Q, K, V per head
-#       - Dropout on input to the feed-forward block
-#       - Omit the usual post-attention dropout
-#     """
-#     def __init__(self, d_model, nhead, dim_feedforward, p_dropout):
-#         super().__init__()
-#         self.self_attn = BayesMultiheadAttention(d_model, nhead, p_dropout=p_dropout)
-#         self.linear1 = nn.Linear(d_model, dim_feedforward)
-#         self.ff = BayesFeedForward(d_model, dim_feedforward, p_dropout=p_dropout)
-#         self.norm1 = nn.LayerNorm(d_model)
-#         self.norm2 = nn.LayerNorm(d_model) # Authors use softmax instead of layernorm here
-#         self.dropout_skip_connection = nn.Dropout(p_dropout)
-        
-#         # Dropout on the input to the feed-forward block
-#         self.dropout_mlp_input = nn.Dropout(p_dropout)
-        
-#     def forward(self, src, src_mask=None):
-#         # Self-attention + skip connection
-#         attn_out = self.self_attn(src, src_mask)
-#         skip_connection = self.dropout_skip_connection(src) # arrow
-        
-#         src = self.norm1(skip_connection + attn_out)
-        
-#         mlp_in = self.dropout_mlp_input(src) # orange arrow
-#         # Dropout on input to MLP, then feed-forward
-#         ff_out = self.ff(mlp_in) # brown arrow within ff block
-#         # dropout brown arrow
-#         out = self.norm2(src + ff_out)
+    def forward(
+        self, query: Tensor, key: Tensor, value: Tensor, mask: Tensor
+    ) -> Tensor:
+        batch_size, seq_length, d_k = query.shape
 
-#         return out
+        query = self.dropout(query)  # red dropout
+        key = self.dropout(key)  # green dropout
+        value = self.dropout(value)  # blue dropout
 
-# class BayesTransformerEncoder(nn.Module):
-#     """
-#     Full 'BayesFormer' encoder stack. Also demonstrates how to apply dropout
-#     to input embeddings *before* embedding them, as recommended.
-#     """
-#     def __init__(
-#         self, 
-#         vocab_size,
-#         d_model, 
-#         nhead, 
-#         num_layers, 
-#         dim_feedforward, 
-#         p_dropout
-#     ):
-#         super().__init__()
-        
-#         self.d_model = d_model
+        Q = self.W_q(query)
+        K = self.W_k(key)
+        V = self.W_v(value)
 
-#         # For demonstration, define separate input-embedding & positional-embedding.
-#         self.token_embed = nn.Embedding(vocab_size, d_model)
-#         self.pos_embed = nn.Embedding(2048, d_model)  # max length of 512 for example
-        
-#         # We'll apply dropout masks to the "rows" of the token IDs or pos IDs
-#         # before calling the embedding.  One way: 
-#         self.p_dropout = p_dropout
-        
-#         # The stack of BayesFormer encoder layers
-#         self.layers = nn.ModuleList([
-#             BayesTransformerEncoderLayer(
-#                 d_model, nhead, dim_feedforward, p_dropout
-#             )
-#             for _ in range(num_layers)
-#         ])
-        
-#     def forward(self, src_tokens):
-#         """
-#         src_tokens: (batch_size, seq_len) of token IDs
-#         """
-#         B, T = src_tokens.shape
-        
-#         # 1. Sample dropout masks for token IDs and positional IDs "rows".
-#         #    In practice, you might do something more sophisticated, 
-#         #    e.g. zero out entire rows or etc.  For simplicity, we just 
-#         #    show a single Bernoulli mask for each token.
-        
-#         device = src_tokens.device
-#         if self.training and self.p_dropout > 0:
-#             # With probability p_dropout, replace token with a special [PAD] or [MASK] etc.
-#             mask_tokens = (torch.rand(B, T, device=device) < self.p_dropout)
-#             # Example: set masked positions to 0 (supposing 0 is <PAD>)
-#             src_tokens = src_tokens.masked_fill(mask_tokens, 0)
-        
-#         # 2. Similarly for position IDs
-#         pos_ids = torch.arange(T, device=device).unsqueeze(0).expand(B, T)
-#         if self.training and self.p_dropout > 0:
-#             mask_pos = (torch.rand(B, T, device=device) < self.p_dropout)
-#             pos_ids = pos_ids.masked_fill(mask_pos, 0)
-        
-#         # 3. Convert to embeddings
-#         token_emb = self.token_embed(src_tokens)  # (B, T, d_model)
-#         pos_emb = self.pos_embed(pos_ids)         # (B, T, d_model)
-        
-#         # 4. Use hadard multiplication to combine token and pos
-#         x = token_emb * pos_emb; assert x.shape == (B, T, self.d_model)
-        
-#         # 5. Pass through the stack of BayesFormer encoder layers
-#         mask = None  # if you want an attention mask for padding, etc.
-#         for layer in self.layers:
-#             x = layer(x, src_mask=mask)
-        
-#         # x is now (B, T, d_model)
-#         return x
+        # Split into (batch_size, num_heads, seq_length, d_k)
+        Q = Q.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
+        K = K.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
+        V = V.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
 
-# # ----------------------------
-# # Example usage:
-# if __name__ == "__main__":
-#     model = BayesTransformerEncoder(
-#         vocab_size=2_000, 
-#         d_model=hyperparameters.encoder_embed_dim, 
-#         nhead=hyperparameters.encoder_attention_heads,
-#         num_layers=hyperparameters.encoder_layers,
-#         dim_feedforward=hyperparameters.encoder_ffn_embed_dim,
-#         p_dropout=0.1)
-#     num_params = sum(p.numel() for p in model.parameters())
-#     print(f"Model has {num_params / 1e6:.1f}M parameters. The baseline has 34.5M parameters.")
-#     src_tokens = torch.randint(1, 10000, (8, 20))  # (batch_size=8, seq_len=20)
-#     # out = model(src_tokens)  # (8, 20, 128)
-#     # print(out.shape)
+        attention_output = nn.functional.scaled_dot_product_attention(
+            Q,
+            K,
+            V,
+            attn_mask=mask,
+        )
+
+        # Concatenate heads
+        # (batch_size, num_heads, seq_length, d_k) -> (batch_size, seq_length, d_model)
+        attention_output = attention_output.transpose(1, 2).contiguous()
+        attention_output = attention_output.view(batch_size, -1, self.d_model)
+
+        # Final linear layer
+        output = self.out(attention_output)
+        assert isinstance(output, torch.Tensor)
+        return output
 
 
+class BayesFeedForward(nn.Module):
+    def __init__(self, d_model: int, d_ff: int, dropout: float) -> None:
+        super(BayesFeedForward, self).__init__()
+        self.linear1 = nn.Linear(d_model, d_ff)
+        self.linear2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
+        self.relu = nn.ReLU()
+
+    def forward(self, x: Tensor) -> Tensor:
+        output = self.linear2(self.dropout(self.relu(self.linear1(x))))
+        assert isinstance(output, torch.Tensor)
+        return output
+
+
+class BayesEncoderLayer(nn.Module):
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float) -> None:
+        super(BayesEncoderLayer, self).__init__()
+        self.self_attn = BayesMultiheadAttention(d_model, num_heads, p_dropout=dropout)
+        self.feed_forward = BayesFeedForward(d_model, d_ff, dropout)
+
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout_skip_connection = nn.Dropout(dropout)
+
+        # Dropout on the input to the feed-forward block
+        self.dropout_mlp_input = nn.Dropout(dropout)
+
+    def forward(self, x: Tensor, mask: Tensor) -> Tensor:
+        # Self-attention sub-layer
+        attn_output = self.self_attn(x, x, x, mask)
+        x = x + self.dropout_skip_connection(attn_output)  # orange dropout
+        x = self.norm1(x)
+
+        # Dropout on the input to the feed-forward block
+        x = self.dropout_mlp_input(x)  # pink dropout
+
+        # Feed-forward sub-layer
+        ff_output = self.feed_forward(x)
+        x = x + self.dropout_skip_connection(ff_output)  # brown dropout
+        x = self.norm2(x)
+
+        return x
+
+
+class BayesEncoder(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        d_ff: int,
+        num_layers: int,
+        dropout: float,
+    ) -> None:
+        super(BayesEncoder, self).__init__()
+
+        self.d_model = d_model
+        self.p_dropout = dropout
+
+        # The stack of BayesFormer encoder layers
+        self.layers = nn.ModuleList(
+            [
+                BayesEncoderLayer(d_model, num_heads, d_ff, dropout)
+                for _ in range(num_layers)
+            ]
+        )
+
+    def forward(self, src: Tensor, src_mask: Tensor) -> Tensor:
+        """
+        src: (batch_size, src_seq_length)
+        src_mask: (batch_size, 1, 1, src_seq_length) or (batch_size, 1, src_seq_length, src_seq_length)
+        """
+        for layer in self.layers:
+            src = layer(src, src_mask)
+
+        assert isinstance(src, torch.Tensor)
+        return src
+
+
+class BayesDecoderLayer(nn.Module):
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float) -> None:
+        super(BayesDecoderLayer, self).__init__()
+        self.self_attn = BayesMultiheadAttention(d_model, num_heads, p_dropout=dropout)
+        self.cross_attn = BayesMultiheadAttention(d_model, num_heads, p_dropout=dropout)
+        self.feed_forward = BayesFeedForward(d_model, d_ff, dropout)
+
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.norm3 = nn.LayerNorm(d_model)
+        self.dropout_skip_connection = nn.Dropout(dropout)
+
+        # Dropout on the input to the feed-forward block
+        self.dropout_mlp_input = nn.Dropout(dropout)
+
+    def forward(
+        self, x: Tensor, enc_output: Tensor, tgt_mask: Tensor, memory_mask: Tensor
+    ) -> Tensor:
+        # Masked self-attention
+        attn_output = self.self_attn(x, x, x, tgt_mask)
+        x = x + self.dropout_skip_connection(attn_output)
+        x = self.norm1(x)
+
+        # Cross-attention sub-layer
+        attn_output = self.cross_attn(x, enc_output, enc_output, memory_mask)
+        x = x + self.dropout_skip_connection(attn_output)
+        x = self.norm2(x)
+
+        # Dropout on the input to the feed-forward block
+        x = self.dropout_mlp_input(x)
+
+        # Feed-forward sub-layer
+        ff_output = self.feed_forward(x)
+        x = x + self.dropout_skip_connection(ff_output)
+        x = self.norm3(x)
+
+        return x
+
+
+class BayesDecoder(nn.Module):
+    def __init__(
+        self, d_model: int, num_heads: int, d_ff: int, num_layers: int, dropout: float
+    ) -> None:
+        super(BayesDecoder, self).__init__()
+        self.d_model = d_model
+
+        self.layers = nn.ModuleList(
+            [
+                BayesDecoderLayer(d_model, num_heads, d_ff, dropout)
+                for _ in range(num_layers)
+            ]
+        )
+
+    def forward(
+        self,
+        tgt: Tensor,
+        enc_output: Tensor,
+        tgt_mask: Optional[Tensor] = None,
+        memory_mask: Optional[Tensor] = None,
+    ) -> Tensor:
+        """
+        tgt: (batch_size, tgt_seq_length)
+        enc_output: (batch_size, src_seq_length, d_model)
+        """
+        for layer in self.layers:
+            tgt = layer(tgt, enc_output, tgt_mask, memory_mask)
+
+        assert isinstance(tgt, torch.Tensor)
+        return tgt
+
+
+class BayesTransformer(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        nhead: int,
+        num_encoder_layers: int,
+        num_decoder_layers: int,
+        dim_feedforward: int,
+        dropout: float,
+    ) -> None:
+        super(BayesTransformer, self).__init__()
+        self.d_model = d_model
+        self.nhead = nhead
+        self.dropout = nn.Dropout(dropout)
+        self.encoder = BayesEncoder(
+            d_model=d_model,
+            num_heads=nhead,
+            d_ff=dim_feedforward,
+            num_layers=num_encoder_layers,
+            dropout=dropout,
+        )
+        self.decoder = BayesDecoder(
+            d_model=d_model,
+            num_heads=nhead,
+            d_ff=dim_feedforward,
+            num_layers=num_decoder_layers,
+            dropout=dropout,
+        )
+
+    def forward(
+        self,
+        src: Tensor,
+        tgt: Tensor,
+        tgt_mask: Tensor,
+        src_key_padding_mask: Tensor,
+        tgt_key_padding_mask: Tensor,
+    ) -> Tensor:
+        """
+        src: (batch_size, src_seq_length)
+        tgt: (batch_size, tgt_seq_length)
+        """
+        enc_src_mask, tgt_mask, memory_mask = create_transformer_masks(
+            src, tgt, src_key_padding_mask, tgt_key_padding_mask, tgt_mask, self.nhead
+        )
+
+        enc_output = self.encoder(src, enc_src_mask)
+        dec_output = self.decoder(tgt, enc_output, tgt_mask, memory_mask)
+
+        assert isinstance(dec_output, torch.Tensor)
+        return dec_output
