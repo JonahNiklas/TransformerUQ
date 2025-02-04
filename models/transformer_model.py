@@ -25,7 +25,7 @@ class TransformerPyTorch(nn.Module):
         self.d_model = d_model
         self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=0)
         self.dropout = nn.Dropout(dropout)
-        self.pos_encoder = PositionalEncoding(d_model, max_len)
+        self.pos_encoder = PositionalEncoding(d_model, max_len=max_len, dropout=dropout)
         self.transformer: torch.nn.Module
         if hyperparameters.transformer.transformer_implementation == "pytorch":
             self.transformer = nn.Transformer(
@@ -110,8 +110,8 @@ class PositionalEncoding(nn.Module):
     def __init__(
         self,
         d_model: int,
-        dropout: float = 0.0,
-        max_len: int = hyperparameters.transformer.max_len,
+        dropout: float,
+        max_len: int,
     ) -> None:
         super().__init__()
         self.dropout_rate = dropout
