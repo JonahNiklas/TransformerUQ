@@ -18,18 +18,22 @@ class BayesMultiheadAttention(nn.Module):
         self.num_heads = num_heads
         self.d_k = d_model // num_heads
 
-        self.W_q = nn.Linear(d_model, d_model, bias=False)
-        self.W_k = nn.Linear(d_model, d_model, bias=False)
-        self.W_v = nn.Linear(d_model, d_model, bias=False)
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
 
-        self.out = nn.Linear(d_model, d_model, bias=False)
+        self.out = nn.Linear(d_model, d_model)
 
-        self.p_dropout = p_dropout
+        self.dropout = nn.Dropout(p_dropout)
 
     def forward(
         self, query: Tensor, key: Tensor, value: Tensor, mask: Tensor
     ) -> Tensor:
         batch_size, seq_length, d_k = query.shape
+
+        query = self.dropout(query)  # red dropout
+        key = self.dropout(key)  # green dropout
+        value = self.dropout(value)  # blue dropout
 
         Q = self.W_q(query)
         K = self.W_k(key)
@@ -39,29 +43,6 @@ class BayesMultiheadAttention(nn.Module):
         Q = Q.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
         K = K.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
         V = V.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
-
-        # Apply an *independent* dropout mask to q, k, v for each head
-        # The easiest way is to sample a mask of shape (batch_size, num_heads, 1, d_k)
-        # (or (B, num_heads, T, head_dim) if you want *per-token* dropout).
-        # Here we do per-head/feature dropout for demonstration.
-
-        if self.training and self.p_dropout > 0:
-            q_dropout = (
-                torch.rand(batch_size, self.num_heads, 1, self.d_k, device=query.device)
-                > self.p_dropout
-            ).float()
-            k_dropout = (
-                torch.rand(batch_size, self.num_heads, 1, self.d_k, device=query.device)
-                > self.p_dropout
-            ).float()
-            v_dropout = (
-                torch.rand(batch_size, self.num_heads, 1, self.d_k, device=query.device)
-                > self.p_dropout
-            ).float()
-
-            Q = Q * q_dropout
-            K = K * k_dropout
-            V = V * v_dropout
 
         attention_output = nn.functional.scaled_dot_product_attention(
             Q,
@@ -102,16 +83,14 @@ class BayesEncoderLayer(nn.Module):
         self.feed_forward = BayesFeedForward(d_model, d_ff, dropout)
 
         self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(
-            d_model
-        )  # Authors use softmax instead of layernorm here
+        self.norm2 = nn.LayerNorm(d_model)
         self.dropout_skip_connection = nn.Dropout(dropout)
 
         # Dropout on the input to the feed-forward block
         self.dropout_mlp_input = nn.Dropout(dropout)
 
     def forward(self, x: Tensor, mask: Tensor) -> Tensor:
-        # Self-attention + skip connection
+        # Self-attention sub-layer
         attn_output = self.self_attn(x, x, x, mask)
         x = x + self.dropout_skip_connection(attn_output)  # orange dropout
         x = self.norm1(x)
@@ -179,12 +158,12 @@ class BayesDecoderLayer(nn.Module):
     def forward(
         self, x: Tensor, enc_output: Tensor, tgt_mask: Tensor, memory_mask: Tensor
     ) -> Tensor:
-        # Masked self-attention + skip connection
+        # Masked self-attention
         attn_output = self.self_attn(x, x, x, tgt_mask)
         x = x + self.dropout_skip_connection(attn_output)
         x = self.norm1(x)
 
-        # Cross-attention sub-layer + skip connection
+        # Cross-attention sub-layer
         attn_output = self.cross_attn(x, enc_output, enc_output, memory_mask)
         x = x + self.dropout_skip_connection(attn_output)
         x = self.norm2(x)
@@ -192,7 +171,7 @@ class BayesDecoderLayer(nn.Module):
         # Dropout on the input to the feed-forward block
         x = self.dropout_mlp_input(x)
 
-        # Feed-forward sub-layer + skip connection
+        # Feed-forward sub-layer
         ff_output = self.feed_forward(x)
         x = x + self.dropout_skip_connection(ff_output)
         x = self.norm3(x)
