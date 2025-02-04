@@ -13,6 +13,16 @@
                 "TORCH_COMPILE": "FALSE",
                 "USE_WANDB": "FALSE",
             }
+        },
+        {
+            "name": "test_model",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "test_model",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
         }
     ]
 }
