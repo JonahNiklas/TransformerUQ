@@ -23,6 +23,16 @@
                 "TORCH_COMPILE": "FALSE",
                 "USE_WANDB": "FALSE",
             }
+        },
+        {
+            "name": "test_model_uq",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uq.test_model_uq",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
         }
     ]
 }
