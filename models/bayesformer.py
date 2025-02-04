@@ -63,7 +63,6 @@ class BayesMultiheadAttention(nn.Module):
             K = K * k_dropout
             V = V * v_dropout
 
-        mask = mask == False  # type: ignore
         attention_output = nn.functional.scaled_dot_product_attention(
             Q,
             K,

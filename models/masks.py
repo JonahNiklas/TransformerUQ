@@ -1,3 +1,4 @@
+from typing import Tuple
 from torch import Tensor
 import torch
 
@@ -9,7 +10,7 @@ def create_transformer_masks(
     tgt_key_padding_mask: Tensor,
     tgt_mask: Tensor,
     nhead: int,
-) -> tuple[Tensor, Tensor, Tensor]:
+) -> Tuple[Tensor, Tensor, Tensor]:
     batch_size, src_seq_length, _ = src.shape
     tgt_seq_length = tgt.shape[1]
 
