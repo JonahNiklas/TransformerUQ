@@ -25,8 +25,9 @@ def generate_autoregressivly_with_uq(
         print_sample_sentences(batch_size, src_tokens, ground_truth, text_output_multiple, uq, aq_func, print_ex)
         return BLEU_mean_output_batch(text_output_multiple), uq
 
-    text_output_single, logits = _generate_single_inference(model, src_tokens, vocab_shared, batch_size, max_len)
-    uq = aq_func.__call__(text_output_single, logits)
+    tgt_tokens, token_log_probs = _generate_single_inference(model, src_tokens, vocab_shared, batch_size, max_len)
+    text_output_single = [output_to_text(tgt_tokens[i].tolist()) for i in range(batch_size)]
+    uq = aq_func.__call__(tgt_tokens, token_log_probs)
     print_sample_sentences(batch_size, src_tokens, ground_truth, text_output_single, uq, aq_func, print_ex)
     return text_output_single, uq
 
@@ -36,18 +37,17 @@ def _generate_single_inference(
     vocab_shared: Vocabulary,
     batch_size: int,
     max_len: int
-) -> Tuple[List[str], torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     device = hyperparameters.device
     tgt_tokens = torch.zeros(batch_size, max_len).long().to(device)
     tgt_tokens[:, 0] = vocab_shared.token_to_id(BOS_TOKEN)
-    text_output = [""] * batch_size
-    logits = torch.zeros(batch_size, max_len).to(device)
+    token_log_probs = torch.zeros(batch_size, max_len).to(device)
 
     with torch.no_grad():
-        for t in tqdm(range(1, max_len), desc="Generating tokens"):
+        for t in range(1, max_len):
             output = model(src_tokens, tgt_tokens)
             assert output.shape == (batch_size, max_len, len(vocab_shared))
-            logits[:, t] = output[:, t - 1, :].max(dim=1).values
+            token_log_probs[:, t] = torch.log_softmax(output[:, t - 1, :], dim=1).max(dim=1).values
             output = output[:, t - 1, :].argmax(dim=1)
             assert output.shape == (batch_size,)
             tgt_tokens[:, t] = output
@@ -57,8 +57,7 @@ def _generate_single_inference(
                 if tgt_tokens[i, j] == vocab_shared.token_to_id("<eos>"):
                     tgt_tokens[i, j + 1 :] = vocab_shared.token_to_id("<pad>")
                     break
-            text_output[i] = output_to_text(tgt_tokens[i].tolist())
-    return text_output, logits
+    return tgt_tokens, token_log_probs
 
 def _generate_multiple_inference(
     model: nn.Module,

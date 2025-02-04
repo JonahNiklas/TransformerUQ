@@ -6,8 +6,8 @@ import torch
 from typing import Union, List, cast
 from hyperparameters import hyperparameters
 
-def _length_penalty(output: List[str], alpha: float) -> torch.Tensor:
-    lengths = torch.tensor([len(out) for out in output]).to(hyperparameters.device)
+def _length_penalty(output: torch.Tensor, alpha: float) -> torch.Tensor:
+    lengths = torch.sum(output != 0, dim=1)
     return torch.tensor(((5 + lengths) / 6) ** alpha)
 
 class AcquisitionFunction:
@@ -16,30 +16,29 @@ class AcquisitionFunction:
         self.multiple_inference = multiple_inference
         self.num_inferences = num_inferences
 
-    def __call__(self, output: Union[List[str], List[List[str]]], logits: torch.Tensor) -> torch.Tensor:
+    def __call__(self, output: Union[torch.Tensor, List[List[str]]], token_log_probs: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError("Subclasses should implement this method")
 
 class BeamScore(AcquisitionFunction):
-    def __call__(self, output: Union[List[str], List[List[str]]], logits: torch.Tensor) -> torch.Tensor:
-        # logits dim: (batch_size, max_len)
-        assert isinstance(output[0], str), "Output should be a list of strings"
-        output = cast(List[str], output)
+    def __call__(self, output: Union[torch.Tensor, List[List[str]]], token_log_probs: torch.Tensor) -> torch.Tensor:
+        assert isinstance(output, torch.Tensor), "Output should be a tensor"
 
-        log_prob = torch.sum(torch.log_softmax(logits, dim=1), dim=1) # (batch_size)
+        # token_log_probs dim: (batch_size, max_len)
+        log_prob = torch.sum(token_log_probs, dim=1)
         return log_prob / _length_penalty(output, self.alpha)
 
 # class SequenceProbability(AcquisitionFunction):
 #     def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
 #         super().__init__(multiple_inference, num_inferences, alpha)
 
-#     def __call__(self, output: torch.Tensor, logits: torch.Tensor) -> torch.Tensor:
-#         # logits dim: (batch_size, num_inferences, max_len, vocab_size)
+#     def __call__(self, output: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
+#         # token_log_probs dim: (batch_size, num_inferences, max_len, vocab_size)
 #         # output dim: (batch_size, num_inferences, max_len)
 #         assert isinstance(output[0], str), "Output should be a list of strings"
 
-#         logits = logits[:, :, :, ouptut.idx]
+#         token_log_probs = token_log_probs[:, :, :, ouptut.idx]
 
-#         probabilities = torch.softmax(logits, dim=2) # (batch_size, num_inferences, max_len)
+#         probabilities = torch.softmax(token_log_probs, dim=2) # (batch_size, num_inferences, max_len)
 #         probability = torch.prod(probabilities, dim=2) # (batch_size, num_inferences)
 #         probability_sum = torch.sum(probability, dim=1) # (batch_size)
 #         return torch.log(probability_sum) / _length_penalty(output, self.alpha)
@@ -48,7 +47,7 @@ class BLEUVariance(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
 
-    def __call__(self, output: Union[List[str], List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
+    def __call__(self, output: Union[torch.Tensor, List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
         assert isinstance(output[0], list), "Output should be a list of lists"
         batch = len(output)
         bleu_distances = torch.zeros(batch)
