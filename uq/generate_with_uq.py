@@ -21,13 +21,13 @@ def generate_autoregressivly_with_uq(
     max_len = hyperparameters.transformer.max_len
     if aq_func.multiple_inference:
         text_output_multiple, logits = _generate_multiple_inference(model, src_tokens, vocab_shared, batch_size, max_len)
-        uq = aq_func.__call__(text_output_multiple, logits)
+        uq = aq_func(text_output_multiple, logits)
         print_sample_sentences(batch_size, src_tokens, ground_truth, text_output_multiple, uq, aq_func, print_ex)
         return BLEU_mean_output_batch(text_output_multiple), uq
 
     tgt_tokens, token_log_probs = _generate_single_inference(model, src_tokens, vocab_shared, batch_size, max_len)
     text_output_single = [output_to_text(tgt_tokens[i].tolist()) for i in range(batch_size)]
-    uq = aq_func.__call__(tgt_tokens, token_log_probs)
+    uq = aq_func(tgt_tokens, token_log_probs)
     print_sample_sentences(batch_size, src_tokens, ground_truth, text_output_single, uq, aq_func, print_ex)
     return text_output_single, uq
 
