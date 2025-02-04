@@ -29,16 +29,17 @@ class MultiHeadAttention(nn.Module):
     def forward(
         self, query: Tensor, key: Tensor, value: Tensor, mask: Tensor
     ) -> Tensor:
-        batch_size, seq_length, d_k = query.shape
+        batch_size, q_seq_length, _ = query.shape
+        k_seq_length= key.shape[1]
 
         Q = self.W_q(query)
         K = self.W_k(key)
         V = self.W_v(value)
 
         # Split into (batch_size, num_heads, seq_length, d_k)
-        Q = Q.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
-        K = K.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
-        V = V.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
+        Q = Q.view(batch_size, q_seq_length, self.num_heads, self.d_k).transpose(1, 2)
+        K = K.view(batch_size, k_seq_length, self.num_heads, self.d_k).transpose(1, 2)
+        V = V.view(batch_size, k_seq_length, self.num_heads, self.d_k).transpose(1, 2)
 
         # 3) Apply scaled dot-product attention
         #    Q, K, V shape: (batch_size, num_heads, seq_length, d_k)
