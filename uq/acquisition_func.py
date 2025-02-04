@@ -49,6 +49,7 @@ class BLEUVariance(AcquisitionFunction):
 
     def __call__(self, output: Union[torch.Tensor, List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
         assert isinstance(output[0], list), "Output should be a list of lists"
+        output = cast(List[List[str]], output)
         batch = len(output)
         bleu_distances = torch.zeros(batch)
         for b in range(batch):
