@@ -10,7 +10,7 @@ import torch
 # Taken from tensor2tensor: https://github.com/tensorflow/tensor2tensor/blob/28adf2690c551ef0f570d41bef2019d9c502ec7e/tensor2tensor/models/transformer.py#L1627
 class TransformerHyperparameters(BaseModel):
     hidden_size: int = 512  # found in t2t
-    max_len: int = 124  # ALTERED - 256 found in t2t
+    max_len: int = 128  # ALTERED - 256 found in t2t
     encoder_ffn_embed_dim: int = 2048  # found in t2t, known as filter_size in t2t
     num_heads: int = 8  # found in t2t
     num_hidden_layers: int = 6  # found in t2t
