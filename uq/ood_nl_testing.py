@@ -1,6 +1,6 @@
 from constants import constants
 from hyperparameters import hyperparameters
-from models.transformer_pytorch import TransformerPyTorch
+from models.transformer_model import TransformerPyTorch
 from data_processing.vocab import PAD_TOKEN, load_vocab
 from data_processing.dataloader import get_data_loader
 from models.transformer import Transformer

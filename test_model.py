@@ -7,7 +7,7 @@ from constants import constants
 from data_processing.dataloader import get_data_loader
 from data_processing.vocab import load_vocab, output_to_text
 from hyperparameters import hyperparameters
-from models.transformer_pytorch import TransformerPyTorch
+from models.transformer_model import TransformerPyTorch
 from utils.checkpoints import load_checkpoint
 from uq.acquisition_func import BeamScore, BLEUVariance
 from validate import validate
