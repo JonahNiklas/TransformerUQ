@@ -131,7 +131,7 @@ class Encoder(nn.Module):
 
 
 class DecoderLayer(nn.Module):
-    def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float):
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float) -> None:
         super(DecoderLayer, self).__init__()
         self.self_attn = MultiHeadAttention(d_model, num_heads, p_dropout=dropout)
         self.cross_attn = MultiHeadAttention(d_model, num_heads, p_dropout=dropout)
@@ -201,7 +201,7 @@ class Transformer(nn.Module):
         num_decoder_layers: int,
         dim_feedforward: int,
         dropout: float,
-    ):
+    ) -> None:
         super(Transformer, self).__init__()
         self.d_model = d_model
         self.nhead = nhead
@@ -233,10 +233,6 @@ class Transformer(nn.Module):
         src: (batch_size, src_seq_length)
         tgt: (batch_size, tgt_seq_length)
         """
-
-        src = self.dropout(src)  # red dropout
-        tgt = self.dropout(tgt)  # red dropout
-
         enc_src_mask, tgt_mask, memory_mask = create_transformer_masks(
             src, tgt, src_key_padding_mask, tgt_key_padding_mask, tgt_mask, self.nhead
         )

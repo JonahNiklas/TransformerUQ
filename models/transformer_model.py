@@ -8,7 +8,7 @@ from models.bayesformer import BayesTransformer
 from models.transformer import Transformer as TransformerOwn
 
 
-class TransformerPyTorch(nn.Module):
+class TransformerModel(nn.Module):
     def __init__(
         self,
         vocab_size: int,

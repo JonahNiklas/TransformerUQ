@@ -1,6 +1,6 @@
 from constants import constants
 from hyperparameters import hyperparameters
-from models.transformer_model import TransformerPyTorch
+from models.transformer_model import TransformerModel
 from data_processing.vocab import PAD_TOKEN, load_vocab
 from data_processing.dataloader import get_data_loader
 from models.transformer import Transformer
@@ -23,7 +23,7 @@ def main() -> None:
 
     # Load model model weights from checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model: nn.Module = TransformerPyTorch(
+    model: nn.Module = TransformerModel(
         vocab_size=len(vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,

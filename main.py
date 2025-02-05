@@ -6,7 +6,7 @@ import wandb
 from constants import constants
 from data_processing.dataloader import get_data_loader, load_vocab
 from hyperparameters import hyperparameters
-from models.transformer_model import TransformerPyTorch
+from models.transformer_model import TransformerModel
 from data_processing.tokenizer import ParallelCorpusTokenizer
 from train import train
 import logging
@@ -109,7 +109,7 @@ def main() -> None:
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
         vocab=shared_vocab,
-        batch_size=124,
+        batch_size=hyperparameters.training.batch_size//hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -122,17 +122,7 @@ def main() -> None:
 
     logger.info("Creating model")
 
-    # model: nn.Module = Transformer(
-    #     vocab_size=len(shared_vocab),
-    #     d_model=hyperparameters.transformer.hidden_size,
-    #     num_heads=hyperparameters.transformer.num_heads,
-    #     d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
-    #     num_encoder_layers=hyperparameters.transformer.num_hidden_layers,
-    #     num_decoder_layers=hyperparameters.transformer.num_hidden_layers,
-    #     dropout=hyperparameters.transformer.dropout,
-    #     max_len=hyperparameters.transformer.max_len,
-    # )
-    model: nn.Module = TransformerPyTorch(
+    model: nn.Module = TransformerModel(
         vocab_size=len(shared_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,

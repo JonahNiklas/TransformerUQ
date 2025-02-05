@@ -117,10 +117,7 @@ class BayesEncoder(nn.Module):
         dropout: float,
     ) -> None:
         super(BayesEncoder, self).__init__()
-
         self.d_model = d_model
-        self.p_dropout = dropout
-
         # The stack of BayesFormer encoder layers
         self.layers = nn.ModuleList(
             [

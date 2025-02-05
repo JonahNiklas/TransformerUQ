@@ -7,7 +7,7 @@ from constants import constants
 from data_processing.dataloader import get_data_loader
 from data_processing.vocab import load_vocab, output_to_text
 from hyperparameters import hyperparameters
-from models.transformer_model import TransformerPyTorch
+from models.transformer_model import TransformerModel
 from utils.checkpoints import load_checkpoint
 from uq.acquisition_func import BeamScore, BLEUVariance
 from validate import validate
@@ -21,7 +21,7 @@ def main() -> None:
     # Load shared vocabulary
     # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
     vocab = load_vocab(constants.file_paths.vocab)
-    model: nn.Module = TransformerPyTorch(
+    model: nn.Module = TransformerModel(
         vocab_size=len(vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
