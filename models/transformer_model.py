@@ -25,11 +25,7 @@ class TransformerModel(nn.Module):
         self.d_model = d_model
         self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=0)
         self.dropout = nn.Dropout(dropout)
-        positional_dropout = (
-            hyperparameters.transformer.dropout
-            if hyperparameters.transformer.transformer_implementation == "bayesformer"
-            else 0
-        )
+        positional_dropout = 0.0
         self.pos_encoder = PositionalEncoding(d_model, max_len=max_len, dropout=positional_dropout)
         self.transformer: torch.nn.Module
         if hyperparameters.transformer.transformer_implementation == "pytorch":
@@ -75,13 +71,17 @@ class TransformerModel(nn.Module):
             tgt.device
         )
 
-        # Apply dropout to the rows of the embedding matrix
-        if hyperparameters.transformer.transformer_implementation == "bayesformer":
-            src = token_dropout(src, dropout_prob=self.dropout.p, pad_idx=pad_idx)
-            tgt = token_dropout(tgt, dropout_prob=self.dropout.p, pad_idx=pad_idx)
+        # # Apply dropout to the rows of the embedding matrix
+        # if hyperparameters.transformer.transformer_implementation == "bayesformer":
+        #     src = token_dropout(src, dropout_prob=self.dropout.p, pad_idx=pad_idx)
+        #     tgt = token_dropout(tgt, dropout_prob=self.dropout.p, pad_idx=pad_idx)
 
         src = self.embedding(src) * math.sqrt(self.d_model)
         tgt = self.embedding(tgt) * math.sqrt(self.d_model)
+
+        if hyperparameters.transformer.transformer_implementation == "bayesformer":
+            src = self.dropout(src)
+            tgt = self.dropout(tgt)
         
         src = self.pos_encoder(src)
         tgt = self.pos_encoder(tgt)
@@ -139,8 +139,8 @@ class PositionalEncoding(nn.Module):
         x = x + pe
         return x
 
-def token_dropout(tokens: torch.Tensor, dropout_prob: float, pad_idx: int) -> torch.Tensor:
-    # Generate dropout mask on tokens (True indicates to drop)
-    dropout_mask = torch.rand(tokens.shape, device=tokens.device) < dropout_prob
-    # Replace dropped tokens with pad_idx
-    return tokens.masked_fill(dropout_mask, pad_idx)
+# def token_dropout(tokens: torch.Tensor, dropout_prob: float, pad_idx: int) -> torch.Tensor:
+#     # Generate dropout mask on tokens (True indicates to drop)
+#     dropout_mask = torch.rand(tokens.shape, device=tokens.device) < dropout_prob
+#     # Replace dropped tokens with pad_idx
+#     return tokens.masked_fill(dropout_mask, pad_idx)
