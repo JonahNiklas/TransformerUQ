@@ -3,27 +3,32 @@ from typing import List, Tuple
 import torch
 from torch import nn
 
-from uq.acquisition_func import BeamScore, BLEUVariance
-from beam_search import beam_search_unbatched, beam_search_batched
+from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVariance
+from beam_search import beam_search_unbatched, beam_search_batched # | not using beam search yet
 from data_processing.dataloader import get_data_loader
-from hyperparameters import hyperparameters
-from models.transformer_pytorch import TransformerPyTorch
-from uq.plot_uq import plot_data_retained_curve, plot_uq_histogram
+from hyperparameters import hyperparameters 
+from models.transformer_model import TransformerModel
+from uq.plot_uq import plot_data_retained_curve, plot_uq_histogram_and_roc
 from utils.checkpoints import load_checkpoint
 from uq.validate_uq import validate_uq
 from data_processing.vocab import load_vocab, output_to_text
 from constants import constants
+import wandb
+
 
 def main() -> None:
     # Load shared vocabulary
-    # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
+    run_id="7sy5cau3"
+    run_name="Bayesformer"
+    checkpoint = "checkpoints/checkpoint-300000b.pth"
+    # wandb.restore(checkpoint, run_path=f"sondresorbye-magson/TransformerUQ/{run_id}")  # type: ignore
     shared_vocab = load_vocab(constants.file_paths.vocab)
     print(f"Shared vocab size: {len(shared_vocab)}")
     device = hyperparameters.device
     print(f"Device: {device}")
 
     # Initialize the model with shared vocab size
-    model: nn.Module = TransformerPyTorch(
+    model: nn.Module = TransformerModel(
         vocab_size=len(shared_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
@@ -44,7 +49,7 @@ def main() -> None:
     load_checkpoint(
         model, 
         optimizer, 
-        "checkpoints/checkpoint-175000.pth",
+        checkpoint,
         remove_orig_prefix=not torch.cuda.is_available()
     )
 
@@ -53,7 +58,7 @@ def main() -> None:
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size // hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size,# // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -63,38 +68,43 @@ def main() -> None:
         src_file="local/data/test_ood/bpe_test_ood.nl",
         tgt_file="local/data/test_ood/bpe_test_ood.en",
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size // hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size,# // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
-    # Validate the model and calculate BLEU score
-    cache_file = "local/results/validation_cache.pth"
-    if os.path.exists(cache_file):
-        print("Loading cached validation results...")
-        cache = torch.load(cache_file)
-        bleu = cache["bleu"]
-        avg_uq = cache["avg_uq"]
-        hyp_ref_uq_pair = cache["hyp_ref_uq_pair"]
-    else:
-        bleu, avg_uq, hyp_ref_uq_pair = validate_uq(model, test_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
-        cache_validation_results(bleu, avg_uq, hyp_ref_uq_pair, "validation_cache")
     
-    bleu_bs, avg_uq_bs, hyp_ref_uq_pair_bs = validate_uq(model, test_loader, aq_func=BeamScore(), num_batches_to_validate_on=None)
+    bleu, avg_uq, hyp_ref_uq_pair = load_or_validate(
+        model=model,
+        loader=test_loader,
+        aq_func=BLEUVariance(),
+        filename="validation_cache",
+        run_id=run_id
+    )
 
+    bleu_bs, avg_uq_bs, hyp_ref_uq_pair_bs = load_or_validate(
+        model=model,
+        loader=test_loader,
+        aq_func=BeamScore(),
+        filename="validation_cache_bs",
+        run_id=run_id
+    )
 
-    cache_file = "local/results/validation_cache_ood.pth"
-    if os.path.exists(cache_file):
-        print("Loading cached validation ood results...")
-        cache = torch.load(cache_file)
-        bleu_ood = cache["bleu"]
-        avg_uq_ood = cache["avg_uq"]
-        hyp_ref_uq_pair_ood = cache["hyp_ref_uq_pair"]
-    else:
-        bleu_ood, avg_uq_ood, hyp_ref_uq_pair_ood = validate_uq(model, test_ood_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
-        cache_validation_results(bleu, avg_uq, hyp_ref_uq_pair, "validation_cache_ood")
-    
-    bleu_ood_bs, avg_uq_ood_bs,hyp_ref_uq_pair_ood_bs = validate_uq(model, test_ood_loader, aq_func=BeamScore(), num_batches_to_validate_on=None)
+    bleu_ood, avg_uq_ood, hyp_ref_uq_pair_ood = load_or_validate(
+        model=model,
+        loader=test_ood_loader,
+        aq_func=BLEUVariance(),
+        filename="validation_cache_ood",
+        run_id=run_id
+    )
+
+    bleu_ood_bs, avg_uq_ood_bs, hyp_ref_uq_pair_ood_bs = load_or_validate(
+        model=model,
+        loader=test_ood_loader,
+        aq_func=BeamScore(),
+        filename="validation_cache_ood_bs",
+        run_id=run_id
+    )
     
     print(f"BLEU Score on test_set: {bleu}")
     print(f"Average UQ on test_set: {avg_uq}")
@@ -110,15 +120,33 @@ def main() -> None:
 
     os.makedirs("local/results", exist_ok=True)
 
-    plot_data_retained_curve([hyp_ref_uq_pair,hyp_ref_uq_pair_bs],methods=["BLUEvar","BeamScore"], save_path="local/results/hypotheses_uq_pairs.png")
-    plot_data_retained_curve([hyp_ref_uq_pair_ood,hyp_ref_uq_pair_ood_bs], methods=["BLUEvar","BeamScore"],save_path="local/results/hypotheses_uq_pairs_ood.png")
+    plot_data_retained_curve([hyp_ref_uq_pair,hyp_ref_uq_pair_bs], methods=["BLUEvar","BeamScore"], save_path=f"local/results/{run_id}/hypotheses_uq_pairs.png",run_name=run_name)
+    plot_data_retained_curve([hyp_ref_uq_pair_ood,hyp_ref_uq_pair_ood_bs], methods=["BLUEvar","BeamScore"], save_path=f"local/results/{run_id}/hypotheses_uq_pairs_ood.png",run_name=run_name)
 
-    plot_uq_histogram(hyp_ref_uq_pair,hyp_ref_uq_pair_ood, method="BLUEvar",save_path="local/results/uq_histogram_bluevar.png")
-    plot_uq_histogram(hyp_ref_uq_pair_bs,hyp_ref_uq_pair_ood_bs, method="BeamScore",save_path="local/results/uq_histogram_bs.png")
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair, hyp_ref_uq_pair_ood, method="BLUEvar", save_path=f"local/results/{run_id}/uq_histogram_bluevar.png",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair_bs, hyp_ref_uq_pair_ood_bs, method="BeamScore", save_path=f"local/results/{run_id}/uq_histogram_bs.png",run_name=run_name)
 
-def cache_validation_results(bleu: float, avg_uq: float, hyp_ref_uq_pair: List[Tuple[str,str, torch.Tensor]], filename: str) -> None:
-    os.makedirs("local/results", exist_ok=True)
-    torch.save({"bleu": bleu, "avg_uq": avg_uq, "hyp_ref_uq_pair": hyp_ref_uq_pair}, f"local/results/{filename}.pth")
-    print(f"Cached validation results in local/results/{filename}.pth")
+# Validate the model and calculate BLEU score
+def load_or_validate(
+    model: TransformerModel,
+    loader: torch.utils.data.DataLoader,
+    aq_func: AcquisitionFunction,
+    filename: str,
+    run_id: str
+) -> Tuple[float, float, List[Tuple[str, str, torch.Tensor]]]:
+    cache_file = f"local/results/{run_id}/{filename}.pth"
+    if os.path.exists(cache_file):
+        print(f"Loading cached results from {cache_file}...")
+        cache = torch.load(cache_file)
+        bleu = cache["bleu"]
+        avg_uq = cache["avg_uq"]
+        hyp_ref_uq_pair = cache["hyp_ref_uq_pair"]
+    else:
+        bleu, avg_uq, hyp_ref_uq_pair = validate_uq(model, loader, aq_func=aq_func, num_batches_to_validate_on=None)
+        os.makedirs(f"local/results/{run_id}", exist_ok=True)
+        torch.save({"bleu": bleu, "avg_uq": avg_uq, "hyp_ref_uq_pair": hyp_ref_uq_pair}, f"local/results/{run_id}/{filename}.pth")
+        print(f"Cached validation results in local/results/{run_id}/{filename}.pth")
+    return bleu, avg_uq, hyp_ref_uq_pair
+    
 if __name__ == "__main__":
     main()
