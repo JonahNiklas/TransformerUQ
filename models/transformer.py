@@ -22,7 +22,8 @@ class MultiHeadAttention(nn.Module):
         self.W_k = nn.Linear(d_model, d_model)
         self.W_v = nn.Linear(d_model, d_model)
 
-        self.out = nn.Linear(d_model, d_model)
+        # Changed: update out layer input dimension from d_model to self.d_k
+        self.out = nn.Linear(self.d_k, d_model)
 
         self.p_dropout = p_dropout
 
@@ -42,22 +43,16 @@ class MultiHeadAttention(nn.Module):
         V = V.view(batch_size, k_seq_length, self.num_heads, self.d_k).transpose(1, 2)
 
         # 3) Apply scaled dot-product attention
-        #    Q, K, V shape: (batch_size, num_heads, seq_length, d_k)
-        # attention_output, _ = scaled_dot_product_attention(Q, K, V, mask=mask)
         attention_output = nn.functional.scaled_dot_product_attention(
             Q,
             K,
             V,
             attn_mask=mask,
-            dropout_p=(
-                hyperparameters.transformer.dropout if self.training else 0.0
-            ),  # green dropout
+            dropout_p=(hyperparameters.transformer.dropout if self.training else 0.0),
         )
 
-        # Concatenate heads
-        # (batch_size, num_heads, seq_length, d_k) -> (batch_size, seq_length, d_model)
-        attention_output = attention_output.transpose(1, 2).contiguous()
-        attention_output = attention_output.view(batch_size, -1, self.d_model)
+        # Changed: use Hadamard product across heads instead of concatenation
+        attention_output = torch.prod(attention_output, dim=1)
 
         # Final linear layer
         output = self.out(attention_output)
