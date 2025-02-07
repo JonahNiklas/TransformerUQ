@@ -28,10 +28,14 @@ def main() -> None:
     tokenizer.tokenize_files(
         train_en_path=constants.file_paths.train_en,
         train_de_path=constants.file_paths.train_de,
+        dev_en_path=constants.file_paths.dev_en,
+        dev_de_path=constants.file_paths.dev_de,
         test_en_path=constants.file_paths.test_en,
         test_de_path=constants.file_paths.test_de,
         output_train_en=constants.file_paths.tokenized_train_en,
         output_train_de=constants.file_paths.tokenized_train_de,
+        output_dev_en=constants.file_paths.tokenized_dev_en,
+        output_dev_de=constants.file_paths.tokenized_dev_de,
         output_test_en=constants.file_paths.tokenized_test_en,
         output_test_de=constants.file_paths.tokenized_test_de,
         test_ood_en_path=constants.file_paths.ood_en,
@@ -61,14 +65,22 @@ def main() -> None:
     for lang in ["en", "de"]:
         logger.info(f"Applying BPE to training data for {lang}")
         tokenizer.apply_bpe(
-            input_path=f"local/data/training/tokenized_train.{lang}",
-            output_path=f"local/data/training/bpe_train.{lang}",
+            input_path=constants.file_paths.tokenized_train_en[:-2] + lang,
+            output_path=constants.file_paths.bpe_train_en[:-2] + lang,
             codes_path=shared_bpe_codes,
         )
+
+        logger.info(f"Applying BPE to dev data for {lang}")
+        tokenizer.apply_bpe(
+            input_path=constants.file_paths.tokenized_dev_en[:-2] + lang,
+            output_path=constants.file_paths.bpe_dev_en[:-2] + lang,
+            codes_path=shared_bpe_codes,
+        )
+
         logger.info(f"Applying BPE to test data for {lang}")
         tokenizer.apply_bpe(
-            input_path=f"local/data/test/tokenized_test.{lang}",
-            output_path=f"local/data/test/bpe_test.{lang}",
+            input_path=constants.file_paths.tokenized_test_en[:-2] + lang,
+            output_path=constants.file_paths.bpe_test_en[:-2] + lang,
             codes_path=shared_bpe_codes,
         )
 
@@ -76,16 +88,16 @@ def main() -> None:
     for lang in ["en", "nl"]:
         logger.info(f"Applying BPE to {lang} out of distribution test data")
         tokenizer.apply_bpe(
-            input_path=f"local/data/test_ood/tokenized_test_ood.{lang}",
-            output_path=f"local/data/test_ood/bpe_test_ood.{lang}",
+            input_path=constants.file_paths.tokenized_ood_en[:-2] + lang,
+            output_path=constants.file_paths.bpe_test_ood_en[:-2] + lang,
             codes_path=shared_bpe_codes,
         )
 
     logger.info("Build and save vocab")
     if not os.path.exists(constants.file_paths.vocab):
         build_and_save_vocab(
-            train_en_path="local/data/training/bpe_train.en",
-            train_de_path="local/data/training/bpe_train.de",
+            train_en_path=constants.file_paths.bpe_train_en,
+            train_de_path=constants.file_paths.bpe_train_de,
             min_freq=hyperparameters.vocab.token_min_freq,
             save_path=constants.file_paths.vocab,
         )
@@ -96,8 +108,8 @@ def main() -> None:
 
     logger.info("Create data loaders")
     training_loader = get_data_loader(
-        src_file="local/data/training/bpe_train.de",
-        tgt_file="local/data/training/bpe_train.en",
+        src_file=constants.file_paths.bpe_train_de,
+        tgt_file=constants.file_paths.bpe_train_en,
         vocab=shared_vocab,
         batch_size=hyperparameters.training.batch_size,
         add_bos_eos=True,
@@ -105,17 +117,17 @@ def main() -> None:
         max_len=hyperparameters.transformer.max_len,
     )
 
-    test_loader = get_data_loader(
-        src_file="local/data/test/bpe_test.de",
-        tgt_file="local/data/test/bpe_test.en",
+    dev_loader = get_data_loader(
+        src_file=constants.file_paths.bpe_dev_de,
+        tgt_file=constants.file_paths.bpe_dev_en,
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size//hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
     logger.info(f"Training set size: {len(training_loader.dataset)}")  # type: ignore
-    logger.info(f"Test set size: {len(test_loader.dataset)}")  # type: ignore
+    logger.info(f"Dev set size: {len(dev_loader.dataset)}")  # type: ignore
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
@@ -172,7 +184,7 @@ def main() -> None:
     train(
         model,
         training_loader,
-        test_loader,
+        dev_loader,
         optimizer,
         scheduler,
         criterion,

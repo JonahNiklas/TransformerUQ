@@ -49,6 +49,15 @@ training_sets: List[Dict[str, str]] = [
         "en_file": "europarl-v7.de-en.en",
     },
 ]
+
+
+dev_set = {
+    "link": "https://www.statmt.org/wmt14/dev.tgz",
+    "subfolder": "dev/",
+    "de_file": "newstest2013.de",
+    "en_file": "newstest2013.en",
+}
+
 test_set = {
     "link": "https://www.statmt.org/wmt14/test-full.tgz",
     "subfolder": "test-full/",
@@ -96,6 +105,9 @@ def download_and_extract(
 # Download and extract training sets
 for dataset in training_sets:
     download_and_extract(dataset["link"], dataset["de_file"], dataset["en_file"])
+
+# Download and extract dev set
+download_and_extract(dev_set["link"], dev_set["de_file"], dev_set["en_file"])
 
 # Download and extract test set
 download_and_extract(test_set["link"], test_set["de_file"], test_set["en_file"])
@@ -193,6 +205,7 @@ def merge_files(
 
 # %%
 merge_files(training_sets, "training", "train")
+merge_files([dev_set], "dev", "dev")
 merge_files([test_set], "test", "test")
 merge_files([test_ood], "test_ood", "test_ood", second_lang="nl")
 # Remove empty directories in data_directory
