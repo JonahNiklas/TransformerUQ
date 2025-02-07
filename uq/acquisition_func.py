@@ -5,6 +5,7 @@ import sacrebleu
 import torch
 from typing import Union, List, cast
 from hyperparameters import hyperparameters
+from sentence_transformers import SentenceTransformer
 
 def _length_penalty(output: torch.Tensor, alpha: float) -> torch.Tensor:
     lengths = torch.sum(output != 0, dim=1)
@@ -43,6 +44,29 @@ class BeamScore(AcquisitionFunction):
 #         probability_sum = torch.sum(probability, dim=1) # (batch_size)
 #         return torch.log(probability_sum) / _length_penalty(output, self.alpha)
 
+class VR_mpnet_base_distance(AcquisitionFunction):
+    def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
+        super().__init__(multiple_inference, num_inferences, alpha)
+        self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
+
+    def __call__(self, output: Union[torch.Tensor, List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
+        assert isinstance(output[0], list), "Output should be a list of lists"
+        output = cast(List[List[str]], output)
+
+        batch = len(output)
+        distances = torch.zeros(batch)
+        for b in range(batch):
+            embeddings = self.model.encode(output[b])
+            for i in range(self.num_inferences):
+                for j in range(i + 1, self.num_inferences):
+                    cosine_similarity = torch.nn.functional.cosine_similarity(
+                        torch.tensor(embeddings[i]).unsqueeze(0),
+                        torch.tensor(embeddings[j]).unsqueeze(0)
+                    ).item()
+                    distances[b] += 2 - cosine_similarity*2
+
+        return distances/self.num_inferences
+
 class BLEUVariance(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
@@ -54,7 +78,9 @@ class BLEUVariance(AcquisitionFunction):
         bleu_distances = torch.zeros(batch)
         for b in range(batch):
             for i in range(self.num_inferences):
-                for j in range(i + 1, self.num_inferences):
+                for j in range(self.num_inferences):
+                    if i != j:
+                        continue
                     bleu_dist = sacrebleu.sentence_bleu(output[b][i], [output[b][j]]).score
                     bleu_distances[b] += (1 - bleu_dist / 100) ** 2
         return bleu_distances/self.num_inferences
