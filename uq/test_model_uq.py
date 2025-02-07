@@ -28,7 +28,7 @@ def main() -> None:
     print(f"Device: {device}")
 
     # Initialize the model with shared vocab size
-    model: nn.Module = TransformerModel(
+    model: TransformerModel = TransformerModel(
         vocab_size=len(shared_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
@@ -133,7 +133,7 @@ def load_or_validate(
     aq_func: AcquisitionFunction,
     filename: str,
     run_id: str
-) -> Tuple[float, float, List[Tuple[str, str, torch.Tensor]]]:
+) -> Tuple[float, float, List[Tuple[str, str, float]]]:
     cache_file = f"local/results/{run_id}/{filename}.pth"
     if os.path.exists(cache_file):
         print(f"Loading cached results from {cache_file}...")
