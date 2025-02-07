@@ -16,11 +16,11 @@ class BayesMultiheadAttention(nn.Module):
 
         self.d_model = d_model
         self.num_heads = num_heads
-        self.d_k = d_model // num_heads
+        self.d_k = d_model
 
-        self.W_q = nn.Linear(d_model, d_model)
-        self.W_k = nn.Linear(d_model, d_model)
-        self.W_v = nn.Linear(d_model, d_model)
+        self.W_q = nn.Linear(d_model, d_model * num_heads)
+        self.W_k = nn.Linear(d_model, d_model * num_heads)
+        self.W_v = nn.Linear(d_model, d_model * num_heads)
 
         self.out = nn.Linear(d_model, d_model)
 
@@ -54,8 +54,7 @@ class BayesMultiheadAttention(nn.Module):
 
         # Concatenate heads
         # (batch_size, num_heads, seq_length, d_k) -> (batch_size, seq_length, d_model)
-        attention_output = attention_output.transpose(1, 2).contiguous()
-        attention_output = attention_output.view(batch_size, -1, self.d_model)
+        attention_output = torch.prod(attention_output, dim=1)
 
         # Final linear layer
         output = self.out(attention_output)
