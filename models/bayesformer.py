@@ -22,7 +22,7 @@ class BayesMultiheadAttention(nn.Module):
         self.W_k = nn.Linear(d_model, d_model)
         self.W_v = nn.Linear(d_model, d_model)
 
-        self.out = nn.Linear(d_model, d_model)
+        self.out = nn.Linear(d_model // num_heads, d_model)
 
         self.dropout = nn.Dropout(p_dropout)
 
