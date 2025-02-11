@@ -172,7 +172,7 @@ def main() -> None:
     plot_data_retained_curve(
         [hyp_ref_uq_pair, hyp_ref_uq_pair_bs, hyp_ref_uq_pair_vr_mpnet, hyp_ref_uq_pair_vr_matrix_norm, hyp_ref_uq_pair_vr_dot],
         methods=["BLUEvar", "BeamScore", "VR_mpnet", "VR_matrix_norm", "VR_dot"],
-        save_path=f"local/results/{run_id}/hypotheses_uq_pairs.png",
+        save_path=f"local/results/{run_id}/hypotheses_uq_pairs.svg",
         run_name=run_name
     )
 
@@ -180,15 +180,15 @@ def main() -> None:
     plot_data_retained_curve(
         [hyp_ref_uq_pair_ood, hyp_ref_uq_pair_ood_bs, hyp_ref_uq_pair_ood_vr_mpnet, hyp_ref_uq_pair_ood_vr_matrix_norm, hyp_ref_uq_pair_ood_vr_dot],
         methods=["BLUEvar", "BeamScore", "VR_mpnet", "VR_matrix_norm", "VR_dot"],
-        save_path=f"local/results/{run_id}/hypotheses_uq_pairs_ood.png",
+        save_path=f"local/results/{run_id}/hypotheses_uq_pairs_ood.svg",
         run_name=run_name
     )
 
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair, hyp_ref_uq_pair_ood, method="BLUEvar", save_path=f"local/results/{run_id}/uq_histogram_bluevar.png",run_name=run_name)
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair_bs, hyp_ref_uq_pair_ood_bs, method="BeamScore", save_path=f"local/results/{run_id}/uq_histogram_bs.png",run_name=run_name)
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_mpnet, hyp_ref_uq_pair_ood_vr_mpnet, method="VR_mpnet", save_path=f"local/results/{run_id}/uq_histogram_vr_mpnet.png",run_name=run_name)
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_matrix_norm, hyp_ref_uq_pair_ood_vr_matrix_norm, method="VR_matrix_norm", save_path=f"local/results/{run_id}/uq_histogram_vr_matrix_norm.png",run_name=run_name)
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_dot, hyp_ref_uq_pair_ood_vr_dot, method="VR_dot", save_path=f"local/results/{run_id}/uq_histogram_vr_dot.png",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair, hyp_ref_uq_pair_ood, method="BLUEvar", save_path=f"local/results/{run_id}/uq_histogram_bluevar.svg",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair_bs, hyp_ref_uq_pair_ood_bs, method="BeamScore", save_path=f"local/results/{run_id}/uq_histogram_bs.svg",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_mpnet, hyp_ref_uq_pair_ood_vr_mpnet, method="VR_mpnet", save_path=f"local/results/{run_id}/uq_histogram_vr_mpnet.svg",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_matrix_norm, hyp_ref_uq_pair_ood_vr_matrix_norm, method="VR_matrix_norm", save_path=f"local/results/{run_id}/uq_histogram_vr_matrix_norm.svg",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_dot, hyp_ref_uq_pair_ood_vr_dot, method="VR_dot", save_path=f"local/results/{run_id}/uq_histogram_vr_dot.svg",run_name=run_name)
 
 # Validate the model and calculate BLEU score
 def load_or_validate(

@@ -76,6 +76,6 @@ def plot_uq_histogram_and_roc(hyp_ref_uq_pair: List[Tuple[str,str, float]], hyp_
     plt.ylabel('True Positive Rate')
     plt.title(f'ROC Curve with {method} for {run_name}')
     plt.legend()
-    plt.savefig(save_path.replace('.png', '_roc.png'))
+    plt.savefig(save_path.replace('.svg', '_roc.svg'))
     plt.show()
-    print("ROC curve saved at: ", save_path.replace('.png', '_roc.png'))
+    print("ROC curve saved at: ", save_path.replace('.svg', '_roc.svg'))
