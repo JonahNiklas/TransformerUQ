@@ -44,7 +44,7 @@ class BeamScore(AcquisitionFunction):
 #         probability_sum = torch.sum(probability, dim=1) # (batch_size)
 #         return torch.log(probability_sum) / _length_penalty(output, self.alpha)
 
-class VR_mpnet_base_distance(AcquisitionFunction):
+class VR_mpnet_dot(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
@@ -54,16 +54,57 @@ class VR_mpnet_base_distance(AcquisitionFunction):
         output = cast(List[List[str]], output)
 
         batch = len(output)
-        distances = torch.zeros(batch)
+        distances = torch.zeros(batch).to(hyperparameters.device)
         for b in range(batch):
-            embeddings = self.model.encode(output[b])
+            embeddings = self.model.encode(output[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
+            for i in range(self.num_inferences):
+                for j in range(i + 1, self.num_inferences):
+                    dot_product = torch.dot(embeddings[i], embeddings[j]).item()
+                    distances[b] += 1-dot_product
+
+        return distances/self.num_inferences
+
+
+class VR_mpnet_base_cosine(AcquisitionFunction):
+    def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
+        super().__init__(multiple_inference, num_inferences, alpha)
+        self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
+
+    def __call__(self, output: Union[torch.Tensor, List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
+        assert isinstance(output[0], list), "Output should be a list of lists"
+        output = cast(List[List[str]], output)
+
+        batch = len(output)
+        distances = torch.zeros(batch).to(hyperparameters.device)
+        for b in range(batch):
+            embeddings = self.model.encode(output[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
                     cosine_similarity = torch.nn.functional.cosine_similarity(
-                        torch.tensor(embeddings[i]).unsqueeze(0),
-                        torch.tensor(embeddings[j]).unsqueeze(0)
+                        embeddings[i].unsqueeze(0),
+                        embeddings[j].unsqueeze(0)
                     ).item()
-                    distances[b] += 2 - cosine_similarity*2
+                    distances[b] += 1-cosine_similarity
+
+        return distances/self.num_inferences
+
+class VR_mpnet_base_matrix_norm(AcquisitionFunction):
+    def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
+        super().__init__(multiple_inference, num_inferences, alpha)
+        self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
+
+    def __call__(self, output: Union[torch.Tensor, List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
+        assert isinstance(output[0], list), "Output should be a list of lists"
+        output = cast(List[List[str]], output)
+
+        batch = len(output)
+        distances = torch.zeros(batch).to(hyperparameters.device)
+        for b in range(batch):
+            embeddings = self.model.encode(output[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
+            for i in range(self.num_inferences):
+                for j in range(i + 1, self.num_inferences):
+                    matrix_norm = torch.norm(embeddings[i] - embeddings[j])
+                    distances[b] += matrix_norm
 
         return distances/self.num_inferences
 
