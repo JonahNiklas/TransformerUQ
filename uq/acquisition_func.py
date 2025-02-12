@@ -17,16 +17,14 @@ class AcquisitionFunction:
         self.multiple_inference = multiple_inference
         self.num_inferences = num_inferences
 
-    def __call__(self, output: Union[torch.Tensor, List[List[str]]], token_log_probs: torch.Tensor) -> torch.Tensor:
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError("Subclasses should implement this method")
 
 class BeamScore(AcquisitionFunction):
-    def __call__(self, output: Union[torch.Tensor, List[List[str]]], token_log_probs: torch.Tensor) -> torch.Tensor:
-        assert isinstance(output, torch.Tensor), "Output should be a tensor"
-
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
         # token_log_probs dim: (batch_size, max_len)
         log_prob = torch.sum(token_log_probs, dim=1)
-        return log_prob / _length_penalty(output, self.alpha)
+        return log_prob / _length_penalty(tgt_tokens, self.alpha)
 
 # class SequenceProbability(AcquisitionFunction):
 #     def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
@@ -49,14 +47,12 @@ class VR_mpnet_dot(AcquisitionFunction):
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 
-    def __call__(self, output: Union[torch.Tensor, List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
-        assert isinstance(output[0], list), "Output should be a list of lists"
-        output = cast(List[List[str]], output)
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
 
-        batch = len(output)
+        batch = len(hypothesis)
         distances = torch.zeros(batch).to(hyperparameters.device)
         for b in range(batch):
-            embeddings = self.model.encode(output[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
+            embeddings = self.model.encode(hypothesis[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
                     dot_product = torch.dot(embeddings[i], embeddings[j]).item()
@@ -70,14 +66,12 @@ class VR_mpnet_base_cosine(AcquisitionFunction):
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 
-    def __call__(self, output: Union[torch.Tensor, List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
-        assert isinstance(output[0], list), "Output should be a list of lists"
-        output = cast(List[List[str]], output)
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
 
-        batch = len(output)
+        batch = len(hypothesis)
         distances = torch.zeros(batch).to(hyperparameters.device)
         for b in range(batch):
-            embeddings = self.model.encode(output[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
+            embeddings = self.model.encode(hypothesis[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
                     cosine_similarity = torch.nn.functional.cosine_similarity(
@@ -93,14 +87,12 @@ class VR_mpnet_base_matrix_norm(AcquisitionFunction):
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 
-    def __call__(self, output: Union[torch.Tensor, List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
-        assert isinstance(output[0], list), "Output should be a list of lists"
-        output = cast(List[List[str]], output)
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
 
-        batch = len(output)
+        batch = len(hypothesis)
         distances = torch.zeros(batch).to(hyperparameters.device)
         for b in range(batch):
-            embeddings = self.model.encode(output[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
+            embeddings = self.model.encode(hypothesis[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
                     matrix_norm = torch.norm(embeddings[i] - embeddings[j])
@@ -112,17 +104,15 @@ class BLEUVariance(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
 
-    def __call__(self, output: Union[torch.Tensor, List[List[str]]], probability: torch.Tensor) -> torch.Tensor:
-        assert isinstance(output[0], list), "Output should be a list of lists"
-        output = cast(List[List[str]], output)
-        batch = len(output)
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
+        batch = len(hypothesis)
         bleu_distances = torch.zeros(batch)
         for b in range(batch):
             for i in range(self.num_inferences):
                 for j in range(self.num_inferences):
                     if i != j:
                         continue
-                    bleu_dist = sacrebleu.sentence_bleu(output[b][i], [output[b][j]]).score
+                    bleu_dist = sacrebleu.sentence_bleu(hypothesis[b][i], [hypothesis[b][j]]).score
                     bleu_distances[b] += (1 - bleu_dist / 100) ** 2
         return bleu_distances/self.num_inferences
         

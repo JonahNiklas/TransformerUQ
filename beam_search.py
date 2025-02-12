@@ -206,7 +206,6 @@ def greedy_search(
     vocab: Vocabulary,
 ) -> AutoregressiveInferenceResults:
     max_len = hyperparameters.transformer.max_len
-    model.eval()
     with torch.no_grad():
         batch_size = src_tokens.size(0)
         tgt_tokens = torch.zeros(batch_size, max_len).long().to(device)
@@ -238,7 +237,6 @@ def top_k_sampling(
     temperature: float = 0.4,
 ) -> AutoregressiveInferenceResults:
     max_len = hyperparameters.transformer.max_len
-    model.eval()
     with torch.no_grad():
         batch_size = src_tokens.size(0)
         tgt_tokens = torch.zeros(batch_size, max_len, dtype=torch.long, device=device)
@@ -312,7 +310,6 @@ def _beam_search_unbatched(
     """
     max_len = hyperparameters.transformer.max_len
     beam_size = hyperparameters.beam_search.beam_size
-    model.eval()
     with torch.no_grad():
         batch_size = src_tokens.size(0)
 

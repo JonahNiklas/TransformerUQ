@@ -4,13 +4,12 @@ import torch
 from torch import nn
 
 from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVariance, VR_mpnet_base_cosine, VR_mpnet_base_matrix_norm, VR_mpnet_dot
-from beam_search import beam_search_unbatched, beam_search_batched # | not using beam search yet
 from data_processing.dataloader import get_data_loader
 from hyperparameters import hyperparameters 
 from models.transformer_model import TransformerModel
 from uq.plot_uq import plot_data_retained_curve, plot_uq_histogram_and_roc
 from utils.checkpoints import load_checkpoint
-from uq.validate_uq import validate_uq
+from uq.validate_uq import ValidationResult, validate_uq
 from data_processing.vocab import load_vocab, output_to_text
 from constants import constants
 import wandb
@@ -73,144 +72,82 @@ def main() -> None:
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
+
+    # Define the acquisition functions
+    aq_funcs: List[AcquisitionFunction] = [
+        BeamScore(),
+        BLEUVariance(),
+        VR_mpnet_base_cosine(),
+        VR_mpnet_base_matrix_norm(),
+        VR_mpnet_dot(),
+    ]
     
-    bleu, avg_uq, hyp_ref_uq_pair = load_or_validate(
-        model=model,
-        loader=test_loader,
-        aq_func=BLEUVariance(),
-        filename="validation_cache",
-        run_id=run_id
-    )
-
-    bleu_bs, avg_uq_bs, hyp_ref_uq_pair_bs = load_or_validate(
-        model=model,
-        loader=test_loader,
-        aq_func=[BeamScore()],
-        filename="validation_cache_bs",
-        run_id=run_id
-    )
-
-    bleu_vr_mpnet, avg_uq_vr_mpnet, hyp_ref_uq_pair_vr_mpnet = load_or_validate(
-        model=model,
-        loader=test_loader,
-        aq_func=VR_mpnet_base_cosine(),
-        filename="validation_cache_vr_mpnet",
-        run_id=run_id
-    )
-
-    bleu_vr_matrix_norm, avg_uq_vr_matrix_norm, hyp_ref_uq_pair_vr_matrix_norm = load_or_validate(
-        model=model,
-        loader=test_loader,
-        aq_func=VR_mpnet_base_matrix_norm(),
-        filename="validation_cache_vr_matrix_norm",
-        run_id=run_id
-    )
-
-    bleu_vr_dot, avg_uq_vr_dot, hyp_ref_uq_pair_vr_dot = load_or_validate(
-        model=model,
-        loader=test_loader,
-        aq_func=VR_mpnet_dot(),
-        filename="validation_cache_vr_dot",
-        run_id=run_id
-    )
-
-    bleu_ood, avg_uq_ood, hyp_ref_uq_pair_ood = load_or_validate(
-        model=model,
-        loader=test_ood_loader,
-        aq_func=[BLEUVariance(), VR_mpnet_base_cosine(), VR_mpnet_base_matrix_norm(),VR_mpnet_dot()],
-        filename="validation_cache_ood",
-        run_id=run_id
-    )
-
-    bleu_ood_bs, avg_uq_ood_bs, hyp_ref_uq_pair_ood_bs = load_or_validate(
-        model=model,
-        loader=test_ood_loader,
-        aq_func=[BeamScore()],
-        filename="validation_cache_ood_bs",
-        run_id=run_id
-    )
-    
-    bleu_ood_vr_mpnet, avg_uq_ood_vr_mpnet, hyp_ref_uq_pair_ood_vr_mpnet = load_or_validate(
-        model=model,
-        loader=test_ood_loader,
-        aq_func=VR_mpnet_base_cosine(),
-        filename="validation_cache_ood_vr_mpnet",
-        run_id=run_id
-    )
-
-    bleu_ood_vr_matrix_norm, avg_uq_ood_vr_matrix_norm, hyp_ref_uq_pair_ood_vr_matrix_norm = load_or_validate(
-        model=model,
-        loader=test_ood_loader,
-        aq_func=VR_mpnet_base_matrix_norm(),
-        filename="validation_cache_ood_vr_matrix_norm",
-        run_id=run_id
-    )
-
-    bleu_ood_vr_dot, avg_uq_ood_vr_dot, hyp_ref_uq_pair_ood_vr_dot = load_or_validate(
-        model=model,
-        loader=test_ood_loader,
-        aq_func=VR_mpnet_dot(),
-        filename="validation_cache_ood_vr_dot",
-        run_id=run_id
-    )
+    search_methods = ["beam", "sample", "greedy"]
+    enable_dropout = [True, False]
+    for search_method in search_methods:
+        for dropout in enable_dropout:
+            filename = f"val_{search_method}_{dropout}"
+            print(f"Validating model with {search_method} search, dropout={dropout}")
+            validation_results_id = load_or_validate(
+                model,
+                test_loader,
+                search_method,
+                aq_funcs,
+                dropout,
+                filename+"_id",
+                run_id
+            )
+            validation_results_ood = load_or_validate(
+                model,
+                test_ood_loader,
+                search_method,
+                aq_funcs,
+                dropout,
+                filename+"_ood",
+                run_id
+            )
+            plot_data_retained_curve(validation_results_id,
+                                    methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                                    save_path= filename+"_id",
+                                    run_name=run_name)
+            
+            plot_data_retained_curve(validation_results_ood,
+                                    methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                                    save_path= filename+"_ood",
+                                    run_name=run_name)
+            
+            for i, aq_func in enumerate(aq_funcs):
+                plot_uq_histogram_and_roc(validation_results_id[i],
+                                          validation_results_ood[i],
+                                          aq_func.__class__.__name__,
+                                          filename+"_hist",
+                                          run_name)
 
 
-    print(f"BLEU Score on test_set: {bleu}")
-    print(f"Average UQ on test_set: {avg_uq}")
-
-    print(f"BLEU Score on test_set_bs: {bleu_bs}")
-    print(f"Average UQ on test_set_bs: {avg_uq_bs}")
-    
-    print(f"BLEU Score on test_ood: {bleu_ood}")
-    print(f"Average UQ on test_ood: {avg_uq_ood}")
-
-    print(f"BLEU Score on test_ood_bs: {bleu_ood_bs}")
-    print(f"Average UQ on test_ood_bs: {avg_uq_ood_bs}")
-
-    os.makedirs("local/results", exist_ok=True)
-
-    plot_data_retained_curve(
-        [hyp_ref_uq_pair, hyp_ref_uq_pair_bs, hyp_ref_uq_pair_vr_mpnet, hyp_ref_uq_pair_vr_matrix_norm, hyp_ref_uq_pair_vr_dot],
-        methods=["BLUEvar", "BeamScore", "VR_mpnet", "VR_matrix_norm", "VR_dot"],
-        save_path=f"local/results/{run_id}/hypotheses_uq_pairs.svg",
-        run_name=run_name
-    )
-
-
-    plot_data_retained_curve(
-        [hyp_ref_uq_pair_ood, hyp_ref_uq_pair_ood_bs, hyp_ref_uq_pair_ood_vr_mpnet, hyp_ref_uq_pair_ood_vr_matrix_norm, hyp_ref_uq_pair_ood_vr_dot],
-        methods=["BLUEvar", "BeamScore", "VR_mpnet", "VR_matrix_norm", "VR_dot"],
-        save_path=f"local/results/{run_id}/hypotheses_uq_pairs_ood.svg",
-        run_name=run_name
-    )
-
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair, hyp_ref_uq_pair_ood, method="BLUEvar", save_path=f"local/results/{run_id}/uq_histogram_bluevar.svg",run_name=run_name)
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair_bs, hyp_ref_uq_pair_ood_bs, method="BeamScore", save_path=f"local/results/{run_id}/uq_histogram_bs.svg",run_name=run_name)
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_mpnet, hyp_ref_uq_pair_ood_vr_mpnet, method="VR_mpnet", save_path=f"local/results/{run_id}/uq_histogram_vr_mpnet.svg",run_name=run_name)
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_matrix_norm, hyp_ref_uq_pair_ood_vr_matrix_norm, method="VR_matrix_norm", save_path=f"local/results/{run_id}/uq_histogram_vr_matrix_norm.svg",run_name=run_name)
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_dot, hyp_ref_uq_pair_ood_vr_dot, method="VR_dot", save_path=f"local/results/{run_id}/uq_histogram_vr_dot.svg",run_name=run_name)
+            
 
 # Validate the model and calculate BLEU score
 def load_or_validate(
     model: TransformerModel,
     loader: torch.utils.data.DataLoader,
-    aq_func: AcquisitionFunction,
+    sample_beam_greed: str,
+    aq_funcs: List[AcquisitionFunction],
+    enable_dropout: bool,
     filename: str,
     run_id: str
-) -> Tuple[float, float, List[Tuple[str, str, float]]]:
+) -> List[ValidationResult]:
     cache_file = f"local/results/{run_id}/{filename}.pth"
+    validation_results:List[ValidationResult] = []
     if os.path.exists(cache_file):
         print(f"Loading cached results from {cache_file}...")
         cache = torch.load(cache_file)
-        bleu = cache["bleu"]
-        avg_uq = cache["avg_uq"]
-        hyp_ref_uq_pair = cache["hyp_ref_uq_pair"]
+        validation_results = cache["validation_results"]
     else:
-        bleu, avg_uq, hyp_ref_uq_pair = validate_uq(model, loader, aq_func=aq_func, num_batches_to_validate_on=None)
+        validation_results =  validate_uq(model, loader, sample_beam_greed, aq_funcs, enable_dropout)
         os.makedirs(f"local/results/{run_id}", exist_ok=True)
-        torch.save({"bleu": bleu, "avg_uq": avg_uq, "hyp_ref_uq_pair": hyp_ref_uq_pair}, f"local/results/{run_id}/{filename}.pth")
+        torch.save(validation_results, cache_file)
         print(f"Cached validation results in local/results/{run_id}/{filename}.pth")
-    return bleu, avg_uq, hyp_ref_uq_pair
+    return validation_results
     
 if __name__ == "__main__":
     main()

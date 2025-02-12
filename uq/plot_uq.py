@@ -3,11 +3,16 @@ import matplotlib.pyplot as plt
 from sacrebleu import corpus_bleu
 from sklearn.metrics import roc_curve, auc
 
-def plot_data_retained_curve(hyp_ref_uq_pairs: List[List[Tuple[str,str, float]]],methods: List[str],save_path: str, run_name:str) -> None:
+from uq.validate_uq import ValidationResult
+
+def plot_data_retained_curve(validationResults: List[ValidationResult],methods: List[str],save_path: str, run_name:str) -> None:
     # Sort the hypothesis-UQ pairs by UQ value
-    bleu_scores: List[List[float]] = [[] for _ in range(len(hyp_ref_uq_pairs))]
+    bleu_scores: List[List[float]] = [[] for _ in range(len(validationResults))]
     interval = 0.025
-    for idx,hyp_ref_uq_pair in enumerate(hyp_ref_uq_pairs):
+    for idx,val_result in enumerate(validationResults):
+
+        hyp_ref_uq_pair = [(val_result.hypothesis[i], val_result.reference[i], val_result.uncertainty[i].item()) for i in range(len(val_result.hypothesis))]
+
         hyp_ref_uq_pair.sort(key=lambda x: abs(x[2]))
         
         for i in range(0, len(hyp_ref_uq_pair), int(interval * len(hyp_ref_uq_pair))):
@@ -32,25 +37,26 @@ def plot_data_retained_curve(hyp_ref_uq_pairs: List[List[Tuple[str,str, float]]]
 
 
 
-def plot_uq_histogram_and_roc(hyp_ref_uq_pair: List[Tuple[str,str, float]], hyp_ref_uq_pair_ood: List[Tuple[str,str, float]],method: str,save_path:str,run_name:str) -> None:
+def plot_uq_histogram_and_roc(validation_result_id: ValidationResult, validation_result_ood: ValidationResult, method: str,save_path:str,run_name:str) -> None:
     """
     Plot the histogram of the given UQ values.
 
     Args:
     uq_values: list of UQ values.
     """
-    test_uq_values = [pair[2] for pair in hyp_ref_uq_pair]
-    test_ood_uq_values = [pair[2] for pair in hyp_ref_uq_pair_ood]
 
-    min_length = min(len(test_uq_values), len(test_ood_uq_values))
-    test_uq_values = test_uq_values[:min_length]
-    test_ood_uq_values = test_ood_uq_values[:min_length]
+    test_uq_values_id = validation_result_id.uncertainty.tolist()
+    test_uq_values_ood = validation_result_ood.uncertainty.tolist()
 
-    assert len(test_uq_values) == len(test_ood_uq_values)
+    min_length = min(len(test_uq_values_id), len(test_uq_values_ood))
+    test_uq_values_id = test_uq_values_id[:min_length]
+    test_uq_values_ood = test_uq_values_ood[:min_length]
+
+    assert len(test_uq_values_id) == len(test_uq_values_ood)
 
     plt.figure()
-    plt.hist(test_uq_values, bins=20, alpha=0.5, label='In-distribution')    
-    plt.hist(test_ood_uq_values, bins=20, alpha=0.5, label='Out-of-distribution')
+    plt.hist(test_uq_values_id, bins=20, alpha=0.5, label='In-distribution')    
+    plt.hist(test_uq_values_ood, bins=20, alpha=0.5, label='Out-of-distribution')
     plt.xlabel("UQ Value")
     plt.ylabel("Frequency")
     plt.title(f"UQ Histogram with {method} for {run_name}")
@@ -60,8 +66,8 @@ def plot_uq_histogram_and_roc(hyp_ref_uq_pair: List[Tuple[str,str, float]], hyp_
     print("UQ histogram saved at: ", save_path)
 
     # Generate true labels (0 for in-distribution, 1 for out-of-distribution)
-    true_labels = [0] * len(test_uq_values) + [1] * len(test_ood_uq_values)
-    uq_values = test_uq_values + test_ood_uq_values
+    true_labels = [0] * len(test_uq_values_id) + [1] * len(test_uq_values_ood)
+    uq_values = test_uq_values_id + test_uq_values_ood
 
     # Compute ROC curve and ROC area
     fpr, tpr, _ = roc_curve(true_labels, uq_values)
