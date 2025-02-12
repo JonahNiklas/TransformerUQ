@@ -13,7 +13,7 @@ from hyperparameters import hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 BeamSearchFunction = Callable[
-    [nn.Module, torch.Tensor, Vocabulary], torch.Tensor
+    [nn.Module, torch.Tensor, Vocabulary], 'AutoregressiveInferenceResults'
 ]
 
 
@@ -252,10 +252,10 @@ def top_k_sampling(
             output = model(src_tokens, tgt_tokens)
             logits = output[:, t - 1, :]
             
-            logits = logits / temperature
             full_probs = torch.softmax(logits, dim=-1)
             softmax_probs[:, t, :] = full_probs
             
+            logits = logits / temperature
             top_k_logits, top_k_indices = torch.topk(logits, k, dim=-1)
             top_k_probs = torch.softmax(top_k_logits, dim=-1)
             
