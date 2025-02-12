@@ -281,9 +281,25 @@ def _clean_tgt_tokens(tgt_tokens: torch.Tensor, vocab: Vocabulary) -> torch.Tens
 
 @dataclass
 class AutoregressiveInferenceResults:
-    tgt_tokens: torch.Tensor
+    """
+    Results of autoregressive inference (batch_size, max_len)
+    """
+    token_ids: torch.Tensor
+    """
+    Softmax probabilities for each token (batch_size, max_len, vocab_size)
+    """
     softmax_probs: torch.Tensor
 
+    def get_softmax_probs_for_selected_token(self) -> torch.Tensor:
+        """
+        Get the softmax probability for each token in token_ids by indexing into softmax_probs.
+        For each batch and timestep, this returns the probability corresponding to the predicted token.
+        
+        Returns:
+            A tensor of shape (batch_size, max_len) containing the probabilities for the selected tokens.
+        """
+        selected_probs = self.softmax_probs.gather(dim=2, index=self.token_ids.unsqueeze(2))
+        return selected_probs.squeeze(2)
 
 
 def _beam_search_unbatched(
