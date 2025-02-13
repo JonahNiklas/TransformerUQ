@@ -13,7 +13,7 @@ from hyperparameters import hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 BeamSearchFunction = Callable[
-    [nn.Module, torch.Tensor, Vocabulary], torch.Tensor
+    [nn.Module, torch.Tensor, Vocabulary], 'AutoregressiveInferenceResults'
 ]
 
 
@@ -196,6 +196,8 @@ def beam_search_batched(
         for t in range(1, max_len):
             softmax_probs[:, t, :] = torch.softmax(output[:, t - 1, :], dim=-1)
 
+    final_tgt_tokens, softmax_probs = _clean_inference_results(final_tgt_tokens, softmax_probs, vocab)
+
     assert final_tgt_tokens.shape == (batch_size, max_len)
     return AutoregressiveInferenceResults(final_tgt_tokens, softmax_probs)
 
@@ -223,7 +225,7 @@ def greedy_search(
             predicted_tokens = torch.argmax(probs, dim=-1)
             tgt_tokens[:, t] = predicted_tokens
 
-        tgt_tokens = _clean_tgt_tokens(tgt_tokens, vocab)
+        tgt_tokens, softmax_probs = _clean_inference_results(tgt_tokens, softmax_probs, vocab)
 
     assert tgt_tokens.shape == (batch_size, max_len)
     return AutoregressiveInferenceResults(tgt_tokens, softmax_probs)
@@ -248,10 +250,10 @@ def top_k_sampling(
             output = model(src_tokens, tgt_tokens)
             logits = output[:, t - 1, :]
             
-            logits = logits / temperature
             full_probs = torch.softmax(logits, dim=-1)
             softmax_probs[:, t, :] = full_probs
             
+            logits = logits / temperature
             top_k_logits, top_k_indices = torch.topk(logits, k, dim=-1)
             top_k_probs = torch.softmax(top_k_logits, dim=-1)
             
@@ -262,19 +264,22 @@ def top_k_sampling(
             if torch.all((tgt_tokens == vocab.token_to_id(EOS_TOKEN)).any(dim=1)):
                 break
 
-        tgt_tokens = _clean_tgt_tokens(tgt_tokens, vocab)
+        tgt_tokens, softmax_probs = _clean_inference_results(tgt_tokens, softmax_probs, vocab)
 
     assert tgt_tokens.shape == (batch_size, max_len)
     return AutoregressiveInferenceResults(tgt_tokens, softmax_probs)
 
 
-def _clean_tgt_tokens(tgt_tokens: torch.Tensor, vocab: Vocabulary) -> torch.Tensor:
+def _clean_inference_results(tgt_tokens: torch.Tensor, softmax_probs: torch.Tensor, vocab: Vocabulary) -> Tuple[torch.Tensor, torch.Tensor]:
+    assert tgt_tokens[:, 0].eq(vocab.token_to_id(BOS_TOKEN)).all(), "First token must be BOS"
+    softmax_probs[:, 0, vocab.token_to_id(BOS_TOKEN)] = 1.0
     for i in range(tgt_tokens.size(0)):
         for j in range(1, tgt_tokens.size(1)):
             if tgt_tokens[i, j] == vocab.token_to_id(EOS_TOKEN):
                 tgt_tokens[i, j + 1:] = vocab.token_to_id(PAD_TOKEN)
+                softmax_probs[i, j + 1:, vocab.token_to_id(PAD_TOKEN)] = 1.0
                 break
-    return tgt_tokens
+    return tgt_tokens, softmax_probs
 
 
 @dataclass
@@ -300,7 +305,7 @@ class AutoregressiveInferenceResults:
         return selected_probs.squeeze(2)
 
 
-def _beam_search_unbatched(
+def beam_search_unbatched(
     model: nn.Module,
     src_tokens: torch.Tensor,
     vocab: Vocabulary,

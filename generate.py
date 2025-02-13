@@ -18,7 +18,8 @@ def generate_autoregressivly(
     print_ex: int,
 ) -> List[str]:
     model.eval()
-    tgt_tokens = search_method(model, src_tokens, vocab)
+    inference_results = search_method(model, src_tokens, vocab)
+    tgt_tokens = inference_results.token_ids
     batch_size = src_tokens.size(0)
     output_sentences = [output_to_text(tgt_tokens[i].tolist()) for i in range(batch_size)]
     print_random_generated_sentences(src_tokens, ground_truth, tgt_tokens, print_ex)
