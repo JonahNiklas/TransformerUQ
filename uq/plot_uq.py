@@ -15,8 +15,8 @@ def plot_data_retained_curve(validationResults: List[ValidationResult],methods: 
 
         hyp_ref_uq_pair.sort(key=lambda x: abs(x[2]))
         
-        for i in range(0, len(hyp_ref_uq_pair), int(interval * len(hyp_ref_uq_pair))):
-            interval_pairs = hyp_ref_uq_pair[:i + int(interval * len(hyp_ref_uq_pair))]
+        for i in range(0, len(hyp_ref_uq_pair), max(int(interval * len(hyp_ref_uq_pair)),1)):
+            interval_pairs = hyp_ref_uq_pair[:i + max(int(interval * len(hyp_ref_uq_pair)),1)]
             hypothesis_in_interval = [pair[0] for pair in interval_pairs]
             reference_in_interval = [pair[1] for pair in interval_pairs]
             interval_bleu_scores = corpus_bleu(hypothesis_in_interval, [reference_in_interval]).score

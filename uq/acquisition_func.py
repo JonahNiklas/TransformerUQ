@@ -17,27 +17,31 @@ class AcquisitionFunction:
         self.multiple_inference = multiple_inference
         self.num_inferences = num_inferences
 
-    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_softmax_probs: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError("Subclasses should implement this method")
 
 class BeamScore(AcquisitionFunction):
-    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
-        # token_log_probs dim: (batch_size, max_len)
-        log_prob = torch.sum(token_log_probs, dim=1)
-        return log_prob / _length_penalty(tgt_tokens, self.alpha)
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_softmax_probs: torch.Tensor) -> torch.Tensor:
+        # token_softmax_probs dim: (batch_size, max_len)
+        #only use first inference
+        token_softmax_probs = token_softmax_probs[:, 0, :]
+        tgt_tokens = tgt_tokens[:, 0, :]
+        log_prob = torch.log(token_softmax_probs)
+        seq_prob = torch.sum(log_prob, dim=1)
+        return seq_prob / _length_penalty(tgt_tokens, self.alpha)
 
 # class SequenceProbability(AcquisitionFunction):
 #     def __init__(self, multiple_inference: bool = True, num_inferences: int = 5, alpha: float = 0.6) -> None:
 #         super().__init__(multiple_inference, num_inferences, alpha)
 
-#     def __call__(self, output: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
-#         # token_log_probs dim: (batch_size, num_inferences, max_len, vocab_size)
+#     def __call__(self, output: torch.Tensor, token_softmax_probs: torch.Tensor) -> torch.Tensor:
+#         # token_softmax_probs dim: (batch_size, num_inferences, max_len, vocab_size)
 #         # output dim: (batch_size, num_inferences, max_len)
 #         assert isinstance(output[0], str), "Output should be a list of strings"
 
-#         token_log_probs = token_log_probs[:, :, :, ouptut.idx]
+#         token_softmax_probs = token_softmax_probs[:, :, :, ouptut.idx]
 
-#         probabilities = torch.softmax(token_log_probs, dim=2) # (batch_size, num_inferences, max_len)
+#         probabilities = torch.softmax(token_softmax_probs, dim=2) # (batch_size, num_inferences, max_len)
 #         probability = torch.prod(probabilities, dim=2) # (batch_size, num_inferences)
 #         probability_sum = torch.sum(probability, dim=1) # (batch_size)
 #         return torch.log(probability_sum) / _length_penalty(output, self.alpha)
@@ -47,7 +51,7 @@ class VR_mpnet_dot(AcquisitionFunction):
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 
-    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_softmax_probs: torch.Tensor) -> torch.Tensor:
 
         batch = len(hypothesis)
         distances = torch.zeros(batch).to(hyperparameters.device)
@@ -66,7 +70,7 @@ class VR_mpnet_base_cosine(AcquisitionFunction):
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 
-    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_softmax_probs: torch.Tensor) -> torch.Tensor:
 
         batch = len(hypothesis)
         distances = torch.zeros(batch).to(hyperparameters.device)
@@ -87,7 +91,7 @@ class VR_mpnet_base_matrix_norm(AcquisitionFunction):
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 
-    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_softmax_probs: torch.Tensor) -> torch.Tensor:
 
         batch = len(hypothesis)
         distances = torch.zeros(batch).to(hyperparameters.device)
@@ -104,9 +108,9 @@ class BLEUVariance(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
 
-    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_log_probs: torch.Tensor) -> torch.Tensor:
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_softmax_probs: torch.Tensor) -> torch.Tensor:
         batch = len(hypothesis)
-        bleu_distances = torch.zeros(batch)
+        bleu_distances = torch.zeros(batch).to(hyperparameters.device)
         for b in range(batch):
             for i in range(self.num_inferences):
                 for j in range(self.num_inferences):
@@ -124,6 +128,8 @@ def BLEU_mean_output_batch(outputs: List[List[str]]) -> List[str]:
     mean_outputs = []
     for b in range(batch_size):
         batch_outputs = outputs[b]
+        if len(batch_outputs) == 0:
+            continue
         n = len(batch_outputs)
         min_bleu_distance = float('inf')
         min_index = -1

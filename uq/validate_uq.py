@@ -10,6 +10,7 @@ from sacrebleu import corpus_bleu
 from tqdm import tqdm
 
 from data_processing.vocab import output_to_text
+from hyperparameters import hyperparameters
 from uq.generate_with_uq import BatchedValidationResult, generate_autoregressivly_with_uq
 from uq.acquisition_func import AcquisitionFunction, BLEUVariance
 
@@ -44,7 +45,7 @@ def validate_uq(
     print_ex: int = 1,
 ) -> List[ValidationResult]:
     
-    output_list: List[ValidationResult] = [ValidationResult(hypothesis=[], reference=[], uncertainty=torch.tensor([])) for _ in aq_funcs]
+    output_list: List[ValidationResult] = [ValidationResult(hypothesis=[], reference=[], uncertainty=torch.tensor([]).to(hyperparameters.device)) for _ in aq_funcs]
 
     logger.debug("Started validating models")
 

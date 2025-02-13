@@ -49,7 +49,7 @@ def main() -> None:
         model, 
         optimizer, 
         checkpoint,
-        remove_orig_prefix=not torch.cuda.is_available()
+        remove_orig_prefix= not torch.cuda.is_available()
     )
 
     # Set up the test data loader with the shared vocabulary
@@ -82,46 +82,65 @@ def main() -> None:
         VR_mpnet_dot(),
     ]
     
-    search_methods = ["beam", "sample", "greedy"]
-    enable_dropout = [True, False]
-    for search_method in search_methods:
-        for dropout in enable_dropout:
-            filename = f"val_{search_method}_{dropout}"
-            print(f"Validating model with {search_method} search, dropout={dropout}")
-            validation_results_id = load_or_validate(
-                model,
-                test_loader,
-                search_method,
-                aq_funcs,
-                dropout,
-                filename+"_id",
-                run_id
-            )
-            validation_results_ood = load_or_validate(
-                model,
-                test_ood_loader,
-                search_method,
-                aq_funcs,
-                dropout,
-                filename+"_ood",
-                run_id
-            )
-            plot_data_retained_curve(validation_results_id,
-                                    methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                                    save_path= filename+"_id",
-                                    run_name=run_name)
-            
-            plot_data_retained_curve(validation_results_ood,
-                                    methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                                    save_path= filename+"_ood",
-                                    run_name=run_name)
-            
-            for i, aq_func in enumerate(aq_funcs):
-                plot_uq_histogram_and_roc(validation_results_id[i],
-                                          validation_results_ood[i],
-                                          aq_func.__class__.__name__,
-                                          filename+"_hist",
-                                          run_name)
+    val_spec= [
+        {
+        "search_method": "greedy",
+        "dropout": True,
+        },
+        {
+        "search_method": "beam",
+        "dropout": True,
+        },
+        {
+        "search_method": "sample",
+        "dropout": True,
+        },
+        {
+        "search_method": "sample",
+        "dropout": False,
+        },
+    ]                 
+
+
+    for spec in val_spec:
+        search_method = spec["search_method"]
+        dropout = spec["dropout"]
+        filename = f"val_{search_method}_{dropout}"
+        print(f"Validating model with {search_method} search, dropout={dropout}")
+        validation_results_id = load_or_validate(
+            model,
+            test_loader,
+            search_method,
+            aq_funcs,
+            dropout,
+            filename+"_id",
+            run_id
+        )
+        validation_results_ood = load_or_validate(
+            model,
+            test_ood_loader,
+            search_method,
+            aq_funcs,
+            dropout,
+            filename+"_ood",
+            run_id
+        )
+        plot_data_retained_curve(validation_results_id,
+                                methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                                save_path= f"local/results/{run_id}/retention_{filename}_id",
+                                run_name=run_name)
+        
+        plot_data_retained_curve(validation_results_ood,
+                                methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                                save_path= f"local/results/{run_id}/retention_{filename}_ood",
+                                run_name=run_name)
+        
+        for i, aq_func in enumerate(aq_funcs):
+            plot_uq_histogram_and_roc(validation_results_id[i],
+                                        validation_results_ood[i],
+                                        aq_func.__class__.__name__,
+                                        f"local/results/{run_id}/hist_{filename}_{aq_func.__class__.__name__}",
+                                        run_name)
 
 
             
@@ -141,9 +160,9 @@ def load_or_validate(
     if os.path.exists(cache_file):
         print(f"Loading cached results from {cache_file}...")
         cache = torch.load(cache_file)
-        validation_results = cache["validation_results"]
+        validation_results = cache
     else:
-        validation_results =  validate_uq(model, loader, sample_beam_greed, aq_funcs, enable_dropout)
+        validation_results =  validate_uq(model, loader, sample_beam_greed, aq_funcs, enable_dropout,num_batches_to_validate_on=None)
         os.makedirs(f"local/results/{run_id}", exist_ok=True)
         torch.save(validation_results, cache_file)
         print(f"Cached validation results in local/results/{run_id}/{filename}.pth")
