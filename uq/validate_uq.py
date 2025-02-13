@@ -12,7 +12,7 @@ from tqdm import tqdm
 from data_processing.vocab import output_to_text
 from hyperparameters import hyperparameters
 from uq.generate_with_uq import BatchedValidationResult, generate_autoregressivly_with_uq
-from uq.acquisition_func import AcquisitionFunction, BLEUVariance
+from uq.acquisition_func import AcquisitionFunction
 
 logger = logging.getLogger(__name__)
 

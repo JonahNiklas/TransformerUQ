@@ -28,9 +28,8 @@ def plot_data_retained_curve(validationResults: List[ValidationResult],methods: 
     for i in range(len(bleu_scores)):
         plt.plot([i * interval for i in range(len(bleu_scores[i]))], bleu_scores[i], label=f"{methods[i]}")
     plt.legend()
-    plt.xlabel("Data retained")
-    plt.ylabel("BLEU Score")
-    plt.title(f"Data Retained Curve for {run_name}")
+    plt.xlabel("Data retained", fontsize=22)
+    plt.ylabel("BLEU Score", fontsize=22)
     plt.savefig(save_path)
     plt.show()
     print("Data retained curve saved at: ", save_path)
@@ -57,10 +56,9 @@ def plot_uq_histogram_and_roc(validation_result_id: ValidationResult, validation
     plt.figure()
     plt.hist(test_uq_values_id, bins=20, alpha=0.5, label='In-distribution')    
     plt.hist(test_uq_values_ood, bins=20, alpha=0.5, label='Out-of-distribution')
-    plt.xlabel("UQ Value")
-    plt.ylabel("Frequency")
-    plt.title(f"UQ Histogram with {method} for {run_name}")
-    plt.legend(loc='upper left')
+    plt.xlabel("UQ Value", fontsize=22)
+    plt.ylabel("Frequency", fontsize=22)
+    plt.legend(loc='upper left' )
     plt.savefig(save_path)
     plt.show()
     print("UQ histogram saved at: ", save_path)
@@ -78,10 +76,46 @@ def plot_uq_histogram_and_roc(validation_result_id: ValidationResult, validation
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title(f'ROC Curve with {method} for {run_name}')
+    plt.xlabel('False Positive Rate', fontsize=22)
+    plt.ylabel('True Positive Rate', fontsize=22)
     plt.legend()
     plt.savefig(save_path.replace('.svg', '_roc.svg'))
     plt.show()
     print("ROC curve saved at: ", save_path.replace('.svg', '_roc.svg'))
+
+
+def plot_combined_roc_curve(validation_result_id: List[ValidationResult], validation_result_ood: List[ValidationResult], methods: List[str], save_path: str):
+    """
+    Plot the all the ROC curves of the different uq_methods
+    Args:
+    validationResults: list of ValidationResults
+    """
+    plt.figure()
+    for validation_result_id, validation_result_ood, method in zip(validation_result_id, validation_result_ood, methods):
+        test_uq_values_id = validation_result_id.uncertainty.tolist()
+        test_uq_values_ood = validation_result_ood.uncertainty.tolist()
+
+        min_length = min(len(test_uq_values_id), len(test_uq_values_ood))
+        test_uq_values_id = test_uq_values_id[:min_length]
+        test_uq_values_ood = test_uq_values_ood[:min_length]
+
+        assert len(test_uq_values_id) == len(test_uq_values_ood)
+
+        # Generate true labels (0 for in-distribution, 1 for out-of-distribution)
+        true_labels = [0] * len(test_uq_values_id) + [1] * len(test_uq_values_ood)
+        uq_values = test_uq_values_id + test_uq_values_ood
+
+        # Compute ROC curve and ROC area
+        fpr, tpr, _ = roc_curve(true_labels, uq_values)
+        roc_auc = auc(fpr, tpr)
+
+        plt.plot(fpr, tpr, label=f'{method} (area = {roc_auc:.2f})')
+
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate',fontsize=22)
+    plt.ylabel('True Positive Rate',fontsize=22)
+    plt.legend()
+    plt.savefig(save_path)
+    plt.show()

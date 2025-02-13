@@ -46,29 +46,32 @@ def generate_autoregressivly_with_uq(
     else:
         beam_search_function = greedy_search
 
-    hypothesis :List[List[str]] = [[] for _ in range(hyperparameters.training.batch_size)]
-    token_ids : torch.Tensor = torch.zeros(hyperparameters.training.batch_size, hyperparameters.uq.num_inferences, hyperparameters.transformer.max_len).to(hyperparameters.device)
-    softmax_probs : torch.Tensor = torch.zeros(hyperparameters.training.batch_size, hyperparameters.uq.num_inferences, hyperparameters.transformer.max_len).to(hyperparameters.device)
+    batch_size = src_tokens.size(0)
+    hypothesis :List[List[str]] = [[] for _ in range(batch_size)]
+    token_ids : torch.Tensor = torch.zeros(batch_size, hyperparameters.uq.num_inferences, hyperparameters.transformer.max_len).to(hyperparameters.device)
+    softmax_probs : torch.Tensor = torch.zeros(batch_size, hyperparameters.uq.num_inferences, hyperparameters.transformer.max_len).to(hyperparameters.device)
+
     for n in tqdm(range(hyperparameters.uq.num_inferences)):
         inference_result : AutoregressiveInferenceResults = beam_search_function(
             model,
             src_tokens,
             vocab,
         )
-        token_ids[:len(inference_result.token_ids), n, :] = inference_result.token_ids
-        softmax_probs[:len(inference_result.token_ids), n, :] = inference_result.get_softmax_probs_for_selected_token()
-        for i in range(len(inference_result.token_ids)):
-            hypothesis[i].append(output_to_text(inference_result.token_ids[i].tolist(), lang='en'))
+        token_ids[:, n, :] = inference_result.token_ids
+        softmax_probs[:, n, :] = inference_result.get_softmax_probs_for_selected_token()
+        for b in range(batch_size):
+            hypothesis[b].append(output_to_text(inference_result.token_ids[b].tolist(), lang='en'))
 
     validation_result = []
     
-    for i, aq_func in enumerate(aq_funcs):
+    for aq_func in aq_funcs:
         if aq_func.multiple_inference:
             hyp = BLEU_mean_output_batch(hypothesis)
         else:
-            hyp = [hypothesis[i][0] for i in range(len(hypothesis))]
+            hyp = [hypothesis[b][0] for b in range(batch_size)]
         ref = [output_to_text(ref) for ref in ground_truth.tolist()]
         uq = aq_func(hypothesis, token_ids, softmax_probs)
+
         validation_result.append(BatchedValidationResult(hyp, ref, uq))
     
     model.eval() # Disable dropout

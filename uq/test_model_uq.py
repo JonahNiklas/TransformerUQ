@@ -3,11 +3,11 @@ from typing import List, Tuple
 import torch
 from torch import nn
 
-from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVariance, VR_mpnet_base_cosine, VR_mpnet_base_matrix_norm, VR_mpnet_dot
+from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVar, mpnet_cosine, mpnet_norm, mpnet_dot
 from data_processing.dataloader import get_data_loader
 from hyperparameters import hyperparameters 
 from models.transformer_model import TransformerModel
-from uq.plot_uq import plot_data_retained_curve, plot_uq_histogram_and_roc
+from uq.plot_uq import plot_combined_roc_curve, plot_data_retained_curve, plot_uq_histogram_and_roc
 from utils.checkpoints import load_checkpoint
 from uq.validate_uq import ValidationResult, validate_uq
 from data_processing.vocab import load_vocab, output_to_text
@@ -76,10 +76,10 @@ def main() -> None:
     # Define the acquisition functions
     aq_funcs: List[AcquisitionFunction] = [
         BeamScore(),
-        BLEUVariance(),
-        VR_mpnet_base_cosine(),
-        VR_mpnet_base_matrix_norm(),
-        VR_mpnet_dot(),
+        BLEUVar(),
+        mpnet_cosine(),
+        mpnet_norm(),
+        mpnet_dot(),
     ]
     
     val_spec= [
@@ -106,6 +106,7 @@ def main() -> None:
         search_method = spec["search_method"]
         dropout = spec["dropout"]
         filename = f"val_{search_method}_{dropout}"
+        os.makedirs(f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True)
         print(f"Validating model with {search_method} search, dropout={dropout}")
         validation_results_id = load_or_validate(
             model,
@@ -127,21 +128,26 @@ def main() -> None:
         )
         plot_data_retained_curve(validation_results_id,
                                 methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                                save_path= f"local/results/{run_id}/retention_{filename}_id",
+                                save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/retention_curve_id.svg",
                                 run_name=run_name)
         
         plot_data_retained_curve(validation_results_ood,
-                                methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                                save_path= f"local/results/{run_id}/retention_{filename}_ood",
+                                    methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                                save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/retention_curve_ood.svg",
                                 run_name=run_name)
         
         for i, aq_func in enumerate(aq_funcs):
             plot_uq_histogram_and_roc(validation_results_id[i],
                                         validation_results_ood[i],
                                         aq_func.__class__.__name__,
-                                        f"local/results/{run_id}/hist_{filename}_{aq_func.__class__.__name__}",
+                                        f"local/results/{run_id}/{search_method}/dropout{dropout}/hist_{filename}_{aq_func.__class__.__name__}.svg",
                                         run_name)
-
+        
+        plot_combined_roc_curve(validation_results_id,
+                                validation_results_ood,
+                                methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                                save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/roc_curve.svg",
+        )
 
             
 

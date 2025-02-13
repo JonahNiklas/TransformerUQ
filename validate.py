@@ -11,7 +11,6 @@ from beam_search import beam_search_batched, beam_search_unbatched, greedy_searc
 from constants import constants
 from generate import generate_autoregressivly
 from data_processing.vocab import load_vocab, output_to_text
-from uq.acquisition_func import AcquisitionFunction, BLEUVariance
 from hyperparameters import hyperparameters
 
 logger = logging.getLogger(__name__)

@@ -16,6 +16,7 @@ class AcquisitionFunction:
         self.alpha = alpha
         self.multiple_inference = multiple_inference
         self.num_inferences = num_inferences
+        self.name= None
 
     def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_softmax_probs: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError("Subclasses should implement this method")
@@ -26,6 +27,7 @@ class BeamScore(AcquisitionFunction):
         #only use first inference
         token_softmax_probs = token_softmax_probs[:, 0, :]
         tgt_tokens = tgt_tokens[:, 0, :]
+        assert (token_softmax_probs > 0).all(), "Softmax probabilities should be positive"
         log_prob = torch.log(token_softmax_probs)
         seq_prob = torch.sum(log_prob, dim=1)
         return seq_prob / _length_penalty(tgt_tokens, self.alpha)
@@ -46,7 +48,7 @@ class BeamScore(AcquisitionFunction):
 #         probability_sum = torch.sum(probability, dim=1) # (batch_size)
 #         return torch.log(probability_sum) / _length_penalty(output, self.alpha)
 
-class VR_mpnet_dot(AcquisitionFunction):
+class mpnet_dot(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
@@ -56,6 +58,8 @@ class VR_mpnet_dot(AcquisitionFunction):
         batch = len(hypothesis)
         distances = torch.zeros(batch).to(hyperparameters.device)
         for b in range(batch):
+            if len(hypothesis[b]) < self.num_inferences:
+                continue
             embeddings = self.model.encode(hypothesis[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
@@ -65,7 +69,7 @@ class VR_mpnet_dot(AcquisitionFunction):
         return distances/self.num_inferences
 
 
-class VR_mpnet_base_cosine(AcquisitionFunction):
+class mpnet_cosine(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
@@ -75,6 +79,8 @@ class VR_mpnet_base_cosine(AcquisitionFunction):
         batch = len(hypothesis)
         distances = torch.zeros(batch).to(hyperparameters.device)
         for b in range(batch):
+            if len(hypothesis[b]) < self.num_inferences:
+                continue
             embeddings = self.model.encode(hypothesis[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
@@ -86,7 +92,7 @@ class VR_mpnet_base_cosine(AcquisitionFunction):
 
         return distances/self.num_inferences
 
-class VR_mpnet_base_matrix_norm(AcquisitionFunction):
+class mpnet_norm(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
         self.model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
@@ -96,6 +102,8 @@ class VR_mpnet_base_matrix_norm(AcquisitionFunction):
         batch = len(hypothesis)
         distances = torch.zeros(batch).to(hyperparameters.device)
         for b in range(batch):
+            if len(hypothesis[b]) < self.num_inferences:
+                continue
             embeddings = self.model.encode(hypothesis[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
@@ -104,7 +112,7 @@ class VR_mpnet_base_matrix_norm(AcquisitionFunction):
 
         return distances/self.num_inferences
 
-class BLEUVariance(AcquisitionFunction):
+class BLEUVar(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
         super().__init__(multiple_inference, num_inferences, alpha)
 
@@ -112,9 +120,11 @@ class BLEUVariance(AcquisitionFunction):
         batch = len(hypothesis)
         bleu_distances = torch.zeros(batch).to(hyperparameters.device)
         for b in range(batch):
+            if len(hypothesis[b]) < self.num_inferences:
+                continue
             for i in range(self.num_inferences):
                 for j in range(self.num_inferences):
-                    if i != j:
+                    if i == j:
                         continue
                     bleu_dist = sacrebleu.sentence_bleu(hypothesis[b][i], [hypothesis[b][j]]).score
                     bleu_distances[b] += (1 - bleu_dist / 100) ** 2
