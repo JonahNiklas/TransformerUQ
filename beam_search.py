@@ -75,7 +75,7 @@ def beam_search_batched(
             encoder_input = src_tokens.unsqueeze(1).repeat(1, beam_size, 1).view(
                 batch_size * beam_size, -1
             )
-            model_output = model(encoder_input, decoder_input)
+            model_output, regularization = model(encoder_input, decoder_input)
             next_token_logits = model_output[
                 :, -1, :
             ]  # we only need the last time step

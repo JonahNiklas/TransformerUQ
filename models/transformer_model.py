@@ -1,4 +1,5 @@
 import math
+from typing import Tuple
 import torch
 import torch.nn as nn
 
@@ -38,6 +39,7 @@ class TransformerModel(nn.Module):
                 dropout=dropout,
                 batch_first=True,
             )
+            raise NotImplementedError("Concrete dropout adjustments not implemented for pytorch transformer")
         elif hyperparameters.transformer.transformer_implementation == "own":
             self.transformer = TransformerOwn(
                 d_model=d_model,
@@ -47,6 +49,7 @@ class TransformerModel(nn.Module):
                 dim_feedforward=d_ff,
                 dropout=dropout,
             )
+            raise NotImplementedError("Concrete dropout adjustments not implemented for own transformer")
         elif hyperparameters.transformer.transformer_implementation == "bayesformer":
             self.transformer = BayesTransformer(
                 d_model=d_model,
@@ -63,7 +66,7 @@ class TransformerModel(nn.Module):
 
     def forward(
         self, src: torch.Tensor, tgt: torch.Tensor, pad_idx: int = 0
-    ) -> torch.Tensor:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         src_key_padding_mask = src == pad_idx
         tgt_key_padding_mask = tgt == pad_idx
@@ -90,7 +93,7 @@ class TransformerModel(nn.Module):
             src = self.dropout(src)
             tgt = self.dropout(tgt)
 
-        out = self.transformer(
+        out, regularization = self.transformer(
             src,
             tgt,
             tgt_mask=causal_mask,
@@ -98,7 +101,7 @@ class TransformerModel(nn.Module):
             tgt_key_padding_mask=tgt_key_padding_mask,
         )
         result: torch.Tensor = self.out(out)
-        return result
+        return result, regularization
 
 
 class PositionalEncoding(nn.Module):

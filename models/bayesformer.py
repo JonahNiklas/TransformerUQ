@@ -3,9 +3,10 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 from torch import Tensor
-from typing import Optional
+from typing import Optional, Tuple
 
 from hyperparameters import hyperparameters
+from models.concrete_dropout import ConcreteDropout
 from models.masks import create_transformer_masks
 
 
@@ -24,21 +25,17 @@ class BayesMultiheadAttention(nn.Module):
 
         self.out = nn.Linear(d_model, d_model)
 
-        self.dropout = nn.Dropout(p_dropout)
+        self.dropout = ConcreteDropout()
 
     def forward(
         self, query: Tensor, key: Tensor, value: Tensor, mask: Tensor
-    ) -> Tensor:
+    ) -> Tuple[Tensor, Tensor]:
         batch_size, q_seq_length, _ = query.shape
         k_seq_length= key.shape[1]
 
-        query = self.dropout(query)  # red dropout
-        key = self.dropout(key)  # green dropout
-        value = self.dropout(value)  # blue dropout
-
-        Q = self.W_q(query)
-        K = self.W_k(key)
-        V = self.W_v(value)
+        Q, regularization1 = self.dropout(query, self.W_q) # red dropout
+        K, regularization2 = self.dropout(key, self.W_k) # green dropout
+        V, regularization3 = self.dropout(value, self.W_v) # blue dropout
 
         # Split into (batch_size, num_heads, seq_length, d_k)
         Q = Q.view(batch_size, q_seq_length, self.num_heads, self.d_k).transpose(1, 2)
@@ -60,7 +57,7 @@ class BayesMultiheadAttention(nn.Module):
         # Final linear layer
         output = self.out(attention_output)
         assert isinstance(output, torch.Tensor)
-        return output
+        return output, regularization1 + regularization2 + regularization3
 
 
 class BayesFeedForward(nn.Module):
@@ -68,13 +65,14 @@ class BayesFeedForward(nn.Module):
         super(BayesFeedForward, self).__init__()
         self.linear1 = nn.Linear(d_model, d_ff)
         self.linear2 = nn.Linear(d_ff, d_model)
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = ConcreteDropout()
         self.relu = nn.ReLU()
 
-    def forward(self, x: Tensor) -> Tensor:
-        output = self.linear2(self.dropout(self.relu(self.linear1(x))))
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
+        output = self.relu(self.linear1(x))
+        output, regularization = self.dropout(output, self.linear2)
         assert isinstance(output, torch.Tensor)
-        return output
+        return output, regularization
 
 
 class BayesEncoderLayer(nn.Module):
@@ -85,26 +83,28 @@ class BayesEncoderLayer(nn.Module):
 
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
-        self.dropout_skip_connection = nn.Dropout(dropout)
+        self.dropout_skip_connection = ConcreteDropout()
 
         # Dropout on the input to the feed-forward block
-        self.dropout_mlp_input = nn.Dropout(hyperparameters.transformer.dropout_mlp_input)
+        self.dropout_mlp_input = ConcreteDropout()
 
-    def forward(self, x: Tensor, mask: Tensor) -> Tensor:
+    def forward(self, x: Tensor, mask: Tensor) -> Tuple[Tensor, Tensor]:
         # Self-attention sub-layer
-        attn_output = self.self_attn(x, x, x, mask)
-        x = x + self.dropout_skip_connection(attn_output)  # orange dropout
+        attn_output, regularization1 = self.self_attn(x, x, x, mask)
+        skip_connection, regularization2 = self.dropout_skip_connection(attn_output, None)
+        x = x + skip_connection  # orange dropout
         x = self.norm1(x)
 
         # Dropout on the input to the feed-forward block
-        x = self.dropout_mlp_input(x)  # pink dropout
+        x, regularization3 = self.dropout_mlp_input(x, None)  # pink dropout
 
         # Feed-forward sub-layer
-        ff_output = self.feed_forward(x)
-        x = x + self.dropout_skip_connection(ff_output)  # brown dropout
+        ff_output, regularization4 = self.feed_forward(x)
+        skip_connection, regularization5 = self.dropout_skip_connection(ff_output, None)
+        x = x + skip_connection  # brown dropout
         x = self.norm2(x)
 
-        return x
+        return x, regularization1 + regularization2 + regularization3 + regularization4 + regularization5
 
 
 class BayesEncoder(nn.Module):
@@ -126,16 +126,18 @@ class BayesEncoder(nn.Module):
             ]
         )
 
-    def forward(self, src: Tensor, src_mask: Tensor) -> Tensor:
+    def forward(self, src: Tensor, src_mask: Tensor) -> Tuple[Tensor, Tensor]:
         """
         src: (batch_size, src_seq_length)
         src_mask: (batch_size, 1, 1, src_seq_length) or (batch_size, 1, src_seq_length, src_seq_length)
         """
+        regularization: Tensor = 0 # type: ignore
         for layer in self.layers:
-            src = layer(src, src_mask)
+            src, regularization_layer = layer(src, src_mask)
+            regularization += regularization_layer
 
         assert isinstance(src, torch.Tensor)
-        return src
+        return src, regularization
 
 
 class BayesDecoderLayer(nn.Module):
@@ -148,33 +150,36 @@ class BayesDecoderLayer(nn.Module):
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.norm3 = nn.LayerNorm(d_model)
-        self.dropout_skip_connection = nn.Dropout(dropout)
+        self.dropout_skip_connection = ConcreteDropout()
 
         # Dropout on the input to the feed-forward block
-        self.dropout_mlp_input = nn.Dropout(hyperparameters.transformer.dropout_mlp_input)
+        self.dropout_mlp_input = ConcreteDropout()
 
     def forward(
         self, x: Tensor, enc_output: Tensor, tgt_mask: Tensor, memory_mask: Tensor
-    ) -> Tensor:
+    ) -> Tuple[Tensor, Tensor]:
         # Masked self-attention
-        attn_output = self.self_attn(x, x, x, tgt_mask)
-        x = x + self.dropout_skip_connection(attn_output)
+        attn_output, regularization1 = self.self_attn(x, x, x, tgt_mask)
+        skip_connection, regularization2 = self.dropout_skip_connection(attn_output, None)
+        x = x + skip_connection  # orange dropout
         x = self.norm1(x)
 
         # Cross-attention sub-layer
-        attn_output = self.cross_attn(x, enc_output, enc_output, memory_mask)
-        x = x + self.dropout_skip_connection(attn_output)
+        attn_output, regularization3 = self.cross_attn(x, enc_output, enc_output, memory_mask)
+        skip_connection, regularization4 = self.dropout_skip_connection(attn_output, None)
+        x = x + skip_connection  # green dropout
         x = self.norm2(x)
 
         # Dropout on the input to the feed-forward block
-        x = self.dropout_mlp_input(x)
+        x, regularization5 = self.dropout_mlp_input(x, None)
 
         # Feed-forward sub-layer
-        ff_output = self.feed_forward(x)
-        x = x + self.dropout_skip_connection(ff_output)
+        ff_output, regularization6 = self.feed_forward(x)
+        skip_connection, regularization7 = self.dropout_skip_connection(ff_output, None)
+        x = x + skip_connection  # brown dropout
         x = self.norm3(x)
 
-        return x
+        return x, regularization1 + regularization2 + regularization3 + regularization4 + regularization5 + regularization6 + regularization7
 
 
 class BayesDecoder(nn.Module):
@@ -197,16 +202,18 @@ class BayesDecoder(nn.Module):
         enc_output: Tensor,
         tgt_mask: Optional[Tensor] = None,
         memory_mask: Optional[Tensor] = None,
-    ) -> Tensor:
+    ) -> Tuple[Tensor, Tensor]:
         """
         tgt: (batch_size, tgt_seq_length)
         enc_output: (batch_size, src_seq_length, d_model)
         """
+        regularization: Tensor = 0 # type: ignore
         for layer in self.layers:
-            tgt = layer(tgt, enc_output, tgt_mask, memory_mask)
+            tgt, regularization_layer = layer(tgt, enc_output, tgt_mask, memory_mask)
+            regularization += regularization_layer
 
         assert isinstance(tgt, torch.Tensor)
-        return tgt
+        return tgt, regularization
 
 
 class BayesTransformer(nn.Module):
@@ -245,7 +252,7 @@ class BayesTransformer(nn.Module):
         tgt_mask: Tensor,
         src_key_padding_mask: Tensor,
         tgt_key_padding_mask: Tensor,
-    ) -> Tensor:
+    ) -> Tuple[Tensor, Tensor]:
         """
         src: (batch_size, src_seq_length)
         tgt: (batch_size, tgt_seq_length)
@@ -254,8 +261,8 @@ class BayesTransformer(nn.Module):
             src, tgt, src_key_padding_mask, tgt_key_padding_mask, tgt_mask, self.nhead
         )
 
-        enc_output = self.encoder(src, enc_src_mask)
-        dec_output = self.decoder(tgt, enc_output, tgt_mask, memory_mask)
+        enc_output, regularization1 = self.encoder(src, enc_src_mask)
+        dec_output, regularization2 = self.decoder(tgt, enc_output, tgt_mask, memory_mask)
 
         assert isinstance(dec_output, torch.Tensor)
-        return dec_output
+        return dec_output, regularization1 + regularization2
