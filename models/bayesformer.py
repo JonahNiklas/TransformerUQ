@@ -229,7 +229,6 @@ class BayesTransformer(nn.Module):
         super(BayesTransformer, self).__init__()
         self.d_model = d_model
         self.nhead = nhead
-        self.dropout = nn.Dropout(dropout)
         self.encoder = BayesEncoder(
             d_model=d_model,
             num_heads=nhead,

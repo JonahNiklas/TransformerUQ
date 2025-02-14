@@ -38,7 +38,7 @@ def validate(
                 hyperparameters.device
             ), ground_truth.to(hyperparameters.device)
             output = generate_autoregressivly(
-                model, src_tokens, ground_truth, beam_search_batched, vocab, print_ex=1
+                model, src_tokens, ground_truth, beam_search_batched, vocab, print_ex=1 if i < 5 else False
             )
             all_hypotheses.extend(output)
             all_references.extend(
