@@ -35,6 +35,13 @@ class TrainingHyperparameters(BaseModel):
     adam_eps: float = 1e-9  # found in attention
 
 
+class ConcreteDropoutHyperparameters(BaseModel):
+    l: float = 0.01 # Try also 0.1 and 0.001 for more weight regularization
+    _number_of_training_examples: int = 4_603_578
+    weight_regularizer: float = l**2 / _number_of_training_examples
+    dropout_regularizer: float = 2 / (_number_of_training_examples * l**2)
+
+
 class VocabHyperparameters(BaseModel):
     token_min_freq: int = 100
     bpe_num_symbols: int = 32000
@@ -56,6 +63,7 @@ class Hyperparameter(BaseModel):
     uq: UncertaintyQuantificationHyperparameters = (
         UncertaintyQuantificationHyperparameters()
     )
+    dropout: ConcreteDropoutHyperparameters = ConcreteDropoutHyperparameters()
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
 

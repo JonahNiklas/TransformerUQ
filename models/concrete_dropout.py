@@ -5,12 +5,13 @@ import numpy as np
 import torch
 from torch import nn
 
+from hyperparameters import hyperparameters
 
 class ConcreteDropout(nn.Module):
     def __init__(
         self,
-        weight_regularizer: float = 1e-6,
-        dropout_regularizer: float = 1e-5,
+        weight_regularizer: float = hyperparameters.dropout.weight_regularizer,
+        dropout_regularizer: float = hyperparameters.dropout.dropout_regularizer,
         init_min: float = 0.1,
         init_max: float = 0.1,
     ) -> None:
