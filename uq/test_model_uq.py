@@ -3,7 +3,7 @@ from typing import List, Tuple
 import torch
 from torch import nn
 
-from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVariance
+from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVariance, VR_mpnet_base_cosine, VR_mpnet_base_matrix_norm, VR_mpnet_dot
 from beam_search import beam_search_unbatched, beam_search_batched # | not using beam search yet
 from data_processing.dataloader import get_data_loader
 from hyperparameters import hyperparameters 
@@ -85,15 +85,39 @@ def main() -> None:
     bleu_bs, avg_uq_bs, hyp_ref_uq_pair_bs = load_or_validate(
         model=model,
         loader=test_loader,
-        aq_func=BeamScore(),
+        aq_func=[BeamScore()],
         filename="validation_cache_bs",
+        run_id=run_id
+    )
+
+    bleu_vr_mpnet, avg_uq_vr_mpnet, hyp_ref_uq_pair_vr_mpnet = load_or_validate(
+        model=model,
+        loader=test_loader,
+        aq_func=VR_mpnet_base_cosine(),
+        filename="validation_cache_vr_mpnet",
+        run_id=run_id
+    )
+
+    bleu_vr_matrix_norm, avg_uq_vr_matrix_norm, hyp_ref_uq_pair_vr_matrix_norm = load_or_validate(
+        model=model,
+        loader=test_loader,
+        aq_func=VR_mpnet_base_matrix_norm(),
+        filename="validation_cache_vr_matrix_norm",
+        run_id=run_id
+    )
+
+    bleu_vr_dot, avg_uq_vr_dot, hyp_ref_uq_pair_vr_dot = load_or_validate(
+        model=model,
+        loader=test_loader,
+        aq_func=VR_mpnet_dot(),
+        filename="validation_cache_vr_dot",
         run_id=run_id
     )
 
     bleu_ood, avg_uq_ood, hyp_ref_uq_pair_ood = load_or_validate(
         model=model,
         loader=test_ood_loader,
-        aq_func=BLEUVariance(),
+        aq_func=[BLEUVariance(), VR_mpnet_base_cosine(), VR_mpnet_base_matrix_norm(),VR_mpnet_dot()],
         filename="validation_cache_ood",
         run_id=run_id
     )
@@ -101,11 +125,36 @@ def main() -> None:
     bleu_ood_bs, avg_uq_ood_bs, hyp_ref_uq_pair_ood_bs = load_or_validate(
         model=model,
         loader=test_ood_loader,
-        aq_func=BeamScore(),
+        aq_func=[BeamScore()],
         filename="validation_cache_ood_bs",
         run_id=run_id
     )
     
+    bleu_ood_vr_mpnet, avg_uq_ood_vr_mpnet, hyp_ref_uq_pair_ood_vr_mpnet = load_or_validate(
+        model=model,
+        loader=test_ood_loader,
+        aq_func=VR_mpnet_base_cosine(),
+        filename="validation_cache_ood_vr_mpnet",
+        run_id=run_id
+    )
+
+    bleu_ood_vr_matrix_norm, avg_uq_ood_vr_matrix_norm, hyp_ref_uq_pair_ood_vr_matrix_norm = load_or_validate(
+        model=model,
+        loader=test_ood_loader,
+        aq_func=VR_mpnet_base_matrix_norm(),
+        filename="validation_cache_ood_vr_matrix_norm",
+        run_id=run_id
+    )
+
+    bleu_ood_vr_dot, avg_uq_ood_vr_dot, hyp_ref_uq_pair_ood_vr_dot = load_or_validate(
+        model=model,
+        loader=test_ood_loader,
+        aq_func=VR_mpnet_dot(),
+        filename="validation_cache_ood_vr_dot",
+        run_id=run_id
+    )
+
+
     print(f"BLEU Score on test_set: {bleu}")
     print(f"Average UQ on test_set: {avg_uq}")
 
@@ -120,11 +169,26 @@ def main() -> None:
 
     os.makedirs("local/results", exist_ok=True)
 
-    plot_data_retained_curve([hyp_ref_uq_pair,hyp_ref_uq_pair_bs], methods=["BLUEvar","BeamScore"], save_path=f"local/results/{run_id}/hypotheses_uq_pairs.png",run_name=run_name)
-    plot_data_retained_curve([hyp_ref_uq_pair_ood,hyp_ref_uq_pair_ood_bs], methods=["BLUEvar","BeamScore"], save_path=f"local/results/{run_id}/hypotheses_uq_pairs_ood.png",run_name=run_name)
+    plot_data_retained_curve(
+        [hyp_ref_uq_pair, hyp_ref_uq_pair_bs, hyp_ref_uq_pair_vr_mpnet, hyp_ref_uq_pair_vr_matrix_norm, hyp_ref_uq_pair_vr_dot],
+        methods=["BLUEvar", "BeamScore", "VR_mpnet", "VR_matrix_norm", "VR_dot"],
+        save_path=f"local/results/{run_id}/hypotheses_uq_pairs.svg",
+        run_name=run_name
+    )
 
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair, hyp_ref_uq_pair_ood, method="BLUEvar", save_path=f"local/results/{run_id}/uq_histogram_bluevar.png",run_name=run_name)
-    plot_uq_histogram_and_roc(hyp_ref_uq_pair_bs, hyp_ref_uq_pair_ood_bs, method="BeamScore", save_path=f"local/results/{run_id}/uq_histogram_bs.png",run_name=run_name)
+
+    plot_data_retained_curve(
+        [hyp_ref_uq_pair_ood, hyp_ref_uq_pair_ood_bs, hyp_ref_uq_pair_ood_vr_mpnet, hyp_ref_uq_pair_ood_vr_matrix_norm, hyp_ref_uq_pair_ood_vr_dot],
+        methods=["BLUEvar", "BeamScore", "VR_mpnet", "VR_matrix_norm", "VR_dot"],
+        save_path=f"local/results/{run_id}/hypotheses_uq_pairs_ood.svg",
+        run_name=run_name
+    )
+
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair, hyp_ref_uq_pair_ood, method="BLUEvar", save_path=f"local/results/{run_id}/uq_histogram_bluevar.svg",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair_bs, hyp_ref_uq_pair_ood_bs, method="BeamScore", save_path=f"local/results/{run_id}/uq_histogram_bs.svg",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_mpnet, hyp_ref_uq_pair_ood_vr_mpnet, method="VR_mpnet", save_path=f"local/results/{run_id}/uq_histogram_vr_mpnet.svg",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_matrix_norm, hyp_ref_uq_pair_ood_vr_matrix_norm, method="VR_matrix_norm", save_path=f"local/results/{run_id}/uq_histogram_vr_matrix_norm.svg",run_name=run_name)
+    plot_uq_histogram_and_roc(hyp_ref_uq_pair_vr_dot, hyp_ref_uq_pair_ood_vr_dot, method="VR_dot", save_path=f"local/results/{run_id}/uq_histogram_vr_dot.svg",run_name=run_name)
 
 # Validate the model and calculate BLEU score
 def load_or_validate(
