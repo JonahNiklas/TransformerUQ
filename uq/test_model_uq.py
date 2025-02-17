@@ -1,7 +1,6 @@
 import os
-from typing import List, Tuple
+from typing import List
 import torch
-from torch import nn
 
 from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVar, mpnet_cosine, mpnet_norm, mpnet_dot
 from data_processing.dataloader import get_data_loader
@@ -12,7 +11,6 @@ from utils.checkpoints import load_checkpoint
 from uq.validate_uq import ValidationResult, validate_uq
 from data_processing.vocab import load_vocab, output_to_text
 from constants import constants
-import wandb
 
 
 def main() -> None:
@@ -82,29 +80,29 @@ def main() -> None:
         mpnet_dot(),
     ]
     
-    val_spec= [
+    val_spec = [
         {
-        "search_method": "greedy",
-        "dropout": True,
+            "search_method": "greedy",
+            "dropout": True,
         },
         {
-        "search_method": "beam",
-        "dropout": True,
+            "search_method": "beam",
+            "dropout": True,
         },
         {
-        "search_method": "sample",
-        "dropout": True,
+            "search_method": "sample",
+            "dropout": True,
         },
         {
-        "search_method": "sample",
-        "dropout": False,
+            "search_method": "sample",
+            "dropout": False,
         },
-    ]                 
+    ]
 
 
     for spec in val_spec:
-        search_method = spec["search_method"]
-        dropout = spec["dropout"]
+        search_method: str = str(spec["search_method"])
+        dropout: bool = bool(spec["dropout"])
         filename = f"val_{search_method}_{dropout}"
         os.makedirs(f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True)
         print(f"Validating model with {search_method} search, dropout={dropout}")

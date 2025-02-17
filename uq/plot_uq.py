@@ -84,16 +84,17 @@ def plot_uq_histogram_and_roc(validation_result_id: ValidationResult, validation
     print("ROC curve saved at: ", save_path.replace('.svg', '_roc.svg'))
 
 
-def plot_combined_roc_curve(validation_result_id: List[ValidationResult], validation_result_ood: List[ValidationResult], methods: List[str], save_path: str):
+def plot_combined_roc_curve(validation_result_id: List[ValidationResult], validation_result_ood: List[ValidationResult], methods: List[str], save_path: str) -> None:
     """
     Plot the all the ROC curves of the different uq_methods
     Args:
     validationResults: list of ValidationResults
     """
     plt.figure()
-    for validation_result_id, validation_result_ood, method in zip(validation_result_id, validation_result_ood, methods):
-        test_uq_values_id = validation_result_id.uncertainty.tolist()
-        test_uq_values_ood = validation_result_ood.uncertainty.tolist()
+    assert len(validation_result_id) == len(validation_result_ood) == len(methods)
+    for val_id, val_ood, method in zip(validation_result_id, validation_result_ood, methods):
+        test_uq_values_id = val_id.uncertainty.tolist()
+        test_uq_values_ood = val_ood.uncertainty.tolist()
 
         min_length = min(len(test_uq_values_id), len(test_uq_values_ood))
         test_uq_values_id = test_uq_values_id[:min_length]
