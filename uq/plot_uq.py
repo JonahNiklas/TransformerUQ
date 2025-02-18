@@ -49,7 +49,7 @@ def plot_data_retained_curve(validationResults: List[ValidationResult],methods: 
     plt.legend()
     plt.xlabel("Data retained", fontsize=label_fontsize)
     plt.ylabel("BLEU Score", fontsize=label_fontsize)
-    plt.savefig(save_path.replace(".svg", "_v2.svg"))
+    plt.savefig(save_path)
     plt.show()
     print("Data retained curve saved at: ", save_path)
 
