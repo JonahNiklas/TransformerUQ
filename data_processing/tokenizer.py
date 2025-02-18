@@ -10,8 +10,6 @@ import subword_nmt.apply_bpe
 import subword_nmt.learn_bpe
 from tqdm import tqdm
 
-from hyperparameters import hyperparameters
-
 
 class ParallelCorpusTokenizer:
     def __init__(self, num_processes: int | None =None, chunksize: int=1000) -> None:
@@ -112,7 +110,7 @@ class ParallelCorpusTokenizer:
         self.tokenize_file(test_ood_en_path, output_test_ood_en, "en")
         self.tokenize_file(test_ood_nl_path, output_test_ood_nl, "de")
 
-    def learn_bpe(self, input_path: str, output_codes_path: str) -> None:
+    def learn_bpe(self, input_path: str, output_codes_path: str, num_symbols: int=10000) -> None:
         """
         Learn BPE codes from a tokenized file.
 
@@ -128,7 +126,7 @@ class ParallelCorpusTokenizer:
         with open(input_path, "r", encoding="utf-8") as infile, open(
             output_codes_path, "w", encoding="utf-8"
         ) as outfile:
-            subword_nmt.learn_bpe.learn_bpe(infile, outfile, num_symbols=hyperparameters.vocab.bpe_num_symbols)
+            subword_nmt.learn_bpe.learn_bpe(infile, outfile, num_symbols=num_symbols)
 
     def _apply_bpe_line(self, line: str, bpe: subword_nmt.apply_bpe.BPE) -> str:
         """Apply BPE to a single line."""

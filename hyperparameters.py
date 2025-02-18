@@ -36,8 +36,8 @@ class TrainingHyperparameters(BaseModel):
 
 
 class VocabHyperparameters(BaseModel):
-    token_min_freq: int = 100
-    bpe_num_symbols: int = 32000
+    token_min_freq: int = 2000
+
 
 
 class UncertaintyQuantificationHyperparameters(BaseModel):

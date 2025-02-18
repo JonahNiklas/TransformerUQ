@@ -90,18 +90,36 @@ def build_and_save_vocab(
     train_en_path: str,
     train_de_path: str,
     min_freq: int,
-    save_path: str,
+    save_en_path: str,
+    save_de_path: str,
 ) -> None:
-    logger.info("Building shared vocabulary...")
-    shared_vocab = Vocabulary(min_freq=min_freq)
-    shared_vocab.update_freqs_from_file(train_en_path)
-    shared_vocab.update_freqs_from_file(train_de_path)
-    shared_vocab.build_vocab_from_freqs()
+    """
+    Build English & German vocabularies from streaming of training data.
+    Saves them to disk as pickle or torch file.
+    """
+    logger.info("Building English vocabulary...")
+    en_vocab = Vocabulary(min_freq=min_freq)
+    en_vocab.update_freqs_from_file(train_en_path)
+    en_vocab.build_vocab_from_freqs()
 
-    with open(save_path, "wb") as f:
-        pickle.dump(shared_vocab, f)
+    logger.info("Building German vocabulary...")
+    de_vocab = Vocabulary(min_freq=min_freq)
+    de_vocab.update_freqs_from_file(train_de_path)
+    de_vocab.build_vocab_from_freqs()
 
-    logger.info(f"Saved shared vocab to {save_path}")
+    # Save (pickle or torch.save)
+    # Option 1: Using pickle
+    with open(save_en_path, "wb") as f:
+        pickle.dump(en_vocab, f)
+    with open(save_de_path, "wb") as f:
+        pickle.dump(de_vocab, f)
+
+    # Option 2 (Alternative): Using torch.save
+    # torch.save(en_vocab, save_en_path)
+    # torch.save(de_vocab, save_de_path)
+
+    logger.info(f"Saved English vocab to {save_en_path}")
+    logger.info(f"Saved German vocab  to {save_de_path}")
 
 
 def load_vocab(vocab_file: str) -> Vocabulary:
@@ -111,15 +129,25 @@ def load_vocab(vocab_file: str) -> Vocabulary:
     return vocab
 
 
-_vocab_shared = None
+_vocab_en = None
+_vocab_de = None
+
 
 def output_to_text(output: List[int], lang: str="en") -> str:
-    global _vocab_shared
-    if _vocab_shared is None:
-        logger.debug("Loading shared vocab")
-        _vocab_shared = load_vocab(constants.file_paths.vocab)
+    global _vocab_en, _vocab_de
+    if lang == "de" and _vocab_de is None:
+        logger.debug("Loading vocab")
+        _vocab_de = load_vocab("local/vocab_de.pkl")
+    if lang == "en" and _vocab_en is None:
+        logger.debug("Loading vocab")
+        _vocab_en = load_vocab("local/vocab_en.pkl")
 
-    tokens = _vocab_shared.decode(output)
+    if lang == "de":
+        assert _vocab_de is not None
+        tokens = _vocab_de.decode(output)
+    else:
+        assert _vocab_en is not None
+        tokens = _vocab_en.decode(output)
 
     for i in range(len(tokens) - 1, -1, -1):
         if tokens[i].endswith("@@") and i + 1 < len(tokens):
