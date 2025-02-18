@@ -2,7 +2,7 @@ import os
 from typing import List
 import torch
 
-from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVar, mpnet_cosine, mpnet_norm, mpnet_dot
+from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVar, mpnet_cosine, mpnet_norm, mpnet_dot, roberta_cosine
 from data_processing.dataloader import get_data_loader
 from hyperparameters import hyperparameters 
 from models.transformer_model import TransformerModel
@@ -16,7 +16,7 @@ from constants import constants
 def main() -> None:
     # Load shared vocabulary
     run_id="7sy5cau3"
-    run_name="Bayesformer"
+    run_name="Bayes"
     checkpoint = "checkpoints/checkpoint-300000b.pth"
     # wandb.restore(checkpoint, run_path=f"sondresorbye-magson/TransformerUQ/{run_id}")  # type: ignore
     shared_vocab = load_vocab(constants.file_paths.vocab)
@@ -115,6 +115,15 @@ def main() -> None:
             filename+"_id",
             run_id
         )
+
+        # for i, aq_func in enumerate(aq_funcs):
+        #     print(f"Searh method: {search_method}, Dropout: {dropout}")
+        #     aq_func_corp_bleu = corpus_bleu(
+        #     validation_results_id[i].hypothesis,
+        #     [validation_results_id[i].reference],
+        #     )
+        #     print(f"{aq_func.__class__.__name__} corpus BLEU: {aq_func_corp_bleu.score}")
+
         validation_results_ood = load_or_validate(
             model,
             test_ood_loader,
@@ -125,26 +134,26 @@ def main() -> None:
             run_id
         )
         plot_data_retained_curve(validation_results_id,
-                                methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                                save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/retention_curve_id.svg",
-                                run_name=run_name)
+                    methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                    save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id.svg",
+                    run_name=run_name)
         
         plot_data_retained_curve(validation_results_ood,
-                                    methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                                save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/retention_curve_ood.svg",
-                                run_name=run_name)
+                        methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                    save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood.svg",
+                    run_name=run_name)
         
         for i, aq_func in enumerate(aq_funcs):
             plot_uq_histogram_and_roc(validation_results_id[i],
                                         validation_results_ood[i],
                                         aq_func.__class__.__name__,
-                                        f"local/results/{run_id}/{search_method}/dropout{dropout}/hist_{filename}_{aq_func.__class__.__name__}.svg",
+                                        f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_hist_{aq_func.__class__.__name__}.svg",
                                         run_name)
         
         plot_combined_roc_curve(validation_results_id,
                                 validation_results_ood,
                                 methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                                save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/roc_curve.svg",
+                                save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_roc.svg",
         )
 
             

@@ -214,7 +214,7 @@ def greedy_search(
         softmax_probs = torch.zeros(batch_size, max_len, len(vocab)).to(device)
         tgt_tokens[:, 0] = vocab.token_to_id(BOS_TOKEN)
 
-        for t in tqdm(range(1, max_len), desc="Generating tokens"):
+        for t in range(1,max_len):
             output = model(src_tokens, tgt_tokens)
             assert output.shape == (batch_size, max_len, len(vocab))
             logits = output[:, t - 1, :]
@@ -246,7 +246,7 @@ def top_k_sampling(
         
         tgt_tokens[:, 0] = vocab.token_to_id(BOS_TOKEN)
 
-        for t in tqdm(range(1, max_len), desc="Generating tokens"):
+        for t in range(1, max_len):
             output = model(src_tokens, tgt_tokens)
             logits = output[:, t - 1, :]
             

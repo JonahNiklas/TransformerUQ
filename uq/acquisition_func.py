@@ -91,6 +91,29 @@ class mpnet_cosine(AcquisitionFunction):
                     distances[b] += 1-cosine_similarity
 
         return distances/self.num_inferences
+    
+class roberta_cosine(AcquisitionFunction):
+    def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
+        super().__init__(multiple_inference, num_inferences, alpha)
+        self.model = SentenceTransformer('sentence-transformers/all-roberta-large-v1')
+
+    def __call__(self, hypothesis: List[List[str]], tgt_tokens: torch.Tensor, token_softmax_probs: torch.Tensor) -> torch.Tensor:
+
+        batch = len(hypothesis)
+        distances = torch.zeros(batch).to(hyperparameters.device)
+        for b in range(batch):
+            if len(hypothesis[b]) < self.num_inferences:
+                continue
+            embeddings = self.model.encode(hypothesis[b], convert_to_tensor=True, normalize_embeddings=True).to(hyperparameters.device)
+            for i in range(self.num_inferences):
+                for j in range(i + 1, self.num_inferences):
+                    cosine_similarity = torch.nn.functional.cosine_similarity(
+                        embeddings[i].unsqueeze(0),
+                        embeddings[j].unsqueeze(0)
+                    ).item()
+                    distances[b] += 1-cosine_similarity
+
+        return distances/self.num_inferences
 
 class mpnet_norm(AcquisitionFunction):
     def __init__(self, multiple_inference: bool = True, num_inferences: int = hyperparameters.uq.num_inferences, alpha: float = 0.6) -> None:
