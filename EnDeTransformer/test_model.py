@@ -3,11 +3,11 @@ import wandb
 from torch import nn
 
 from EnDeTransformer.beam_search import beam_search_batched, beam_search_unbatched
-from constants import constants
+from EnDeTransformer.constants import constants
 from EnDeTransformer.data_processing.dataloader import get_data_loader
 from EnDeTransformer.data_processing.vocab import load_vocab, output_to_text
 from EnDeTransformer.hyperparameters import hyperparameters
-from models.transformer_model import TransformerModel
+from EnDeTransformer.models.transformer_model import TransformerModel
 from EnDeTransformer.utils.checkpoints import load_checkpoint
 from EnDeTransformer.validate import validate
 
@@ -18,7 +18,7 @@ from EnDeTransformer.validate import validate
 
 def main() -> None:
     # Load shared vocabulary
-    # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
+    # wandb.restore("EnDeTransformer/checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
     vocab = load_vocab(constants.file_paths.vocab)
     model: nn.Module = TransformerModel(
         vocab_size=len(vocab),
@@ -41,7 +41,7 @@ def main() -> None:
     load_checkpoint(
         model, 
         optimizer, 
-        "checkpoints/checkpoint-175000.pth",
+        "EnDeTransformer/checkpoints/checkpoint-175000.pth",
         remove_orig_prefix=not torch.cuda.is_available()
     )
 

@@ -4,8 +4,8 @@ import torch.nn as nn
 
 from torch.nn import functional as F
 from EnDeTransformer.hyperparameters import hyperparameters
-from models.bayesformer import BayesTransformer
-from models.transformer import Transformer as TransformerOwn
+from EnDeTransformer.models.bayesformer import BayesTransformer
+from EnDeTransformer.models.transformer import Transformer as TransformerOwn
 
 
 class TransformerModel(nn.Module):

@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from EnDeTransformer.hyperparameters import hyperparameters
 from EnDeTransformer.data_processing.vocab import BOS_TOKEN, Vocabulary, load_vocab, output_to_text
-from constants import constants
+from EnDeTransformer.constants import constants
 from EnDeTransformer.beam_search import BeamSearchFunction
 from EnDeTransformer.utils.print_random_generated_sentences import print_random_generated_sentences
 

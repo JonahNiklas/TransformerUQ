@@ -4,7 +4,7 @@ from EnDeTransformer.hyperparameters import hyperparameters
 from EnDeTransformer.data_processing.streaming_parallell_dataset import StreamingParallelDataset
 from EnDeTransformer.data_processing.vocab import PAD_TOKEN, Vocabulary, load_vocab, output_to_text
 from torch.utils.data import DataLoader
-from constants import constants
+from EnDeTransformer.constants import constants
 
 def get_data_loader(
     src_file: str, 
@@ -37,10 +37,10 @@ def get_data_loader(
 
 if __name__ == "__main__":
     # Paths
-    train_en_path = "local/data/training/bpe_train.en"
-    train_de_path = "local/data/training/bpe_train.de"
-    test_en_path  = "local/data/test/bpe_test.en"
-    test_de_path  = "local/data/test/bpe_test.de"
+    train_en_path = "EnDeTransformer/local/data/training/bpe_train.en"
+    train_de_path = "EnDeTransformer/local/data/training/bpe_train.de"
+    test_en_path  = "EnDeTransformer/local/data/test/bpe_test.en"
+    test_de_path  = "EnDeTransformer/local/data/test/bpe_test.de"
 
     # Load the saved vocabularies
     vocab = load_vocab(constants.file_paths.vocab)

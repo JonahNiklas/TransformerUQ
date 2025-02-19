@@ -8,7 +8,7 @@
             "name": "main",
             "type": "debugpy",
             "request": "launch",
-            "module": "main",
+            "module": "EnDeTransformer.main",
             "env": {
                 "TORCH_COMPILE": "FALSE",
                 "USE_WANDB": "FALSE",
@@ -18,7 +18,7 @@
             "name": "test_model",
             "type": "debugpy",
             "request": "launch",
-            "module": "test_model",
+            "module": "EnDeTransformer.test_model",
             "env": {
                 "TORCH_COMPILE": "FALSE",
                 "USE_WANDB": "FALSE",
@@ -28,7 +28,7 @@
             "name": "test_model_uq",
             "type": "debugpy",
             "request": "launch",
-            "module": "uq.test_model_uq",
+            "module": "EnDeTransformer.uq.test_model_uq",
             "env": {
                 "TORCH_COMPILE": "FALSE",
                 "USE_WANDB": "FALSE",

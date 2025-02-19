@@ -25,7 +25,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-data_directory = "./local/data"
+data_directory = "./EnDeTransformer/local/data"
 if not os.path.exists(data_directory):
     os.makedirs(data_directory)
 

@@ -8,7 +8,7 @@ from sacrebleu import corpus_bleu
 from tqdm import tqdm
 
 from EnDeTransformer.beam_search import beam_search_batched, beam_search_unbatched, greedy_search, top_k_sampling
-from constants import constants
+from EnDeTransformer.constants import constants
 from EnDeTransformer.generate import generate_autoregressivly
 from EnDeTransformer.data_processing.vocab import load_vocab, output_to_text
 from EnDeTransformer.hyperparameters import hyperparameters
@@ -50,7 +50,7 @@ def validate(
 
     if save_hypotheses_to_file:
         logger.info("Saving hypotheses to file")
-        with open("local/data/test/hypotheses.en", "w") as f:
+        with open("EnDeTransformer/local/data/test/hypotheses.en", "w") as f:
             for hyp in all_hypotheses:
                 f.write(hyp + "\n")
 

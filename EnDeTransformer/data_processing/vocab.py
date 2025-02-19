@@ -8,7 +8,7 @@ from typing import Dict, List
 import torch
 from sacremoses import MosesDetokenizer, MosesTokenizer
 
-from constants import constants
+from EnDeTransformer.constants import constants
 
 
 logger = logging.getLogger(__name__)

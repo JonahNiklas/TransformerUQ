@@ -3,10 +3,10 @@ import os
 from typing import Literal
 import torch
 import wandb
-from constants import constants
+from EnDeTransformer.constants import constants
 from EnDeTransformer.data_processing.dataloader import get_data_loader, load_vocab
 from EnDeTransformer.hyperparameters import hyperparameters
-from models.transformer_model import TransformerModel
+from EnDeTransformer.models.transformer_model import TransformerModel
 from EnDeTransformer.data_processing.tokenizer import ParallelCorpusTokenizer
 from EnDeTransformer.train import train
 import logging
@@ -55,7 +55,7 @@ def main() -> None:
                 f_out.write(line)
 
     logger.info("Learn a single set of BPE codes from merged data")
-    shared_bpe_codes = "local/data/training/shared_bpe_codes.txt"
+    shared_bpe_codes = "EnDeTransformer/local/data/training/shared_bpe_codes.txt"
     tokenizer.learn_bpe(
         input_path=constants.file_paths.tokenized_train_merged,
         output_codes_path=shared_bpe_codes,
@@ -177,7 +177,7 @@ def main() -> None:
         project="TransformerUQ",
         entity="sondresorbye-magson",
         config=hyperparameters.model_dump(),
-        dir="local",
+        dir="EnDeTransformer/local",
         mode=wandb_mode,
     )
 

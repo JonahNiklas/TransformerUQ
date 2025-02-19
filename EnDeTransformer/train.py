@@ -69,8 +69,8 @@ def train(
                     wandb.log({"bleu": bleu}, step=step_num)
                     model.train()
                 if step_num % hyperparameters.training.save_every == 0:
-                    os.makedirs("local/checkpoints", exist_ok=True)
+                    os.makedirs("EnDeTransformer/local/checkpoints", exist_ok=True)
                     save_checkpoint(
-                        model, optimizer, f"local/checkpoints/checkpoint-{step_num}.pth"
+                        model, optimizer, f"EnDeTransformer/local/checkpoints/checkpoint-{step_num}.pth"
                     )
-                    wandb.save(f"local/checkpoints/checkpoint-{step_num}.pth")
+                    wandb.save(f"EnDeTransformer/local/checkpoints/checkpoint-{step_num}.pth")

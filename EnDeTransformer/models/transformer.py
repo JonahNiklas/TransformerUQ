@@ -6,7 +6,7 @@ from torch import Tensor
 from typing import Optional
 
 from EnDeTransformer.hyperparameters import hyperparameters
-from models.masks import create_transformer_masks
+from EnDeTransformer.models.masks import create_transformer_masks
 
 
 class MultiHeadAttention(nn.Module):

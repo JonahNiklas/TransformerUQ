@@ -8,7 +8,7 @@ from EnDeTransformer.beam_search import AutoregressiveInferenceResults, beam_sea
 from EnDeTransformer.data_processing.vocab import BOS_TOKEN, Vocabulary, load_vocab, output_to_text
 from EnDeTransformer.uq.acquisition_func import AcquisitionFunction, BLEU_mean_output_batch
 from EnDeTransformer.hyperparameters import hyperparameters
-from constants import constants
+from EnDeTransformer.constants import constants
 from typing import List, Tuple, Union
 
 @dataclass

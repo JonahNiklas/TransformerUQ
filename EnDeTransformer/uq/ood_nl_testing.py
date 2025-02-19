@@ -1,9 +1,9 @@
-from constants import constants
+from EnDeTransformer.constants import constants
 from EnDeTransformer.hyperparameters import hyperparameters
-from models.transformer_model import TransformerModel
+from EnDeTransformer.models.transformer_model import TransformerModel
 from EnDeTransformer.data_processing.vocab import PAD_TOKEN, load_vocab
 from EnDeTransformer.data_processing.dataloader import get_data_loader
-from models.transformer import Transformer
+from EnDeTransformer.models.transformer import Transformer
 import torch
 import torch.nn as nn
 from EnDeTransformer.validate import validate
@@ -12,8 +12,8 @@ def main() -> None:
     vocab = load_vocab(constants.file_paths.vocab)
 
     test_ood_loader = get_data_loader(
-        src_file="local/data/test_ood/bpe_test_ood.nl",
-        tgt_file="local/data/test_ood/bpe_test_ood.en",
+        src_file="EnDeTransformer/local/data/test_ood/bpe_test_ood.nl",
+        tgt_file="EnDeTransformer/local/data/test_ood/bpe_test_ood.en",
         vocab=vocab,
         batch_size=hyperparameters.training.batch_size,
         add_bos_eos=True,
@@ -37,7 +37,7 @@ def main() -> None:
     model.to(device)
 
     checkpoint_to_load = 175000
-    model.load_state_dict(torch.load(f"checkpoints/checkpoint-{checkpoint_to_load}.pth")["model_state_dict"])
+    model.load_state_dict(torch.load(f"EnDeTransformer/checkpoints/checkpoint-{checkpoint_to_load}.pth")["model_state_dict"])
 
     # Validate model on OOD data
     validate(model, test_ood_loader)
