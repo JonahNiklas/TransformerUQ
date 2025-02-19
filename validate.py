@@ -7,11 +7,10 @@ import torch.utils.data as data
 from sacrebleu import corpus_bleu
 from tqdm import tqdm
 
-from beam_search import beam_search_batched, beam_search_unbatched, greedy_search
+from beam_search import beam_search_batched, beam_search_unbatched, greedy_search, top_k_sampling
 from constants import constants
 from generate import generate_autoregressivly
 from data_processing.vocab import load_vocab, output_to_text
-from uq.acquisition_func import AcquisitionFunction, BLEUVariance
 from hyperparameters import hyperparameters
 
 logger = logging.getLogger(__name__)
@@ -38,7 +37,7 @@ def validate(
                 hyperparameters.device
             ), ground_truth.to(hyperparameters.device)
             output = generate_autoregressivly(
-                model, src_tokens, ground_truth, beam_search_batched, vocab, print_ex=1
+                model, src_tokens, ground_truth, top_k_sampling, vocab, print_ex=1
             )
             all_hypotheses.extend(output)
             all_references.extend(
