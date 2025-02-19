@@ -156,28 +156,3 @@ def output_to_text(output: List[int], lang: str="en") -> str:
     detokenizer = MosesDetokenizer(lang=lang)
     text: str = detokenizer.detokenize(tokens)
     return text
-
-
-if __name__ == "__main__":
-    # Test output_to_text
-    
-    sample_sentence = "hi don't im such a cool person"
-    tokenizer = MosesTokenizer(lang="en")
-    tokenized_text = tokenizer.tokenize(sample_sentence)
-    print("Tokenized text:")
-    print(tokenized_text)
-    vocab = load_vocab(constants.file_paths.vocab)
-    encoded = vocab.encode(tokenized_text, add_bos=True, add_eos=True)
-    print([vocab.id2token[enc] for enc in encoded])
-    print("Encoded text:")
-    print(encoded)
-    decoded = vocab.decode(encoded)
-    print("Decoded text:")
-    print(decoded)
-    
-    
-    detokenizer = MosesDetokenizer(lang="en")
-    detokenized_text = detokenizer.detokenize(decoded)
-    print("Detokenized text:")
-    print(detokenized_text)
-    

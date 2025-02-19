@@ -11,7 +11,8 @@ from models.transformer import Transformer as TransformerOwn
 class TransformerModel(nn.Module):
     def __init__(
         self,
-        vocab_size: int,
+        src_vocab_size: int,
+        tgt_vocab_size: int,
         d_model: int,
         num_heads: int,
         num_encoder_layers: int,
@@ -21,9 +22,10 @@ class TransformerModel(nn.Module):
         max_len: int,
     ) -> None:
         super().__init__()
-        self.vocab_size = vocab_size
+        self.src_vocab_size = src_vocab_size
+        self.tgt_vocab_size = tgt_vocab_size
         self.d_model = d_model
-        self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=0)
+        self.embedding = nn.Embedding(src_vocab_size, d_model, padding_idx=0)
         self.dropout = nn.Dropout(dropout)
         positional_dropout = 0.0
         self.pos_encoder = PositionalEncoding(d_model, max_len=max_len, dropout=positional_dropout)
@@ -58,8 +60,7 @@ class TransformerModel(nn.Module):
             )
         else:
             raise ValueError("Invalid transformer implementation")
-        self.out = nn.Linear(d_model, vocab_size, bias=False)
-        self.embedding.weight = self.out.weight
+        self.out = nn.Linear(d_model, tgt_vocab_size, bias=False)
 
     def forward(
         self, src: torch.Tensor, tgt: torch.Tensor, pad_idx: int = 0

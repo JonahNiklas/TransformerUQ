@@ -14,13 +14,13 @@ def generate_autoregressivly(
     src_tokens: torch.Tensor,
     ground_truth: torch.Tensor,
     search_method: BeamSearchFunction,
-    vocab: Vocabulary,
+    tgt_vocab: Vocabulary,
     print_ex: int,
 ) -> List[str]:
     model.eval()
-    tgt_tokens = search_method(model, src_tokens, vocab)
+    tgt_tokens = search_method(model, src_tokens, tgt_vocab)
     batch_size = src_tokens.size(0)
-    output_sentences = [output_to_text(tgt_tokens[i].tolist()) for i in range(batch_size)]
+    output_sentences = [output_to_text(tgt_tokens[i].tolist(), lang="en") for i in range(batch_size)]
     print_random_generated_sentences(src_tokens, ground_truth, tgt_tokens, print_ex)
 
     return output_sentences

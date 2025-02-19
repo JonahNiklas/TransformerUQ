@@ -26,7 +26,8 @@ def validate(
     all_references: list[str] = []
     all_hypotheses: list[str] = []
 
-    vocab = load_vocab(constants.file_paths.vocab)
+    src_vocab = load_vocab(constants.file_paths.src_vocab)
+    tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
 
     logger.debug("Started validating models")
     with torch.no_grad():
@@ -38,7 +39,7 @@ def validate(
                 hyperparameters.device
             ), ground_truth.to(hyperparameters.device)
             output = generate_autoregressivly(
-                model, src_tokens, ground_truth, beam_search_batched, vocab, print_ex=1
+                model, src_tokens, ground_truth, beam_search_batched, tgt_vocab, print_ex=1
             )
             all_hypotheses.extend(output)
             all_references.extend(

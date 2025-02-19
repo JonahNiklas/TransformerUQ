@@ -20,9 +20,11 @@ from validate import validate
 def main() -> None:
     # Load shared vocabulary
     # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
-    vocab = load_vocab(constants.file_paths.vocab)
+    src_vocab = load_vocab(constants.file_paths.src_vocab)
+    tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
     model: nn.Module = TransformerModel(
-        vocab_size=len(vocab),
+        src_vocab_size=len(src_vocab),
+        tgt_vocab_size=len(tgt_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
@@ -50,7 +52,8 @@ def main() -> None:
     test_loader = get_data_loader(
         src_file=constants.file_paths.bpe_test_de,
         tgt_file=constants.file_paths.bpe_test_en,
-        vocab=vocab,
+        src_vocab=src_vocab,
+        tgt_vocab=tgt_vocab,
         batch_size=32, # Needs to be low due to beam search
         add_bos_eos=True,
         shuffle=False,

@@ -10,17 +10,17 @@ import torch
 
 # Taken from tensor2tensor: https://github.com/tensorflow/tensor2tensor/blob/28adf2690c551ef0f570d41bef2019d9c502ec7e/tensor2tensor/models/transformer.py#L1627
 class TransformerHyperparameters(BaseModel):
-    hidden_size: int = 512  # found in t2t
+    hidden_size: int = 512  # found in transformer_iwslt_de_en
     max_len: int = 128  # ALTERED - 256 found in t2t
-    encoder_ffn_embed_dim: int = 2048  # found in t2t, known as filter_size in t2t
-    num_heads: int = 8  # found in t2t
-    num_hidden_layers: int = 6  # found in t2t
+    encoder_ffn_embed_dim: int = 1024  # found in transformer_iwslt_de_en
+    num_heads: int = 4  # found in transformer_iwslt_de_en
+    num_hidden_layers: int = 6  # found in transformer_iwslt_de_en
     dropout: float = 0.1  # 0.1 in attention  # 0.2found in t2t, transformer_base_v1(), 0.1 used by bayesformer (fairseq)
     dropout_mlp_input: float = 0.05  # found in bayesformer
     transformer_implementation: Literal["pytorch", "own", "bayesformer"] = "bayesformer"
 
 class TrainingHyperparameters(BaseModel):
-    max_steps: int = 350_000  # known from wat zei je
+    max_steps: int = 500_000  # found in bayesformer
     validate_every: int = 5000
     save_every: int = 50_000
     label_smoothing: float = 0.1  # found in t2t
@@ -36,7 +36,8 @@ class TrainingHyperparameters(BaseModel):
 
 
 class VocabHyperparameters(BaseModel):
-    token_min_freq: int = 2000
+    token_min_freq: int = 1
+    bpe_num_symbols: int = 10000
 
 
 

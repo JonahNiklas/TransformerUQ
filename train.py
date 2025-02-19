@@ -40,15 +40,15 @@ def train(
 
                 batch_size = src_tokens.shape[0]
                 tgt_len = tgt_tokens.shape[1]
-                vocab_size = model.vocab_size
-                assert vocab_size > 10_000
+                tgt_vocab_size = model.tgt_vocab_size
+                assert tgt_vocab_size > 5_000
 
                 optimizer.zero_grad()
                 decoder_input = tgt_tokens[:, :-1]
                 labels = tgt_tokens[:, 1:]
                 logits = model(src_tokens, decoder_input)
                 logits = logits.transpose(1, 2)
-                assert logits.shape == (batch_size, vocab_size, tgt_len - 1)
+                assert logits.shape == (batch_size, tgt_vocab_size, tgt_len - 1)
                 assert labels.shape == (batch_size, tgt_len - 1)
                 loss = criterion(logits, labels)
                 loss.backward()
