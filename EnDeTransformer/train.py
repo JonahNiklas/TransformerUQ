@@ -5,10 +5,10 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import wandb
-from hyperparameters import hyperparameters
+from EnDeTransformer.hyperparameters import hyperparameters
 
-from utils.checkpoints import save_checkpoint
-from validate import validate
+from EnDeTransformer.utils.checkpoints import save_checkpoint
+from EnDeTransformer.validate import validate
 import logging
 
 logger = logging.getLogger(__name__)

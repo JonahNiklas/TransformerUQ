@@ -4,7 +4,7 @@ import numpy as np
 from sacrebleu import corpus_bleu
 from sklearn.metrics import roc_curve, auc
 
-from uq.validate_uq import ValidationResult
+from EnDeTransformer.uq.validate_uq import ValidationResult
 
 label_fontsize = 12
 plot_figsize = (6.4*0.75, 4.8*0.75)

@@ -9,10 +9,10 @@ import torch.utils.data as data
 from sacrebleu import corpus_bleu
 from tqdm import tqdm
 
-from data_processing.vocab import output_to_text
-from hyperparameters import hyperparameters
-from uq.generate_with_uq import BatchedValidationResult, generate_autoregressivly_with_uq
-from uq.acquisition_func import AcquisitionFunction
+from EnDeTransformer.data_processing.vocab import output_to_text
+from EnDeTransformer.hyperparameters import hyperparameters
+from EnDeTransformer.uq.generate_with_uq import BatchedValidationResult, generate_autoregressivly_with_uq
+from EnDeTransformer.uq.acquisition_func import AcquisitionFunction
 
 logger = logging.getLogger(__name__)
 

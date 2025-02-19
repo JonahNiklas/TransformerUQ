@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch import Tensor
 from typing import Optional
 
-from hyperparameters import hyperparameters
+from EnDeTransformer.hyperparameters import hyperparameters
 from models.masks import create_transformer_masks
 
 

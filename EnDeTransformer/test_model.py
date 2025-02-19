@@ -2,14 +2,14 @@ import torch
 import wandb
 from torch import nn
 
-from beam_search import beam_search_batched, beam_search_unbatched
+from EnDeTransformer.beam_search import beam_search_batched, beam_search_unbatched
 from constants import constants
-from data_processing.dataloader import get_data_loader
-from data_processing.vocab import load_vocab, output_to_text
-from hyperparameters import hyperparameters
+from EnDeTransformer.data_processing.dataloader import get_data_loader
+from EnDeTransformer.data_processing.vocab import load_vocab, output_to_text
+from EnDeTransformer.hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
-from utils.checkpoints import load_checkpoint
-from validate import validate
+from EnDeTransformer.utils.checkpoints import load_checkpoint
+from EnDeTransformer.validate import validate
 
 # RESULTS
 # - embedding_fix:

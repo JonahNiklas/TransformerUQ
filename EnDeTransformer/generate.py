@@ -3,11 +3,11 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from hyperparameters import hyperparameters
-from data_processing.vocab import BOS_TOKEN, Vocabulary, load_vocab, output_to_text
+from EnDeTransformer.hyperparameters import hyperparameters
+from EnDeTransformer.data_processing.vocab import BOS_TOKEN, Vocabulary, load_vocab, output_to_text
 from constants import constants
-from beam_search import BeamSearchFunction
-from utils.print_random_generated_sentences import print_random_generated_sentences
+from EnDeTransformer.beam_search import BeamSearchFunction
+from EnDeTransformer.utils.print_random_generated_sentences import print_random_generated_sentences
 
 def generate_autoregressivly(
     model: nn.Module,

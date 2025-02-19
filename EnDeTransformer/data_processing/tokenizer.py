@@ -10,7 +10,7 @@ import subword_nmt.apply_bpe
 import subword_nmt.learn_bpe
 from tqdm import tqdm
 
-from hyperparameters import hyperparameters
+from EnDeTransformer.hyperparameters import hyperparameters
 
 
 class ParallelCorpusTokenizer:

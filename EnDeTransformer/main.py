@@ -4,15 +4,15 @@ from typing import Literal
 import torch
 import wandb
 from constants import constants
-from data_processing.dataloader import get_data_loader, load_vocab
-from hyperparameters import hyperparameters
+from EnDeTransformer.data_processing.dataloader import get_data_loader, load_vocab
+from EnDeTransformer.hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
-from data_processing.tokenizer import ParallelCorpusTokenizer
-from train import train
+from EnDeTransformer.data_processing.tokenizer import ParallelCorpusTokenizer
+from EnDeTransformer.train import train
 import logging
 from torch.utils.data import DataLoader
 from torch import nn
-from data_processing.vocab import build_and_save_vocab, load_vocab
+from EnDeTransformer.data_processing.vocab import build_and_save_vocab, load_vocab
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)

@@ -1,12 +1,12 @@
 from constants import constants
-from hyperparameters import hyperparameters
+from EnDeTransformer.hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
-from data_processing.vocab import PAD_TOKEN, load_vocab
-from data_processing.dataloader import get_data_loader
+from EnDeTransformer.data_processing.vocab import PAD_TOKEN, load_vocab
+from EnDeTransformer.data_processing.dataloader import get_data_loader
 from models.transformer import Transformer
 import torch
 import torch.nn as nn
-from validate import validate
+from EnDeTransformer.validate import validate
 
 def main() -> None:
     vocab = load_vocab(constants.file_paths.vocab)

@@ -1,6 +1,6 @@
 import torch
 
-from data_processing.vocab import output_to_text
+from EnDeTransformer.data_processing.vocab import output_to_text
 
 
 def print_random_generated_sentences(

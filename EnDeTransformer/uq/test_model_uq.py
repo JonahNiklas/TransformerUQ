@@ -2,14 +2,14 @@ import os
 from typing import List
 import torch
 
-from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVar, mpnet_cosine, mpnet_norm, mpnet_dot, roberta_cosine
-from data_processing.dataloader import get_data_loader
-from hyperparameters import hyperparameters 
+from EnDeTransformer.uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVar, mpnet_cosine, mpnet_norm, mpnet_dot, roberta_cosine
+from EnDeTransformer.data_processing.dataloader import get_data_loader
+from EnDeTransformer.hyperparameters import hyperparameters 
 from models.transformer_model import TransformerModel
-from uq.plot_uq import plot_combined_roc_curve, plot_data_retained_curve, plot_uq_histogram_and_roc
-from utils.checkpoints import load_checkpoint
-from uq.validate_uq import ValidationResult, validate_uq
-from data_processing.vocab import load_vocab, output_to_text
+from EnDeTransformer.uq.plot_uq import plot_combined_roc_curve, plot_data_retained_curve, plot_uq_histogram_and_roc
+from EnDeTransformer.utils.checkpoints import load_checkpoint
+from EnDeTransformer.uq.validate_uq import ValidationResult, validate_uq
+from EnDeTransformer.data_processing.vocab import load_vocab, output_to_text
 from constants import constants
 
 

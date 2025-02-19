@@ -1,8 +1,8 @@
 from tqdm import tqdm
-from data_processing.collate import collate_fn
-from hyperparameters import hyperparameters
-from data_processing.streaming_parallell_dataset import StreamingParallelDataset
-from data_processing.vocab import PAD_TOKEN, Vocabulary, load_vocab, output_to_text
+from EnDeTransformer.data_processing.collate import collate_fn
+from EnDeTransformer.hyperparameters import hyperparameters
+from EnDeTransformer.data_processing.streaming_parallell_dataset import StreamingParallelDataset
+from EnDeTransformer.data_processing.vocab import PAD_TOKEN, Vocabulary, load_vocab, output_to_text
 from torch.utils.data import DataLoader
 from constants import constants
 

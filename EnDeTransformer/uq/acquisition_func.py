@@ -4,7 +4,7 @@ import numpy as np
 import sacrebleu
 import torch
 from typing import Union, List, cast
-from hyperparameters import hyperparameters
+from EnDeTransformer.hyperparameters import hyperparameters
 from sentence_transformers import SentenceTransformer
 
 def _length_penalty(output: torch.Tensor, alpha: float) -> torch.Tensor:

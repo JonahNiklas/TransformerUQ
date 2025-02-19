@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 from torch.nn import functional as F
-from hyperparameters import hyperparameters
+from EnDeTransformer.hyperparameters import hyperparameters
 from models.bayesformer import BayesTransformer
 from models.transformer import Transformer as TransformerOwn
 

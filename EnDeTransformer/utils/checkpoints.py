@@ -1,7 +1,7 @@
 import torch
 from torch import nn, optim
-from data_processing.vocab import Vocabulary
-from hyperparameters import hyperparameters
+from EnDeTransformer.data_processing.vocab import Vocabulary
+from EnDeTransformer.hyperparameters import hyperparameters
 
 
 def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str) -> None:

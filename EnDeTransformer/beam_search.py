@@ -4,11 +4,11 @@ from typing import Callable, List, Tuple, cast
 import torch
 import torch.nn as nn
 
-from data_processing.vocab import BOS_TOKEN, EOS_TOKEN, PAD_TOKEN, Vocabulary
+from EnDeTransformer.data_processing.vocab import BOS_TOKEN, EOS_TOKEN, PAD_TOKEN, Vocabulary
 from tqdm import tqdm
 import torch.nn.functional as F
 
-from hyperparameters import hyperparameters
+from EnDeTransformer.hyperparameters import hyperparameters
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
