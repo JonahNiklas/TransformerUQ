@@ -29,6 +29,9 @@ The validation set of HellaSwag has a total of 10,042 examples.
 import os
 import json
 import pickle
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.ndimage import gaussian_filter1d
 import requests
 import tiktoken
 from tqdm.notebook import tqdm
@@ -36,7 +39,10 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from transformers import GPT2LMHeadModel
+from typing import Dict, Tuple, Generator, List
 
+from gpt2project.gpt2_generate import generate_from_model
+from gpt2project.gpt2model import GPT
 from uq.acquisition_func import BeamScore
 from uq.generate_with_uq import _enable_test_time_dropout
 
@@ -45,7 +51,7 @@ device_type = "cuda" if "cuda" in device else "cpu"
 # -----------------------------------------------------------------------------
 DATA_CACHE_DIR = os.path.join(os.getcwd(), "local/hellaswag")
 
-def download_file(url: str, fname: str, chunk_size=1024):
+def download_file(url: str, fname: str, chunk_size: int = 1024) -> None:
     """Helper function to download a file from a given url"""
     resp = requests.get(url, stream=True)
     total = int(resp.headers.get("content-length", 0))
@@ -68,7 +74,7 @@ hellaswags = {
 
 enc = tiktoken.get_encoding("gpt2")
 
-def download(split):
+def download(split: str) -> None:
     """Downloads HellaSwag DATA_CACHE_DIR"""
     os.makedirs(DATA_CACHE_DIR, exist_ok=True)
     data_url = hellaswags[split]
@@ -77,7 +83,8 @@ def download(split):
         print(f"Downloading {data_url} to {data_filename}...")
         download_file(data_url, data_filename)
 
-def render_example(example):
+
+def render_example(example: Dict) -> Tuple[Dict, torch.Tensor, torch.Tensor, int]:
     """
     Given the example as a dictionary, render it as three torch tensors:
     - tokens (the tokens of context + completion, of size 4xN, as there are always 4 candidates)
@@ -116,7 +123,8 @@ def render_example(example):
 
     return data, tokens, mask, label
 
-def iterate_examples(split):
+
+def iterate_examples(split: str) -> Generator[Dict, None, None]:
     # there are 10,042 examples in total in val
     download(split)
     with open(os.path.join(DATA_CACHE_DIR, f"hellaswag_{split}.jsonl"), "r") as f:
@@ -125,7 +133,7 @@ def iterate_examples(split):
             yield example
 
 @torch.no_grad()
-def evaluate(model_type, device):
+def evaluate(model_type: str, device: str) -> None:
 
     torch.set_float32_matmul_precision('high') # use tf32
     model = GPT2LMHeadModel.from_pretrained(model_type)
@@ -176,7 +184,7 @@ def evaluate(model_type, device):
             print(f"predicted: {pred_norm}, actual: {label}")
 
 
-def get_most_likely_row(tokens, mask, logits):
+def get_most_likely_row(tokens: torch.Tensor, mask: torch.Tensor, logits: torch.Tensor) -> int:
     # evaluate the autoregressive loss at all positions
     shift_logits = (logits[..., :-1, :]).contiguous()
     shift_tokens = (tokens[..., 1:]).contiguous()
@@ -194,19 +202,19 @@ def get_most_likely_row(tokens, mask, logits):
     # the one with the lowest loss should be the most likely
     pred_norm = avg_loss.argmin().item()
 
-    return pred_norm
+    return int(pred_norm)
 
 
-def get_uncertainty_of_selected_tokens(tokens, mask, logits):
-    logits = F.log_softmax(logits, dim=-1)
-    logits_of_selected_tokens = torch.gather(logits, -1, tokens.unsqueeze(-1)).squeeze(-1)
-    logits_of_selected_tokens[~mask] = 0
+def get_uncertainty_of_selected_tokens(tokens: torch.Tensor, mask: torch.Tensor, logits: torch.Tensor) -> float:
+    softmax_p = F.softmax(logits, dim=-1)
+    softmax_of_selected_tokens = torch.gather(softmax_p, -1, tokens.unsqueeze(-1)).squeeze(-1)
+    softmax_of_selected_tokens[~mask] = 0
     # Find uncertainty for the most likely row
-    uncertainty = BeamScore()(tokens.unsqueeze(0), logits_of_selected_tokens.unsqueeze(0))
+    uncertainty = BeamScore()(hypothesis=[tokens.tolist()], tgt_tokens=tokens.unsqueeze(0).unsqueeze(0), token_softmax_probs=softmax_of_selected_tokens.unsqueeze(0).unsqueeze(0))
     assert uncertainty.shape == (1,)
     return uncertainty.item()
 
-def get_uncertainty_of_selected_tokens_mcdo(model, tokens, mask, num_mc_samples=10):
+def get_uncertainty_of_selected_tokens_mcdo(model: GPT, tokens: torch.Tensor, mask: torch.Tensor, num_mc_samples: int = 10) -> float:
     """
     Computes uncertainty using Monte Carlo dropout (MCdo).
     
@@ -243,9 +251,9 @@ def get_uncertainty_of_selected_tokens_mcdo(model, tokens, mask, num_mc_samples=
         selected_log_probs = selected_log_probs[mask.bool()]
         mc_samples.append(selected_log_probs)
         
-    mc_samples = torch.stack(mc_samples, dim=0)  # Shape: (num_mc_samples, L)
+    mc_samples_tensor = torch.stack(mc_samples, dim=0)  # Shape: (num_mc_samples, L)
     # Compute the variance across the MC samples for each token in the completion region.
-    token_variances = torch.var(mc_samples, dim=0)
+    token_variances = torch.var(mc_samples_tensor, dim=0)
     # Average the per-token variance to yield a single uncertainty measure.
     uncertainty = token_variances.mean()
     
@@ -253,7 +261,7 @@ def get_uncertainty_of_selected_tokens_mcdo(model, tokens, mask, num_mc_samples=
 
 
 @torch.no_grad()
-def evaluate_hellaswag(model):
+def evaluate_hellaswag(model: GPT) -> None:
     num_correct_norm = 0
     num_total = 0
 
@@ -293,20 +301,11 @@ def evaluate_hellaswag(model):
     with open("local/uncertainty_list.pkl", "wb") as f:
         pickle.dump(uncertainty_list, f)
 
-evaluate_hellaswag(gpt2)
 
 
-import pickle
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.ndimage import gaussian_filter1d
 
-with open("local/correct_list.pkl", "rb") as f:
-    correct_list = pickle.load(f)
-with open("local/uncertainty_list.pkl", "rb") as f:
-    uncertainty_list = pickle.load(f)
 
-def plot_retention_curve(correct_list, uncertainty_list):
+def plot_retention_curve(correct_list: List[int], uncertainty_list: List[float]) -> None:
     # Sort examples by uncertainty
     sorted_indices = np.argsort(uncertainty_list)
     correct_list = np.array(correct_list)[sorted_indices]
@@ -334,7 +333,17 @@ def plot_retention_curve(correct_list, uncertainty_list):
     plt.legend()
     plt.show()
     
+
+gpt2 = GPT.from_pretrained('gpt2').to(device)
+
+# generate_from_model(gpt2, "Hello, I'm a language model,")
+
+evaluate_hellaswag(gpt2)
+
+
+with open("local/correct_list.pkl", "rb") as f:
+    correct_list = pickle.load(f)
+with open("local/uncertainty_list.pkl", "rb") as f:
+    uncertainty_list = pickle.load(f)
+
 plot_retention_curve(correct_list, uncertainty_list)
-
-
-

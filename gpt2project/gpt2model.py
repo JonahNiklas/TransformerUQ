@@ -27,7 +27,7 @@ class CausalSelfAttention(nn.Module):
         self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd)
         # output projection
         self.c_proj = nn.Linear(config.n_embd, config.n_embd)
-        self.c_proj.NANOGPT_SCALE_INIT = 1
+        self.c_proj.NANOGPT_SCALE_INIT = torch.tensor(1.0)  # scale init (not used in the original code)
         # regularization
         self.n_head = config.n_head
         self.n_embd = config.n_embd
@@ -55,7 +55,7 @@ class MLP(nn.Module):
         self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd)
         self.gelu    = nn.GELU(approximate='tanh')
         self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd)
-        self.c_proj.NANOGPT_SCALE_INIT = 1
+        self.c_proj.NANOGPT_SCALE_INIT = torch.tensor(1.0)  # scale init (not used in the original code)
 
     def forward(self, x: Tensor) -> Tensor:
         x = self.c_fc(x)
@@ -151,7 +151,7 @@ class GPT(nn.Module):
         sd_keys = [k for k in sd_keys if not k.endswith('.attn.bias')]  # discard this mask / buffer, not a param
 
         # init a huggingface/transformers model
-        model_hf = GPT2LMHeadModel.from_pretrained(model_type)
+        model_hf = GPT2LMHeadModel.from_pretrained("gpt2")
         sd_hf = model_hf.state_dict()
 
         # copy while ensuring all of the parameters are aligned and match in names and shapes
@@ -177,4 +177,4 @@ class GPT(nn.Module):
         return model
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-gpt2 = GPT.from_pretrained('gpt2').to(device)
+model = GPT.from_pretrained('gpt2').to(device)

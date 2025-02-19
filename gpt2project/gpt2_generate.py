@@ -1,21 +1,22 @@
-
-
+import torch
 import tiktoken
 import numpy as np
 from tqdm import tqdm
+from torch import nn
+from typing import List
 
 enc = tiktoken.get_encoding("gpt2")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 device_type = "cuda" if "cuda" in device else "cpu"
 
-def generate_from_model(model, context, max_tokens=100):
+def generate_from_model(model: nn.Module, context: str, max_tokens: int = 100) -> None:
     model.eval()
     num_return_sequences = 4
     max_length = 32
-    tokens = enc.encode("Hello, I'm a language model,")
-    tokens = torch.tensor(tokens, dtype=torch.long)
-    tokens = tokens.unsqueeze(0).repeat(num_return_sequences, 1)
-    xgen = tokens.to(device)
+    tokens: List[int] = enc.encode(context)
+    tokens_tensor = torch.tensor(tokens, dtype=torch.long)
+    tokens_tensor = tokens_tensor.unsqueeze(0).repeat(num_return_sequences, 1)
+    xgen = tokens_tensor.to(device)
     sample_rng = torch.Generator(device=device)
     pbar = tqdm(total=max_length - xgen.size(1), desc="Generating")
     while xgen.size(1) < max_length:
@@ -26,7 +27,7 @@ def generate_from_model(model, context, max_tokens=100):
             # take the logits at the last position
             logits = logits[:, -1, :] # (B, vocab_size)
             # get the probabilities
-            probs = F.softmax(logits, dim=-1)
+            probs = torch.nn.functional.softmax(logits, dim=-1)
             # do top-k sampling of 50 (huggingface pipeline default)
             # topk_probs here becomes (5, 50), topk_indices is (5, 50)
             topk_probs, topk_indices = torch.topk(probs, 50, dim=-1)
@@ -44,7 +45,4 @@ def generate_from_model(model, context, max_tokens=100):
         tokens = xgen[i, :max_length].tolist()
         decoded = enc.decode(tokens)
         print(f"sample {i}: {decoded}")
-
-
-generate_from_model(gpt2, "Hello, I'm a language model,")
 

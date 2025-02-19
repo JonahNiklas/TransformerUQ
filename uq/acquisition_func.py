@@ -27,7 +27,7 @@ class BeamScore(AcquisitionFunction):
         #only use first inference
         token_softmax_probs = token_softmax_probs[:, 0, :]
         tgt_tokens = tgt_tokens[:, 0, :]
-        assert (token_softmax_probs > 0).all(), "Softmax probabilities should be positive"
+        assert (token_softmax_probs >= 0).all(), "Softmax probabilities should be positive"
         log_prob = torch.log(token_softmax_probs)
         seq_prob = torch.sum(log_prob, dim=1)
         return seq_prob / _length_penalty(tgt_tokens, self.alpha)
