@@ -25,7 +25,8 @@ class TransformerModel(nn.Module):
         self.src_vocab_size = src_vocab_size
         self.tgt_vocab_size = tgt_vocab_size
         self.d_model = d_model
-        self.embedding = nn.Embedding(src_vocab_size, d_model, padding_idx=0)
+        self.src_embedding = nn.Embedding(src_vocab_size, d_model, padding_idx=0)
+        self.tgt_embedding = nn.Embedding(tgt_vocab_size, d_model, padding_idx=0)
         self.dropout = nn.Dropout(dropout)
         positional_dropout = 0.0
         self.pos_encoder = PositionalEncoding(d_model, max_len=max_len, dropout=positional_dropout)
@@ -61,6 +62,7 @@ class TransformerModel(nn.Module):
         else:
             raise ValueError("Invalid transformer implementation")
         self.out = nn.Linear(d_model, tgt_vocab_size, bias=False)
+        self.tgt_embedding.weight = self.out.weight
 
     def forward(
         self, src: torch.Tensor, tgt: torch.Tensor, pad_idx: int = 0
@@ -77,8 +79,8 @@ class TransformerModel(nn.Module):
         #     src = token_dropout(src, dropout_prob=self.dropout.p, pad_idx=pad_idx)
         #     tgt = token_dropout(tgt, dropout_prob=self.dropout.p, pad_idx=pad_idx)
 
-        src = self.embedding(src) * math.sqrt(self.d_model)
-        tgt = self.embedding(tgt) * math.sqrt(self.d_model)
+        src = self.src_embedding(src) * math.sqrt(self.d_model)
+        tgt = self.tgt_embedding(tgt) * math.sqrt(self.d_model)
 
         if hyperparameters.transformer.transformer_implementation == "bayesformer":
             src = self.dropout(src)
