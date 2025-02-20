@@ -73,7 +73,7 @@ def main() -> None:
         tokenizer.apply_bpe(
             input_path=f"local/data/test_ood/tokenized_test_ood.{lang}",
             output_path=f"local/data/test_ood/bpe_test_ood.{lang}",
-            codes_path=f"local/data/training/{"de" if lang=="nl" else lang}_bpe_codes.txt",
+            codes_path=f"local/iwslt/training/{"de" if lang=="nl" else lang}_bpe_codes.txt",
         )
 
 
