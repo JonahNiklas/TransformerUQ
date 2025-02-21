@@ -1,29 +1,31 @@
 import os
-from typing import List, Tuple
+from typing import List
 import torch
-from torch import nn
 
-from uq.acquisition_func import BeamScore, BLEUVariance
-from beam_search import beam_search_unbatched, beam_search_batched
+from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVar, mpnet_cosine, mpnet_norm, mpnet_dot, roberta_cosine
 from data_processing.dataloader import get_data_loader
-from hyperparameters import hyperparameters
-from models.transformer_pytorch import TransformerPyTorch
-from uq.plot_uq import plot_data_retained_curve, plot_uq_histogram
+from hyperparameters import hyperparameters 
+from models.transformer_model import TransformerModel
+from uq.plot_uq import plot_combined_roc_curve, plot_data_retained_curve, plot_uq_histogram_and_roc
 from utils.checkpoints import load_checkpoint
-from uq.validate_uq import validate_uq
+from uq.validate_uq import ValidationResult, validate_uq
 from data_processing.vocab import load_vocab, output_to_text
 from constants import constants
 
+
 def main() -> None:
     # Load shared vocabulary
-    # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
+    run_id="7sy5cau3"
+    run_name="Bayes"
+    checkpoint = "checkpoints/checkpoint-300000b.pth"
+    # wandb.restore(checkpoint, run_path=f"sondresorbye-magson/TransformerUQ/{run_id}")  # type: ignore
     shared_vocab = load_vocab(constants.file_paths.vocab)
     print(f"Shared vocab size: {len(shared_vocab)}")
     device = hyperparameters.device
     print(f"Device: {device}")
 
     # Initialize the model with shared vocab size
-    model: nn.Module = TransformerPyTorch(
+    model: TransformerModel = TransformerModel(
         vocab_size=len(shared_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
@@ -44,8 +46,8 @@ def main() -> None:
     load_checkpoint(
         model, 
         optimizer, 
-        "checkpoints/checkpoint-175000.pth",
-        remove_orig_prefix=not torch.cuda.is_available()
+        checkpoint,
+        remove_orig_prefix= not torch.cuda.is_available()
     )
 
     # Set up the test data loader with the shared vocabulary
@@ -53,7 +55,7 @@ def main() -> None:
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size // hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size,# // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -63,62 +65,121 @@ def main() -> None:
         src_file="local/data/test_ood/bpe_test_ood.nl",
         tgt_file="local/data/test_ood/bpe_test_ood.en",
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size // hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size,# // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
-    # Validate the model and calculate BLEU score
-    cache_file = "local/results/validation_cache.pth"
+
+    # Define the acquisition functions
+    aq_funcs: List[AcquisitionFunction] = [
+        BeamScore(),
+        BLEUVar(),
+        mpnet_cosine(),
+        mpnet_norm(),
+        mpnet_dot(),
+    ]
+    
+    val_spec = [
+        {
+            "search_method": "greedy",
+            "dropout": True,
+        },
+        {
+            "search_method": "beam",
+            "dropout": True,
+        },
+        {
+            "search_method": "sample",
+            "dropout": True,
+        },
+        {
+            "search_method": "sample",
+            "dropout": False,
+        },
+    ]
+
+
+    for spec in val_spec:
+        search_method: str = str(spec["search_method"])
+        dropout: bool = bool(spec["dropout"])
+        filename = f"val_{search_method}_{dropout}"
+        os.makedirs(f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True)
+        print(f"Validating model with {search_method} search, dropout={dropout}")
+        validation_results_id = load_or_validate(
+            model,
+            test_loader,
+            search_method,
+            aq_funcs,
+            dropout,
+            filename+"_id",
+            run_id
+        )
+
+        # for i, aq_func in enumerate(aq_funcs):
+        #     print(f"Searh method: {search_method}, Dropout: {dropout}")
+        #     aq_func_corp_bleu = corpus_bleu(
+        #     validation_results_id[i].hypothesis,
+        #     [validation_results_id[i].reference],
+        #     )
+        #     print(f"{aq_func.__class__.__name__} corpus BLEU: {aq_func_corp_bleu.score}")
+
+        validation_results_ood = load_or_validate(
+            model,
+            test_ood_loader,
+            search_method,
+            aq_funcs,
+            dropout,
+            filename+"_ood",
+            run_id
+        )
+        plot_data_retained_curve(validation_results_id,
+                    methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                    save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id.svg",
+                    run_name=run_name)
+        
+        plot_data_retained_curve(validation_results_ood,
+                        methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                    save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood.svg",
+                    run_name=run_name)
+        
+        for i, aq_func in enumerate(aq_funcs):
+            plot_uq_histogram_and_roc(validation_results_id[i],
+                                        validation_results_ood[i],
+                                        aq_func.__class__.__name__,
+                                        f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_hist_{aq_func.__class__.__name__}.svg",
+                                        run_name)
+        
+        plot_combined_roc_curve(validation_results_id,
+                                validation_results_ood,
+                                methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                                save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_roc.svg",
+        )
+
+            
+
+# Validate the model and calculate BLEU score
+def load_or_validate(
+    model: TransformerModel,
+    loader: torch.utils.data.DataLoader,
+    sample_beam_greed: str,
+    aq_funcs: List[AcquisitionFunction],
+    enable_dropout: bool,
+    filename: str,
+    run_id: str
+) -> List[ValidationResult]:
+    cache_file = f"local/results/{run_id}/{filename}.pth"
+    validation_results:List[ValidationResult] = []
     if os.path.exists(cache_file):
-        print("Loading cached validation results...")
+        print(f"Loading cached results from {cache_file}...")
         cache = torch.load(cache_file)
-        bleu = cache["bleu"]
-        avg_uq = cache["avg_uq"]
-        hyp_ref_uq_pair = cache["hyp_ref_uq_pair"]
+        validation_results = cache
     else:
-        bleu, avg_uq, hyp_ref_uq_pair = validate_uq(model, test_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
-        cache_validation_results(bleu, avg_uq, hyp_ref_uq_pair, "validation_cache")
+        validation_results =  validate_uq(model, loader, sample_beam_greed, aq_funcs, enable_dropout,num_batches_to_validate_on=None)
+        os.makedirs(f"local/results/{run_id}", exist_ok=True)
+        torch.save(validation_results, cache_file)
+        print(f"Cached validation results in local/results/{run_id}/{filename}.pth")
+    return validation_results
     
-    bleu_bs, avg_uq_bs, hyp_ref_uq_pair_bs = validate_uq(model, test_loader, aq_func=BeamScore(), num_batches_to_validate_on=None)
-
-
-    cache_file = "local/results/validation_cache_ood.pth"
-    if os.path.exists(cache_file):
-        print("Loading cached validation ood results...")
-        cache = torch.load(cache_file)
-        bleu_ood = cache["bleu"]
-        avg_uq_ood = cache["avg_uq"]
-        hyp_ref_uq_pair_ood = cache["hyp_ref_uq_pair"]
-    else:
-        bleu_ood, avg_uq_ood, hyp_ref_uq_pair_ood = validate_uq(model, test_ood_loader, aq_func=BLEUVariance(), num_batches_to_validate_on=None)
-        cache_validation_results(bleu, avg_uq, hyp_ref_uq_pair, "validation_cache_ood")
-    
-    bleu_ood_bs, avg_uq_ood_bs,hyp_ref_uq_pair_ood_bs = validate_uq(model, test_ood_loader, aq_func=BeamScore(), num_batches_to_validate_on=None)
-    
-    print(f"BLEU Score on test_set: {bleu}")
-    print(f"Average UQ on test_set: {avg_uq}")
-
-    print(f"BLEU Score on test_set_bs: {bleu_bs}")
-    print(f"Average UQ on test_set_bs: {avg_uq_bs}")
-    
-    print(f"BLEU Score on test_ood: {bleu_ood}")
-    print(f"Average UQ on test_ood: {avg_uq_ood}")
-
-    print(f"BLEU Score on test_ood_bs: {bleu_ood_bs}")
-    print(f"Average UQ on test_ood_bs: {avg_uq_ood_bs}")
-
-    os.makedirs("local/results", exist_ok=True)
-
-    plot_data_retained_curve([hyp_ref_uq_pair,hyp_ref_uq_pair_bs],methods=["BLUEvar","BeamScore"], save_path="local/results/hypotheses_uq_pairs.png")
-    plot_data_retained_curve([hyp_ref_uq_pair_ood,hyp_ref_uq_pair_ood_bs], methods=["BLUEvar","BeamScore"],save_path="local/results/hypotheses_uq_pairs_ood.png")
-
-    plot_uq_histogram(hyp_ref_uq_pair,hyp_ref_uq_pair_ood, method="BLUEvar",save_path="local/results/uq_histogram_bluevar.png")
-    plot_uq_histogram(hyp_ref_uq_pair_bs,hyp_ref_uq_pair_ood_bs, method="BeamScore",save_path="local/results/uq_histogram_bs.png")
-
-def cache_validation_results(bleu: float, avg_uq: float, hyp_ref_uq_pair: List[Tuple[str,str, torch.Tensor]], filename: str) -> None:
-    os.makedirs("local/results", exist_ok=True)
-    torch.save({"bleu": bleu, "avg_uq": avg_uq, "hyp_ref_uq_pair": hyp_ref_uq_pair}, f"local/results/{filename}.pth")
-    print(f"Cached validation results in local/results/{filename}.pth")
 if __name__ == "__main__":
     main()

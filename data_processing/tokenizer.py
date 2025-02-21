@@ -65,10 +65,14 @@ class ParallelCorpusTokenizer:
         self,
         train_en_path: str,
         train_de_path: str,
+        dev_en_path: str,
+        dev_de_path: str,
         test_en_path: str,
         test_de_path: str,
         output_train_en: str,
         output_train_de: str,
+        output_dev_en: str,
+        output_dev_de: str,
         output_test_en: str,
         output_test_de: str,
         test_ood_en_path: str,
@@ -81,16 +85,24 @@ class ParallelCorpusTokenizer:
 
         :param train_en_path: Path to the English training file.
         :param train_de_path: Path to the German training file.
+        :param dev_en_path: Path to the English dev file.
+        :param dev_de_path: Path to the German dev file.
         :param test_en_path: Path to the English test file.
         :param test_de_path: Path to the German test file.
         :param output_train_en: Path to save the tokenized English training file.
         :param output_train_de: Path to save the tokenized German training file.
+        :param output_dev_en: Path to save the tokenized English dev file.
+        :param output_dev_de: Path to save the tokenized German dev file.
         :param output_test_en: Path to save the tokenized English test file.
         :param output_test_de: Path to save the tokenized German test file.
         """
         # Tokenize training files
         self.tokenize_file(train_en_path, output_train_en, "en")
         self.tokenize_file(train_de_path, output_train_de, "de")
+
+        # Tokenize dev files
+        self.tokenize_file(dev_en_path, output_dev_en, "en")
+        self.tokenize_file(dev_de_path, output_dev_de, "de")
 
         # Tokenize test files
         self.tokenize_file(test_en_path, output_test_en, "en")
