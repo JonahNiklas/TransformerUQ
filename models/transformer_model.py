@@ -30,7 +30,7 @@ class TransformerModel(nn.Module):
         self.d_model = d_model
         self.dropout = nn.Dropout(dropout)
         positional_dropout = (
-            hyperparameters.transformer.dropout
+            hyperparameters.transformer.dropout_pre_embedding
             if hyperparameters.transformer.transformer_implementation == "bayesformer"
             else 0
         )
@@ -46,7 +46,9 @@ class TransformerModel(nn.Module):
             padding_idx=0,
             dropout=positional_dropout,
         )
-        self.pos_encoder = LearnedPositionalEncoding(d_model, max_len=max_len)
+        self.pos_encoder = LearnedPositionalEncoding(
+            d_model, max_len=max_len, dropout=positional_dropout
+        )
         self.transformer: torch.nn.Module
         if hyperparameters.transformer.transformer_implementation == "pytorch":
             self.transformer = nn.Transformer(
@@ -91,18 +93,9 @@ class TransformerModel(nn.Module):
             tgt.device
         )
 
-        # # Apply dropout to the rows of the embedding matrix
-        # if hyperparameters.transformer.transformer_implementation == "bayesformer":
-        #     src = token_dropout(src, dropout_prob=self.dropout.p, pad_idx=pad_idx)
-        #     tgt = token_dropout(tgt, dropout_prob=self.dropout.p, pad_idx=pad_idx)
-
         src = self.src_embedding(src) * math.sqrt(self.d_model)
         tgt = self.tgt_embedding(tgt) * math.sqrt(self.d_model)
 
-        if hyperparameters.transformer.transformer_implementation == "bayesformer":
-            src = self.dropout(src)
-            tgt = self.dropout(tgt)
-        
         src = self.pos_encoder(src)
         tgt = self.pos_encoder(tgt)
 
@@ -175,12 +168,12 @@ class DropoutEmbedding(nn.Module):
 
 
 class LearnedPositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, max_len: int) -> None:
+    def __init__(self, d_model: int, max_len: int, dropout: float) -> None:
         super().__init__()
         self.pos_embedding = DropoutEmbedding(
             max_len,
             d_model,
-            dropout=hyperparameters.transformer.dropout,
+            dropout=dropout,
             padding_idx=None,
         )
 
