@@ -44,20 +44,25 @@ def topk_sampling_gpt(
     with torch.no_grad():
         total_len = tgt_tokens.size(1) + max_len
         batch_size = tgt_tokens.size(0)
-        tgt_tokens = torch.cat([tgt_tokens, torch.zeros(batch_size, max_len, dtype=torch.long).to(hyperparameters.device)], dim=1)
-        softmax_probs = torch.zeros(batch_size, total_len, vocab_size).to(hyperparameters.device)
+        assert tgt_tokens.shape == (batch_size, tgt_tokens.size(1))
+        softmax_probs = torch.ones(batch_size, tgt_tokens.size(1)).to(hyperparameters.device)
 
-        for t in range(total_len-max_len,total_len):
-            output,_ = model(tgt_tokens)
-            assert output.shape == (batch_size, total_len, vocab_size)
-            logits = output[:, t - 1, :]
+        for t in range(max_len):
+            output, _ = model(tgt_tokens)
+            assert output.shape == (batch_size, tgt_tokens.size(1), vocab_size)
+            logits = output[:, -1, :]
             assert logits.shape == (batch_size, vocab_size)
             probs = torch.softmax(logits, dim=-1)
             assert probs.shape == (batch_size, vocab_size)
             topk_probs, topk_tokens = torch.topk(probs, k=k, dim=-1)
-            topk_probs = topk_probs / topk_probs.sum(dim=-1, keepdim=True)
-            predicted_tokens = torch.multinomial(topk_probs, num_samples=1).squeeze(-1)
-            tgt_tokens[:, t] = predicted_tokens
-            softmax_probs[:, t, :] = probs
+            ix = torch.multinomial(topk_probs, num_samples=1)
+            predicted_tokens = torch.gather(topk_tokens, dim=-1, index=ix)
+            assert predicted_tokens.shape == (batch_size, 1)
+            tgt_tokens = torch.cat([tgt_tokens, predicted_tokens], dim=1)
+            predicted_probs = torch.gather(probs, dim=-1, index=predicted_tokens)
+            assert predicted_probs.shape == (batch_size, 1)
+            softmax_probs = torch.cat([softmax_probs, predicted_probs], dim=1)
+
     assert tgt_tokens.shape == (batch_size, total_len)
+    assert softmax_probs.shape == (batch_size, tgt_tokens.size(1))
     return AutoregressiveInferenceResults(tgt_tokens, softmax_probs)
