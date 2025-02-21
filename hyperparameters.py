@@ -18,7 +18,7 @@ class TransformerHyperparameters(BaseModel):
     dropout: float = 0.1  # 0.1 in attention  # 0.2found in t2t, transformer_base_v1(), 0.1 used by bayesformer (fairseq)
     dropout_mlp_input: float = 0.05  # found in bayesformer?
     dropout_pre_embedding: float = 0.05  # found in bayesformer?
-    transformer_implementation: Literal["pytorch", "own", "bayesformer"] = "bayesformer"
+    transformer_implementation: Literal["pytorch", "own", "bayesformer"] = "own"
 
 class TrainingHyperparameters(BaseModel):
     max_steps: int = 500_000  # found in bayesformer
