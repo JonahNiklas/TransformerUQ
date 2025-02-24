@@ -10,7 +10,6 @@ from hyperparameters import hyperparameters
 from utils.checkpoints import save_checkpoint
 from validate import validate
 import logging
-from wandb import Run
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +69,7 @@ def train(
                     wandb.log({"bleu": bleu}, step=step_num)
                     model.train()
                 if step_num % hyperparameters.training.save_every == 0:
-                    assert isinstance(wandb.run, Run)
+                    assert wandb.run is not None
                     run_id = wandb.run.id
                     os.makedirs(f"local/checkpoints/{run_id}", exist_ok=True)
                     save_checkpoint(
