@@ -15,6 +15,7 @@ from gpt2project.gpt2_hellaswag import (
     render_example,
 )
 from gpt2project.gpt2model import GPT, GPTConfig
+import logging
 
 # -----------------------------------------------------------------------------
 # simple launch:
@@ -27,6 +28,9 @@ from torch.distributed import init_process_group, destroy_process_group
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 from gpt2project.dpp import ddp, ddp_rank, ddp_world_size, master_process, device, device_type
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 torch.manual_seed(1337)
 if torch.cuda.is_available():
@@ -42,8 +46,8 @@ assert (
 ), "make sure total_batch_size is divisible by B * T * ddp_world_size"
 grad_accum_steps = total_batch_size // (B * T * ddp_world_size)
 if master_process:
-    print(f"total desired batch size: {total_batch_size}")
-    print(f"=> calculated gradient accumulation steps: {grad_accum_steps}")
+    logger.info(f"total desired batch size: {total_batch_size}")
+    logger.info(f"=> calculated gradient accumulation steps: {grad_accum_steps}")
 
 train_loader = DataLoaderLite(
     B=B, T=T, process_rank=ddp_rank, num_processes=ddp_world_size, split="train"
@@ -124,7 +128,7 @@ for step in range(max_steps):
         if ddp:
             dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)
         if master_process:
-            print(f"validation loss: {val_loss_accum.item():.4f}")
+            logger.info(f"validation loss: {val_loss_accum.item():.4f}")
             with open(log_file, "a") as f:
                 f.write(f"{step} val {val_loss_accum.item():.4f}\n")
             if step > 0 and (step % 5000 == 0 or last_step):
@@ -171,7 +175,7 @@ for step in range(max_steps):
             num_correct_norm = num_correct_norm.item()
         acc_norm = num_correct_norm / num_total
         if master_process:
-            print(f"HellaSwag accuracy: {num_correct_norm}/{num_total}={acc_norm:.4f}")
+            logger.info(f"HellaSwag accuracy: {num_correct_norm}/{num_total}={acc_norm:.4f}")
             with open(log_file, "a") as f:
                 f.write(f"{step} hella {acc_norm:.4f}\n")
 
@@ -210,7 +214,7 @@ for step in range(max_steps):
         for i in range(num_return_sequences):
             token_list = xgen[i, :max_length].tolist()
             decoded = enc.decode(token_list)
-            print(f"rank {ddp_rank} sample {i}: {decoded}")
+            logger.info(f"rank {ddp_rank} sample {i}: {decoded}")
 
     # do one step of the optimization
     model.train()
@@ -248,7 +252,7 @@ for step in range(max_steps):
     )
     tokens_per_sec = tokens_processed / dt
     if master_process:
-        print(
+        logger.info(
             f"step {step:5d} | loss: {loss_accum.item():.6f} | lr {lr:.4e} | norm: {norm:.4f} | dt: {dt*1000:.2f}ms | tok/sec: {tokens_per_sec:.2f}"
         )
         with open(log_file, "a") as f:
