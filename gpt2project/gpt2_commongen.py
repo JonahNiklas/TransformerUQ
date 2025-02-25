@@ -2,26 +2,19 @@ from math import inf
 from os import remove
 from typing import Any, List, Tuple
 import numpy as np
-from requests import get
 import tiktoken
 import torch
-import torch.nn as nn
 import tiktoken
 from tqdm.notebook import tqdm
 from gpt2project.data_processing.load_commongen import get_common_gen_dataloader
+from gpt2project.gpt2_generate import generate_autoregressivly_gpt2, generate_karpathy, karpathy
 from gpt2project.search_methods_gpt import (
-    greedy_search_gpt,
     GPT_search_method,
     topk_sampling_gpt,
 )
 from sacrebleu import corpus_bleu
 from hyperparameters import hyperparameters
 from gpt2project.gpt2model import GPT
-from beam_search import AutoregressiveInferenceResults
-import random
-from collections import Counter
-import torch.nn.functional as F
-from torch.nn.utils.rnn import pad_sequence
 
 class CommongenEval:
     def __call__(self, output_text: List[str], targets: List[List[str]]) -> float:
@@ -33,18 +26,6 @@ class BLEU_eval(CommongenEval):
         bleu = corpus_bleu(output_text, targets)
         return bleu.score
 
-
-
-# Function to evaluate the model on a given input
-def generate_model_single_example(model: GPT, tokenizer: tiktoken.Encoding, input_text: str) -> AutoregressiveInferenceResults:
-    # Generate a response from the model
-    encodings = tokenizer.encode(input_text)
-    encoding_tensor = torch.tensor(encodings, dtype=torch.long).unsqueeze(0)
-    encoding_tensor = encoding_tensor.to(hyperparameters.device)
-    output = generate_autoregressivly_gpt2(
-        model, tokenizer, encoding_tensor, search_method=topk_sampling_gpt
-    )
-    return output
 
 def evaluate_model_batch(model: GPT, tokenizer: tiktoken.Encoding, encoding_tensors: torch.Tensor, targets: List[List[str]],eval_function_commongen: CommongenEval,remove_prefix_tokens: List[int]) -> float:
     # Use the padded encoding tensor directly to generate responses
@@ -68,21 +49,6 @@ def evaluate_model_batch(model: GPT, tokenizer: tiktoken.Encoding, encoding_tens
         output_texts.append(tokenizer.decode(ids.tolist()))
     score = eval_function_commongen(output_texts, targets)
     return score
-
-
-def generate_autoregressivly_gpt2(
-    model: GPT,
-    tokenizer: tiktoken.Encoding,
-    tgt_tokens: torch.Tensor,
-    search_method: GPT_search_method,
-    max_tokens: int = 32,
-) -> AutoregressiveInferenceResults:
-    model.eval()
-    tgt_tokens = tgt_tokens.to(hyperparameters.device)
-    vocab_size = tokenizer.n_vocab
-    output = search_method(model, tgt_tokens, vocab_size, max_tokens)
-    return output
-
 
 # Load the GPT-2 model and tokenizer
 model_name = "gpt2"

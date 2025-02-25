@@ -39,7 +39,7 @@ def topk_sampling_gpt(
     tgt_tokens: torch.Tensor,
     vocab_size: int,
     max_len:int,
-    k:int = 5,
+    k:int = 50,
 ) -> AutoregressiveInferenceResults:
     with torch.no_grad():
         total_len = tgt_tokens.size(1) + max_len
