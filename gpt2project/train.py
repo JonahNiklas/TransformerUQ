@@ -34,6 +34,7 @@ from gpt2project.dpp import (
     master_process,
     device,
     device_type,
+    ddp_local_rank,
 )
 
 logging.basicConfig(level=logging.DEBUG)
