@@ -2,6 +2,12 @@ import os
 import torch
 from torch.distributed import init_process_group, destroy_process_group
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+logger.info("Initializing DDP")
+
 # set up DDP (distributed data parallel).
 # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
 ddp = int(os.environ.get("RANK", -1)) != -1  # is this a ddp run?

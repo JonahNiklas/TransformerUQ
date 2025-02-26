@@ -9,7 +9,7 @@ from torch import Tensor
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim.adamw import AdamW
-from gpt2project.dpp import master_process
+from gpt2project.dpp import ddp, ddp_rank, ddp_world_size, master_process, device, device_type, ddp_local_rank
 
 @dataclass
 class GPTConfig:

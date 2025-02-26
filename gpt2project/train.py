@@ -47,7 +47,7 @@ if torch.cuda.is_available():
 enc = tiktoken.get_encoding("gpt2")
 
 total_batch_size = 524288  # 2**19, ~0.5M, in number of tokens
-B = 64  # micro batch size
+B = 16  # micro batch size
 T = 1024  # sequence length
 assert (
     total_batch_size % (B * T * ddp_world_size) == 0
@@ -260,7 +260,7 @@ def evaluate_hellaswag(
     log_file: str,
     step: int,
 ) -> None:
-    num_correct_norm: int | float | torch.Tensor = torch.tensor(0, device=device)
+    num_correct_norm: int | float | torch.Tensor = 0
     num_total: int | float | torch.Tensor = 0
     for i, example in enumerate(iterate_examples("val")):
         # only process examples where i % ddp_world_size == ddp_rank
