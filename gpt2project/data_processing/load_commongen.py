@@ -37,14 +37,23 @@ class CommonGenDataset(Dataset):
         target_text = item["target"]
         return input_text, concepts, target_text
 
+
 def collate_fn(batch: Any) -> Tuple[List[str], List[str], torch.Tensor]:
     input_texts, concepts_list, target_texts = zip(*batch)
     tokenizer = tiktoken.get_encoding("gpt2")
     # Tokenize each input text
-    encodings = [torch.tensor(tokenizer.encode(text), dtype=torch.long) for text in input_texts]
+    encodings = [
+        torch.tensor(tokenizer.encode(text), dtype=torch.long) for text in input_texts
+    ]
     # Pad sequences with a padding value (e.g., 0)
     padded_encodings = pad_sequence(encodings, batch_first=True, padding_value=0)
-    return list(input_texts), list(concepts_list), list(target_texts), padded_encodings, 
+    return (
+        list(input_texts),
+        list(concepts_list),
+        list(target_texts),
+        padded_encodings,
+    )
+
 
 def get_common_gen_dataloader(batch_size: int, shuffle: bool) -> DataLoader:
     # Load the CommonGen dataset
@@ -63,12 +72,14 @@ def get_common_gen_dataloader(batch_size: int, shuffle: bool) -> DataLoader:
             target.append(example["target"])
             continue
 
-        merged_dataset.append({
-            "concept_set_idx": idx,
-            "input": input,
-            "target": target,
-            "concepts": concepts
-        })
+        merged_dataset.append(
+            {
+                "concept_set_idx": idx,
+                "input": input,
+                "target": target,
+                "concepts": concepts,
+            }
+        )
         idx = idx_n
         input = generate_input_text(example["concepts"])
         target = [example["target"]]
@@ -80,5 +91,7 @@ def get_common_gen_dataloader(batch_size: int, shuffle: bool) -> DataLoader:
     commongen_dataset = CommonGenDataset(merged_dataset)
 
     # Create a DataLoader object with batching
-    dataloader = DataLoader(commongen_dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn)
+    dataloader = DataLoader(
+        commongen_dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
+    )
     return dataloader

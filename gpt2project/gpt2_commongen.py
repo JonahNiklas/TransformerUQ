@@ -21,28 +21,44 @@ from gpt2project.gpt2model import GPT
 
 
 class CommongenEval:
-    def __call__(self, output_text: List[str], concepts: List[List[str]], targets: List[List[str]]) -> float:
+    def __call__(
+        self,
+        output_text: List[str],
+        concepts: List[List[str]],
+        targets: List[List[str]],
+    ) -> float:
         raise NotImplementedError("Evaluation function not implemented.")
 
 
 class BLEU_eval(CommongenEval):
-    def __call__(self, output_text: List[str], concepts: List[List[str]], targets: List[List[str]]) -> float:
+    def __call__(
+        self,
+        output_text: List[str],
+        concepts: List[List[str]],
+        targets: List[List[str]],
+    ) -> float:
         # Calculate BLEU score
         bleu = corpus_bleu(output_text, targets)
         return bleu.score
 
 
 class ConceptUsageEval(CommongenEval):
-    def __call__(self, output_text: List[str], concepts: List[List[str]], targets: List[List[str]]) -> float:
+    def __call__(
+        self,
+        output_text: List[str],
+        concepts: List[List[str]],
+        targets: List[List[str]],
+    ) -> float:
         scores = []
         for b in range(len(output_text)):
-            score=0
+            score = 0
             output_text[b] = output_text[b].lower()
             for c in concepts[b]:
                 if c.lower() in output_text[b]:
-                    score+=1
-            scores.append(score/len(concepts[b]))
+                    score += 1
+            scores.append(score / len(concepts[b]))
         return np.mean(scores)
+
 
 def evaluate_model_batch(
     model: GPT,
@@ -74,6 +90,7 @@ def evaluate_model_batch(
     score = eval_function_commongen(output_texts, concepts, targets_texts)
     return score
 
+
 if __name__ == "__main__":
     # Load the GPT-2 model and tokenizer
     model_name = "gpt2"
@@ -89,12 +106,16 @@ if __name__ == "__main__":
         tokenizer.encode("\n")[0],
         tokenizer.encode("~")[0],
         tokenizer.encode("~~")[0],
-        tokenizer.encode(" ")[0]
-        ]
-    for i, batch in tqdm(enumerate(dataloader), desc="Running commongen validation", total=len(dataloader)):
+        tokenizer.encode(" ")[0],
+    ]
+    for i, batch in tqdm(
+        enumerate(dataloader),
+        desc="Running commongen validation",
+        total=len(dataloader),
+    ):
         if i == n_batch_to_validate:
             break
-        input_texts, concepts,target_texts, encoding_tensors = batch
+        input_texts, concepts, target_texts, encoding_tensors = batch
         output = evaluate_model_batch(
             model=model,
             tokenizer=tokenizer,
@@ -102,11 +123,11 @@ if __name__ == "__main__":
             concepts=concepts,
             targets_texts=target_texts,
             eval_function_commongen=BLEU_eval(),
-            remove_prefix_tokens=remove_prefix_tokens
+            remove_prefix_tokens=remove_prefix_tokens,
         )
         outputs.append(output)
 
-    print("Average score: ",np.mean(outputs))
+    print("Average score: ", np.mean(outputs))
     # Average score:  3.9192467438661587
     # Average score 26.02: 3.009
 
