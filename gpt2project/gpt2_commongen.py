@@ -28,8 +28,6 @@ class BLEU_eval(CommongenEval):
 
 
 def evaluate_model_batch(model: GPT, tokenizer: tiktoken.Encoding, encoding_tensors: torch.Tensor, targets: List[List[str]],eval_function_commongen: CommongenEval,remove_prefix_tokens: List[int]) -> float:
-    # Use the padded encoding tensor directly to generate responses
-    encoding_tensors = torch.tensor(encoding_tensors).to(hyperparameters.device)
     outputs = generate_autoregressivly_gpt2(
         model, tokenizer, encoding_tensors, search_method=topk_sampling_gpt
     )
