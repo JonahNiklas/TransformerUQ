@@ -1,13 +1,11 @@
-import os
-import math
-import time
-import inspect
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
+import tiktoken
 import torch
 from torch import Tensor
 import torch.nn as nn
 from torch.nn import functional as F
+from transformers import GPT2LMHeadModel
 
 @dataclass
 class GPTConfig:
@@ -176,5 +174,30 @@ class GPT(nn.Module):
 
         return model
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model = GPT.from_pretrained('gpt2').to(device)
+if __name__ == "__main__":
+    # simple test
+    torch.manual_seed(42)
+    torch.cuda.manual_seed(42)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = GPT.from_pretrained('gpt2').to(device)
+    prompt = "Hello, I'm a language model,"
+    tokenizer = tiktoken.get_encoding("gpt2")
+    tokens = [15496, 11, 314, 1101, 257, 3303, 2746, 11] # "Hello, I'm a language model,"
+    token_tensor = torch.tensor(tokens,dtype=torch.long).unsqueeze(0).repeat(5, 1)
+    
+    from gpt2project.gpt2_generate import generate_from_model, karpathy
+    # generate_from_model(model, prompt, max_length=30)
+    print("loaded==============")
+    karpathy(model)
+    #testing huggingface model directly
+    # model2 = GPT2LMHeadModel.from_pretrained("gpt2")
+    # # print("huggingface==================")
+    # # karpathy(model2)
+    print("our method================")
+    from gpt2project.gpt2_generate import generate_autoregressivly_gpt2
+    from gpt2project.search_methods_gpt import topk_sampling_gpt
+    auto_inf_res = generate_autoregressivly_gpt2(model, tokenizer, token_tensor, search_method=topk_sampling_gpt, max_tokens=30)
+    for i in range(5):
+        print(f"> {tokenizer.decode(auto_inf_res.token_ids[i].tolist())}")
+
+    
