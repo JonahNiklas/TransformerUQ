@@ -37,10 +37,11 @@ def evaluate_model_batch(model: GPT, tokenizer: tiktoken.Encoding, encoding_tens
 # Load the GPT-2 model and tokenizer
 model_name = "gpt2"
 tokenizer = tiktoken.get_encoding(model_name)
-model = GPT.from_pretrained(model_name)
+model = GPT.from_pretrained(model_name).to(hyperparameters.device)
 
 dataloader = get_squad_dataloader(1, shuffle=False)
-n_batch_to_validate = 100
+print("Test examples:", len(dataloader))
+n_batch_to_validate = -1
 # Example of iterating through the DataLoader
 outputs = []
 for i, batch in enumerate(dataloader):
@@ -52,6 +53,8 @@ for i, batch in enumerate(dataloader):
     output = evaluate_model_batch(model, tokenizer, encoding_tensors, targets, eval_function_squad=SquadF1Eval(), remove_prefix_tokens=[])
     outputs.extend(output)
 
-print(torch.mean(torch.tensor(outputs)))
+print(f"{torch.mean(torch.tensor(outputs)).item():.5f}")
+# Output on all 10570 examples: 0.01315
+# Output on first 6000 examples: 0.01567
 
            

@@ -1,9 +1,6 @@
 from typing import List, Tuple
 import pandas as pd
-import ast
-import re
 import os
-import torch
 from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
 
@@ -40,6 +37,7 @@ def get_squad_dataframe(force_new_clean:bool = False) -> pd.DataFrame:
     cleaned_data.loc[:, 'answers'] = cleaned_data['answers'].apply(extract_answers)
 
     # Save the cleaned data to a new CSV file
+    os.makedirs('local/gpt-data/squad', exist_ok=True)
     cleaned_data.to_csv(cleaned_file_path, index=False)
     return cleaned_data
 
@@ -58,7 +56,7 @@ class SquadDataset(Dataset):
         return context, question, answers
 
 def get_squad_dataloader(batch_size: int, shuffle: bool = True) -> DataLoader:
-    dataframe = get_squad_dataframe(True)
+    dataframe = get_squad_dataframe()
     dataset = SquadDataset(dataframe)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
     return dataloader
