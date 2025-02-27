@@ -45,7 +45,7 @@ def topk_sampling_gpt(
         total_len = tgt_tokens.size(1) + max_len
         batch_size = tgt_tokens.size(0)
         assert tgt_tokens.shape == (batch_size, tgt_tokens.size(1))
-        softmax_probs = torch.ones(batch_size, tgt_tokens.size(1)).to(hyperparameters.device)
+        softmax_probs = torch.ones(batch_size, tgt_tokens.size(1), vocab_size).to(hyperparameters.device)
 
         for t in range(max_len):
             output, _ = model(tgt_tokens)
@@ -59,10 +59,10 @@ def topk_sampling_gpt(
             predicted_tokens = torch.gather(topk_tokens, dim=-1, index=ix)
             assert predicted_tokens.shape == (batch_size, 1)
             tgt_tokens = torch.cat([tgt_tokens, predicted_tokens], dim=1)
-            predicted_probs = torch.gather(probs, dim=-1, index=predicted_tokens)
-            assert predicted_probs.shape == (batch_size, 1)
-            softmax_probs = torch.cat([softmax_probs, predicted_probs], dim=1)
+            softmax_probs = torch.cat([softmax_probs, probs.unsqueeze(1)], dim=1)
+            
 
+         # TODO: Missing clean_inference_results see beam_search.py
     assert tgt_tokens.shape == (batch_size, total_len)
-    assert softmax_probs.shape == (batch_size, tgt_tokens.size(1))
+    assert softmax_probs.shape == (batch_size, total_len, vocab_size)
     return AutoregressiveInferenceResults(tgt_tokens, softmax_probs)

@@ -33,17 +33,18 @@ class CommonGenDataset(Dataset):
     def __getitem__(self, idx: int) -> tuple:
         item = self.dataset[idx]
         input_text = item["input"]
+        concepts = item["concepts"]
         target_text = item["target"]
-        return input_text, target_text
+        return input_text, concepts, target_text
 
 def collate_fn(batch: Any) -> Tuple[List[str], List[str], torch.Tensor]:
-    input_texts, target_texts = zip(*batch)
+    input_texts, concepts_list, target_texts = zip(*batch)
     tokenizer = tiktoken.get_encoding("gpt2")
     # Tokenize each input text
     encodings = [torch.tensor(tokenizer.encode(text), dtype=torch.long) for text in input_texts]
     # Pad sequences with a padding value (e.g., 0)
     padded_encodings = pad_sequence(encodings, batch_first=True, padding_value=0)
-    return list(input_texts), list(target_texts), padded_encodings
+    return list(input_texts), list(concepts_list), list(target_texts), padded_encodings, 
 
 def get_common_gen_dataloader(batch_size: int, shuffle: bool) -> DataLoader:
     # Load the CommonGen dataset
@@ -54,6 +55,7 @@ def get_common_gen_dataloader(batch_size: int, shuffle: bool) -> DataLoader:
     idx = first_example["concept_set_idx"]
     input = generate_input_text(first_example["concepts"])
     target = [first_example["target"]]
+    concepts = first_example["concepts"]
 
     for example in dataset:
         idx_n = example["concept_set_idx"]
@@ -64,11 +66,13 @@ def get_common_gen_dataloader(batch_size: int, shuffle: bool) -> DataLoader:
         merged_dataset.append({
             "concept_set_idx": idx,
             "input": input,
-            "target": target
+            "target": target,
+            "concepts": concepts
         })
         idx = idx_n
         input = generate_input_text(example["concepts"])
         target = [example["target"]]
+        concepts = example["concepts"]
 
     print("Rows in merged dataset:", len(merged_dataset))
 
