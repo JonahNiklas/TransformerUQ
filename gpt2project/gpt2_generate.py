@@ -135,21 +135,23 @@ def generate_autoregressivly_gpt2_with_uq(
     for n in tqdm(range(hyperparameters.uq.num_inferences)):
         output = search_method(model, tgt_tokens, vocab_size, max_tokens)
         
-        token_ids[:, n, :] = output.token_ids[:,-max_tokens:]
+        token_ids[:, n, :] = output.token_ids[:,-max_tokens:] # only get the newly generated tokens
         softmax_probs[:, n, :] = output.get_softmax_probs_for_selected_token()[:,-max_tokens:]
         for b in range(batch_size):
-            hypothesis[b].append(tokenizer.decode(output.token_ids[b].tolist()))
+            hypothesis[b].append(tokenizer.decode(token_ids[b, n,:].int().tolist()))
 
+    output_hypothesis = []
     for i, aq_func in enumerate(aq_funcs):
         if aq_func.multiple_inference:
             hyp = BLEU_mean_output_batch(hypothesis)
         else:
             hyp = [hypothesis[b][0] for b in range(batch_size)]
-        uq = aq_func(hypothesis, token_ids, softmax_probs)
+        output_hypothesis.append(hyp)
 
+        uq = aq_func(hypothesis, token_ids, softmax_probs)
         uqs[:, i] = uq
     
-    return token_ids, uqs
+    return token_ids, uqs, output_hypothesis
 
 # this is adapted from the karpathy method above to test how it works in the commongen pipeline 
 def generate_karpathy(model: nn.Module, tgt_tokens: torch.Tensor, max_len:int) -> AutoregressiveInferenceResults:
