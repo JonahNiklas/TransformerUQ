@@ -44,13 +44,13 @@ def plot_retention_curve(
     output_texts: List[str],
     concepts: List[str],
     targets: List[List[str]],
-    uq: List[float],
+    uq: torch.Tensor,
     eval_function: Any,
     aq_func_name: str,
-    filepath: str = None,
+    filepath: str,
 ) -> None:
     # Sort the results based on UQ
-    sorted_indices = sorted(range(len(uq)), key=lambda i: uq[i])
+    sorted_indices = sorted(range(len(uq)), key=lambda i: uq[i].item())
     sorted_outputs = [output_texts[i] for i in sorted_indices]
     sorted_targets = [targets[i] for i in sorted_indices]
 
@@ -89,7 +89,6 @@ print("Test examples:", len(dataloader))
 n_batch_to_validate = -1
 
 # Example of iterating through the DataLoader
-outputs = []
 remove_prefix_tokens = [
     tokenizer.encode("\n")[0],
     tokenizer.encode("~")[0],

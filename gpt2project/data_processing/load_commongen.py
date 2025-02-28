@@ -38,7 +38,7 @@ class CommonGenDataset(Dataset):
         return input_text, concepts, target_text
 
 
-def collate_fn(batch: Any) -> Tuple[List[str], List[str], torch.Tensor]:
+def collate_fn(batch: Any) -> Tuple[List[str], List[str], List[str], torch.Tensor]:
     input_texts, concepts_list, target_texts = zip(*batch)
     tokenizer = tiktoken.get_encoding("gpt2")
     # Tokenize each input text

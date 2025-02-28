@@ -57,7 +57,7 @@ class ConceptUsageEval(CommongenEval):
                 if c.lower() in output_text[b]:
                     score += 1
             scores.append(score / len(concepts[b]))
-        return np.mean(scores)
+        return np.mean(scores).item()
 
 
 def evaluate_model_batch(
