@@ -98,6 +98,7 @@ class TargetUsageEval(SquadEval):
             for t in targets[i]:
                 if t in output_text[i]:
                     scores[i] = 1.0
+                    break
         return sum(scores) / len(scores)
 
 

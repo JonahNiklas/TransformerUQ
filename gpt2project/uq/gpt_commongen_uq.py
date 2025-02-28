@@ -87,7 +87,7 @@ if __name__ == "__main__":
         all_uqs = torch.cat((all_uqs, uq), dim=0)
 
 
-    os.makedirs("local/gpt-results", exist_ok=True)
+    os.makedirs("local/gpt-results/commongen", exist_ok=True)
     # Call the function for each acquisition function
     for i, aq_func in enumerate(aq_funcs):
         plot_retention_curve_cg(
@@ -97,5 +97,5 @@ if __name__ == "__main__":
             all_uqs[:, i],
             eval_function_commongen,
             aq_func.__class__.__name__,
-            filepath=f"local/gpt-results/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}.svg",
+            filepath=f"local/gpt-results/commongen/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}.svg",
         )
