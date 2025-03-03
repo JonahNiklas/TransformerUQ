@@ -9,7 +9,6 @@ from data_processing.vocab import load_vocab, output_to_text
 from hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
 from utils.checkpoints import load_checkpoint
-from uq.acquisition_func import BeamScore, BLEUVariance
 from validate import validate
 
 # RESULTS
