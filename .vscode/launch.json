@@ -53,6 +53,16 @@
                 "TORCH_COMPILE": "FALSE",
                 "USE_WANDB": "FALSE",
             }
+        },
+        {
+            "name": "gpt2_commongen",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.gpt2_commongen",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
         }
     ]
 }

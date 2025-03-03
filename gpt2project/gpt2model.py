@@ -1,15 +1,13 @@
-import os
-import math
-import time
-import inspect
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
+import tiktoken
 import torch
 from torch import Tensor
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim.adamw import AdamW
 from gpt2project.dpp import ddp, ddp_rank, ddp_world_size, master_process, device, device_type, ddp_local_rank
+from transformers import GPT2LMHeadModel
 
 @dataclass
 class GPTConfig:
@@ -202,3 +200,31 @@ class GPT(nn.Module):
             print(f"using fused AdamW: {use_fused}")
         optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=(0.9, 0.95), eps=1e-8, fused=use_fused)
         return optimizer
+
+if __name__ == "__main__":
+    # simple test
+    torch.manual_seed(42)
+    torch.cuda.manual_seed(42)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = GPT.from_pretrained('gpt2').to(device)
+    prompt = "Hello, I'm a language model,"
+    tokenizer = tiktoken.get_encoding("gpt2")
+    tokens = [15496, 11, 314, 1101, 257, 3303, 2746, 11] # "Hello, I'm a language model,"
+    token_tensor = torch.tensor(tokens,dtype=torch.long).unsqueeze(0).repeat(5, 1)
+    
+    from gpt2project.gpt2_generate import generate_from_model, karpathy
+    # generate_from_model(model, prompt, max_length=30)
+    print("loaded==============")
+    karpathy(model)
+    #testing huggingface model directly
+    # model2 = GPT2LMHeadModel.from_pretrained("gpt2")
+    # # print("huggingface==================")
+    # # karpathy(model2)
+    print("our method================")
+    from gpt2project.gpt2_generate import generate_autoregressivly_gpt2
+    from gpt2project.search_methods_gpt import topk_sampling_gpt
+    auto_inf_res = generate_autoregressivly_gpt2(model, tokenizer, token_tensor, search_method=topk_sampling_gpt, max_tokens=30)
+    for i in range(5):
+        print(f"> {tokenizer.decode(auto_inf_res.token_ids[i].tolist())}")
+
+    
