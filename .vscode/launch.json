@@ -35,6 +35,16 @@
             }
         },
         {
+            "name": "gpt2_train",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.train",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
+        {
             "name": "gpt2_hellaswag",
             "type": "debugpy",
             "request": "launch",
@@ -49,6 +59,16 @@
             "type": "debugpy",
             "request": "launch",
             "module": "gpt2project.gpt2_commongen",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
+        {
+            "name": "gpt_commongen_uq",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.gpt_commongen_uq",
             "env": {
                 "TORCH_COMPILE": "FALSE",
                 "USE_WANDB": "FALSE",

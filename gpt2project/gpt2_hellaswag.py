@@ -25,7 +25,8 @@ gpt2-xl (1558M)
 
 The validation set of HellaSwag has a total of 10,042 examples.
 """
-
+from __future__ import annotations
+import torch.distributed as dist
 import os
 import json
 import pickle
@@ -45,6 +46,7 @@ from gpt2project.gpt2_generate import generate_from_model
 from gpt2project.gpt2model import GPT
 from uq.acquisition_func import BeamScore
 from uq.generate_with_uq import _enable_test_time_dropout
+from gpt2project.ddp import ddp, ddp_rank, ddp_world_size
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 device_type = "cuda" if "cuda" in device else "cpu"
@@ -261,14 +263,17 @@ def get_uncertainty_of_selected_tokens_mcdo(model: GPT, tokens: torch.Tensor, ma
 
 
 @torch.no_grad()
-def evaluate_hellaswag(model: GPT) -> None:
-    num_correct_norm = 0
-    num_total = 0
+def evaluate_hellaswag(model: GPT, ddp: bool, ddp_rank: int, ddp_world_size: int) -> float:
+    num_correct_norm: int = 0
+    num_total: int = 0
 
     correct_list = []
     uncertainty_list = []
     pbar = tqdm(total=10042, desc="Evaluating HellaSwag")    
     for i, example in enumerate(iterate_examples("val")):
+        # only process examples where i % ddp_world_size == ddp_rank
+        if i % ddp_world_size != ddp_rank:
+            continue
         # Render the example into tokens, mask, and label.
         _, tokens, mask, label = render_example(example)
         tokens = tokens.to(device)
@@ -292,6 +297,15 @@ def evaluate_hellaswag(model: GPT) -> None:
         pbar.set_postfix({'acc': f'{num_correct_norm/num_total:.4f}'})
     
     pbar.close()
+    if ddp:
+        num_total_tensor = torch.tensor(num_total, dtype=torch.long, device=device)
+        num_correct_norm_tensor = torch.tensor(
+            num_correct_norm, dtype=torch.long, device=device
+        )
+        dist.all_reduce(num_total_tensor, op=dist.ReduceOp.SUM)
+        dist.all_reduce(num_correct_norm_tensor, op=dist.ReduceOp.SUM)
+        num_total = int(num_total_tensor.item())
+        num_correct_norm = int(num_correct_norm_tensor.item())
     acc_norm = num_correct_norm / num_total
     print(f"HellaSwag accuracy: {num_correct_norm}/{num_total}={acc_norm:.4f}")
 
@@ -301,7 +315,7 @@ def evaluate_hellaswag(model: GPT) -> None:
     with open("local/uncertainty_list.pkl", "wb") as f:
         pickle.dump(uncertainty_list, f)
 
-
+    return acc_norm
 
 
 
@@ -334,16 +348,15 @@ def plot_retention_curve(correct_list: List[int], uncertainty_list: List[float])
     plt.show()
     
 
-gpt2 = GPT.from_pretrained('gpt2').to(device)
+if __name__ == "__main__":
 
-# generate_from_model(gpt2, "Hello, I'm a language model,")
+    gpt2 = GPT.from_pretrained('gpt2').to(device)
+    # generate_from_model(gpt2, "Hello, I'm a language model,")
+    evaluate_hellaswag(gpt2, ddp=False, ddp_rank=0, ddp_world_size=1)
 
-evaluate_hellaswag(gpt2)
+    with open("local/correct_list.pkl", "rb") as f:
+        correct_list = pickle.load(f)
+    with open("local/uncertainty_list.pkl", "rb") as f:
+        uncertainty_list = pickle.load(f)
 
-
-with open("local/correct_list.pkl", "rb") as f:
-    correct_list = pickle.load(f)
-with open("local/uncertainty_list.pkl", "rb") as f:
-    uncertainty_list = pickle.load(f)
-
-plot_retention_curve(correct_list, uncertainty_list)
+    plot_retention_curve(correct_list, uncertainty_list)
