@@ -53,6 +53,7 @@ def plot_retention_curve(
     sorted_indices = sorted(range(len(uq)), key=lambda i: uq[i].item())
     sorted_outputs = [output_texts[i] for i in sorted_indices]
     sorted_targets = [targets[i] for i in sorted_indices]
+    sorted_concepts = [concepts[i] for i in sorted_indices]
 
     # Evaluate and plot retention curve
     import matplotlib.pyplot as plt
@@ -63,7 +64,8 @@ def plot_retention_curve(
     for cutoff in cutoffs:
         selected_outputs = sorted_outputs[:cutoff]
         selected_targets = sorted_targets[:cutoff]
-        score = eval_function(selected_outputs, concepts, selected_targets)
+        selected_concepts = sorted_concepts[:cutoff]
+        score = eval_function(selected_outputs, selected_concepts, selected_targets)
         retention_scores.append(score)
 
     plt.figure()
@@ -122,7 +124,25 @@ for i, batch in tqdm(
     all_uqs = torch.cat((all_uqs, uq), dim=0)
 
 
+import pickle
 os.makedirs("local/gpt-results", exist_ok=True)
+pickle.dump(
+    {
+        "all_outputs": all_outputs,
+        "all_concepts": all_concepts,
+        "all_targets": all_targets,
+        "all_uqs": all_uqs,
+    },
+    open("local/gpt-results/cg_uq_results.pkl", "wb"),
+)
+
+# load the results
+import pickle
+results = pickle.load(open("local/gpt-results/cg_uq_results.pkl", "rb"))
+all_outputs = results["all_outputs"]
+all_concepts = results["all_concepts"]
+all_targets = results["all_targets"]
+all_uqs = results["all_uqs"]
 # Call the function for each acquisition function
 for i, aq_func in enumerate(aq_funcs):
     plot_retention_curve(
@@ -132,5 +152,6 @@ for i, aq_func in enumerate(aq_funcs):
         all_uqs[:, i],
         eval_function_commongen,
         aq_func.__class__.__name__,
-        filepath=f"local/gpt-results/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}.svg",
+        filepath=f"local/gpt-results/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}.png",
     )
+
