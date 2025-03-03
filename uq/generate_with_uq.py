@@ -6,6 +6,7 @@ import torch.nn as nn
 from tqdm import tqdm
 from beam_search import AutoregressiveInferenceResults, beam_search_batched, greedy_search, top_k_sampling
 from data_processing.vocab import BOS_TOKEN, Vocabulary, load_vocab, output_to_text
+from models.transformer_model import TransformerModel
 from uq.acquisition_func import AcquisitionFunction, BLEU_mean_output_batch
 from hyperparameters import hyperparameters
 from constants import constants
@@ -82,6 +83,16 @@ def _enable_test_time_dropout(model: nn.Module) -> None:
     for module in model.modules():
         if isinstance(module, nn.Dropout):
             module.train()
+
+def enable_fast_test_time_dropout(model: TransformerModel) -> None:
+    """
+    Enable dropout for the final decoder layer in the transformer.
+    """
+    final_decoder_layer = model.transformer.decoder.layers[-1]
+    for module in final_decoder_layer.modules():
+        if isinstance(module, nn.Dropout):
+            module.train()
+
 
 def print_sample_sentences(batch_size: int, src_tokens: torch.Tensor, ground_truth: torch.Tensor, text_output: Union[List[str], List[List[str]]], uq: torch.Tensor, aq_func: AcquisitionFunction, print_ex: int) -> None:
 
