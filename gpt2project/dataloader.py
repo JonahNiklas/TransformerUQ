@@ -2,7 +2,7 @@ import os
 import numpy as np
 import torch
 from typing import Tuple
-from gpt2project.dpp import master_process
+from gpt2project.ddp import master_process
 
 def load_tokens(filename: str) -> torch.Tensor:
     npt = np.load(filename)

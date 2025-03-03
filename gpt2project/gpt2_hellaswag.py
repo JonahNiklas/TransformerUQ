@@ -25,7 +25,8 @@ gpt2-xl (1558M)
 
 The validation set of HellaSwag has a total of 10,042 examples.
 """
-
+from __future__ import annotations
+import torch.distributed as dist
 import os
 import json
 import pickle
@@ -45,6 +46,7 @@ from gpt2project.gpt2_generate import generate_from_model
 from gpt2project.gpt2model import GPT
 from uq.acquisition_func import BeamScore
 from uq.generate_with_uq import _enable_test_time_dropout
+from gpt2project.ddp import ddp, ddp_rank, ddp_world_size
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 device_type = "cuda" if "cuda" in device else "cpu"
@@ -261,9 +263,9 @@ def get_uncertainty_of_selected_tokens_mcdo(model: GPT, tokens: torch.Tensor, ma
 
 
 @torch.no_grad()
-def evaluate_hellaswag(model: GPT, dpp: bool, ddp_rank: int, ddp_world_size: int) -> float:
-    num_correct_norm = 0
-    num_total = 0
+def evaluate_hellaswag(model: GPT, ddp: bool, ddp_rank: int, ddp_world_size: int) -> float:
+    num_correct_norm: int = 0
+    num_total: int = 0
 
     correct_list = []
     uncertainty_list = []
@@ -296,14 +298,14 @@ def evaluate_hellaswag(model: GPT, dpp: bool, ddp_rank: int, ddp_world_size: int
     
     pbar.close()
     if ddp:
-        num_total = torch.tensor(num_total, dtype=torch.long, device=device)
-        num_correct_norm = torch.tensor(
+        num_total_tensor = torch.tensor(num_total, dtype=torch.long, device=device)
+        num_correct_norm_tensor = torch.tensor(
             num_correct_norm, dtype=torch.long, device=device
         )
-        dist.all_reduce(num_total, op=dist.ReduceOp.SUM)
-        dist.all_reduce(num_correct_norm, op=dist.ReduceOp.SUM)
-        num_total = num_total.item()
-        num_correct_norm = num_correct_norm.item()
+        dist.all_reduce(num_total_tensor, op=dist.ReduceOp.SUM)
+        dist.all_reduce(num_correct_norm_tensor, op=dist.ReduceOp.SUM)
+        num_total = int(num_total_tensor.item())
+        num_correct_norm = int(num_correct_norm_tensor.item())
     acc_norm = num_correct_norm / num_total
     print(f"HellaSwag accuracy: {num_correct_norm}/{num_total}={acc_norm:.4f}")
 
@@ -350,7 +352,7 @@ if __name__ == "__main__":
 
     gpt2 = GPT.from_pretrained('gpt2').to(device)
     # generate_from_model(gpt2, "Hello, I'm a language model,")
-    evaluate_hellaswag(gpt2)
+    evaluate_hellaswag(gpt2, ddp=False, ddp_rank=0, ddp_world_size=1)
 
     with open("local/correct_list.pkl", "rb") as f:
         correct_list = pickle.load(f)

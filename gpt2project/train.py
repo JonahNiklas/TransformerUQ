@@ -27,7 +27,7 @@ import logging
 from torch.distributed import init_process_group, destroy_process_group
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
-from gpt2project.dpp import (
+from gpt2project.ddp import (
     ddp,
     ddp_rank,
     ddp_world_size,
@@ -260,6 +260,7 @@ def evaluate_hellaswag(
     log_file: str,
     step: int,
 ) -> None:
+    model.eval()
     num_correct_norm: int | float | torch.Tensor = 0
     num_total: int | float | torch.Tensor = 0
     for i, example in enumerate(iterate_examples("val")):
