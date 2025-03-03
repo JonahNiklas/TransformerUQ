@@ -51,7 +51,8 @@ def topk_sampling_gpt(
     tgt_tokens: torch.Tensor,
     vocab_size: int,
     max_len: int,
-    k: int = 50,
+    k: int = 8,
+    temperature: float = 0.3,
 ) -> AutoregressiveInferenceResults:
     with torch.no_grad():
         total_len = tgt_tokens.size(1) + max_len
@@ -61,15 +62,19 @@ def topk_sampling_gpt(
             hyperparameters.device
         )
 
+        sample_rng = torch.Generator(device=hyperparameters.device)
+        sample_rng.manual_seed(40)
+
         for t in range(max_len):
             output, _ = model(tgt_tokens)
             assert output.shape == (batch_size, tgt_tokens.size(1), vocab_size)
             logits = output[:, -1, :]
             assert logits.shape == (batch_size, vocab_size)
+            logits = logits / temperature
             probs = torch.softmax(logits, dim=-1)
             assert probs.shape == (batch_size, vocab_size)
             topk_probs, topk_tokens = torch.topk(probs, k=k, dim=-1)
-            ix = torch.multinomial(topk_probs, num_samples=1)
+            ix = torch.multinomial(topk_probs, num_samples=1, generator=sample_rng)
             predicted_tokens = torch.gather(topk_tokens, dim=-1, index=ix)
             assert predicted_tokens.shape == (batch_size, 1)
             tgt_tokens = torch.cat([tgt_tokens, predicted_tokens], dim=1)

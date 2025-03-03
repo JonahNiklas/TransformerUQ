@@ -95,3 +95,14 @@ def get_common_gen_dataloader(batch_size: int, shuffle: bool) -> DataLoader:
         commongen_dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
     )
     return dataloader
+
+
+if __name__ == "__main__":
+    dataloader = get_common_gen_dataloader(batch_size=8, shuffle=False)
+    for batch in dataloader:
+        input_texts, concepts_list, target_texts, padded_encodings = batch
+        print(input_texts)
+        print(concepts_list)
+        print(target_texts)
+        print(padded_encodings)
+        break

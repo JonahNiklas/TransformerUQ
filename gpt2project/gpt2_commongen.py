@@ -3,7 +3,7 @@ import numpy as np
 import tiktoken
 import torch
 import tiktoken
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from gpt2project.data_processing.load_commongen import get_common_gen_dataloader
 from gpt2project.gpt2_generate import (
     generate_autoregressivly_gpt2,
@@ -13,11 +13,18 @@ from gpt2project.gpt2_generate import (
 )
 from gpt2project.search_methods_gpt import (
     GPT_search_method,
+    greedy_search_gpt,
     topk_sampling_gpt,
 )
 from sacrebleu import corpus_bleu
 from hyperparameters import hyperparameters
 from gpt2project.gpt2model import GPT
+
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
+logger = logging.getLogger(__name__)
 
 
 class CommongenEval:
@@ -67,16 +74,39 @@ def evaluate_model_batch(
     concepts: List[List[str]],
     targets_texts: List[List[str]],
     eval_function_commongen: CommongenEval,
-    remove_prefix_tokens: List[int],
 ) -> float:
     # Use the padded encoding tensor directly to generate responses
     outputs = generate_autoregressivly_gpt2(
-        model, tokenizer, encoding_tensors, search_method=topk_sampling_gpt
+        model,
+        tokenizer,
+        encoding_tensors,
+        search_method=greedy_search_gpt,
+        max_tokens=20,
     )
     token_ids = outputs.token_ids
+
+    output_texts = _clean_and_decode_output_tokens(token_ids, tokenizer)
+    score = eval_function_commongen(output_texts, concepts, targets_texts)
+    if score == 0:
+        logger.debug(f"Output texts: {output_texts}")
+        logger.debug(f"Concepts: {concepts}")
+        logger.debug(f"Targets texts: {targets_texts}")
+    return score
+
+
+def _clean_and_decode_output_tokens(
+    token_ids: torch.Tensor,
+    tokenizer: tiktoken.Encoding,
+) -> List[str]:
+    remove_prefix_tokens = [
+        tokenizer.encode("\n")[0],
+        tokenizer.encode("~")[0],
+        tokenizer.encode("~~")[0],
+        tokenizer.encode(" ")[0],
+    ]
     new_line_token = tokenizer.encode("\n")[0]
     non_breaking_space_token = tokenizer.encode("\xa0")[0]
-
+    
     output_texts = []
     # clean the output tokens and decode them
     for b in range(len(token_ids)):  # iterate over batch
@@ -87,8 +117,7 @@ def evaluate_model_batch(
         if new_line_token in ids:
             ids = ids[: ids.tolist().index(new_line_token)]
         output_texts.append(tokenizer.decode(ids.tolist()))
-    score = eval_function_commongen(output_texts, concepts, targets_texts)
-    return score
+    return output_texts
 
 
 if __name__ == "__main__":
@@ -97,22 +126,18 @@ if __name__ == "__main__":
     tokenizer = tiktoken.get_encoding(model_name)
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
 
-    dataloader = get_common_gen_dataloader(batch_size=8, shuffle=False)
+    dataloader = get_common_gen_dataloader(batch_size=1, shuffle=False)
     n_batch_to_validate = -1
 
     # Example of iterating through the DataLoader
     outputs = []
-    remove_prefix_tokens = [
-        tokenizer.encode("\n")[0],
-        tokenizer.encode("~")[0],
-        tokenizer.encode("~~")[0],
-        tokenizer.encode(" ")[0],
-    ]
-    for i, batch in tqdm(
+    
+    pbar = tqdm(
         enumerate(dataloader),
-        desc="Running commongen validation",
+        desc="Running commongen validation (avg: N/A)",
         total=len(dataloader),
-    ):
+    )
+    for i, batch in pbar:
         if i == n_batch_to_validate:
             break
         input_texts, concepts, target_texts, encoding_tensors = batch
@@ -122,14 +147,19 @@ if __name__ == "__main__":
             encoding_tensors=encoding_tensors,
             concepts=concepts,
             targets_texts=target_texts,
-            eval_function_commongen=BLEU_eval(),
-            remove_prefix_tokens=remove_prefix_tokens,
+            eval_function_commongen=ConceptUsageEval(),
         )
         outputs.append(output)
+
+        # Update tqdm description with current average
+        pbar.set_description(
+            f"Running commongen validation (current: {output:.4f}, avg: {np.mean(outputs):.4f})"
+        )
 
     print("Average score: ", np.mean(outputs))
     # Average score:  3.9192467438661587
     # Average score 26.02: 3.009
+    # Average score 03.03: 7.994
 
     # # Example input words
     # words = ["tree", "car", "crash"]

@@ -17,9 +17,8 @@ enc = tiktoken.get_encoding("gpt2")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 device_type = "cuda" if "cuda" in device else "cpu"
 
-def generate_from_model(model: nn.Module, context: str, max_length: int = 100) -> None:
+def generate_from_model(model: nn.Module, context: str, max_length: int = 100, num_return_sequences: int = 5) -> None:
     model.eval()
-    num_return_sequences = 5
     tokens: List[int] = enc.encode(context)
     tokens_tensor = torch.tensor(tokens, dtype=torch.long)
     tokens_tensor = tokens_tensor.unsqueeze(0).repeat(num_return_sequences, 1)
@@ -132,7 +131,7 @@ def generate_autoregressivly_gpt2_with_uq(
     hypothesis :List[List[str]] = [[] for _ in range(batch_size)]
     uqs = torch.zeros(batch_size, len(aq_funcs)).to(hyperparameters.device)
 
-    for n in tqdm(range(hyperparameters.uq.num_inferences)):
+    for n in range(hyperparameters.uq.num_inferences):
         output = search_method(model, tgt_tokens, vocab_size, max_tokens)
         
         token_ids[:, n, :] = output.token_ids[:,-max_tokens:]
