@@ -6,27 +6,42 @@ on:
   pull_request:
     branches: [ main ]
 
+# Add permissions for writing to pull requests
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   type-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
+    - name: Install Poetry
+      run: pipx install poetry
+
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-    
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-    
-    - name: Setup Virtual Environment
-      run: |
-        python -m venv venv
-        source venv/bin/activate
+        cache: 'poetry'
     
     - name: Install Dependencies
       run: poetry install --with dev
     
     - name: Run MyPy
       run: poetry run mypy --explicit-package-bases . --exclude venv
+    
+    - id: black-check
+      name: Check Black formatting
+      continue-on-error: true
+      run: poetry run black --check .
+    
+    - uses: mainmatter/continue-on-error-comment@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        outcome: ${{ steps.black-check.outcome }}
+        test-id: "Black code formatting"
+    
+    - name: Run Pytest
+      run: poetry run pytest tests

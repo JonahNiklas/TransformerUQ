@@ -26,7 +26,9 @@ class TransformerModel(nn.Module):
         self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=0)
         self.dropout = nn.Dropout(dropout)
         positional_dropout = 0.0
-        self.pos_encoder = PositionalEncoding(d_model, max_len=max_len, dropout=positional_dropout)
+        self.pos_encoder = PositionalEncoding(
+            d_model, max_len=max_len, dropout=positional_dropout
+        )
         self.transformer: torch.nn.Module
         if hyperparameters.transformer.transformer_implementation == "pytorch":
             self.transformer = nn.Transformer(
@@ -82,7 +84,7 @@ class TransformerModel(nn.Module):
         if hyperparameters.transformer.transformer_implementation == "bayesformer":
             src = self.dropout(src)
             tgt = self.dropout(tgt)
-        
+
         src = self.pos_encoder(src)
         tgt = self.pos_encoder(tgt)
 
@@ -135,9 +137,10 @@ class PositionalEncoding(nn.Module):
             mask = (
                 torch.rand(batch_size, seq_len, 1, device=x.device) > self.dropout_rate
             ).float()  # (batch_size, seq_len, 1)
-            pe = pe * mask 
+            pe = pe * mask
         x = x + pe
         return x
+
 
 # def token_dropout(tokens: torch.Tensor, dropout_prob: float, pad_idx: int) -> torch.Tensor:
 #     # Generate dropout mask on tokens (True indicates to drop)

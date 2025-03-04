@@ -44,9 +44,7 @@ def create_transformer_masks(
         2
     )  # [batch, 1, 1, src_seq_length]
     memory_mask = torch.where(memory_mask == True, -torch.inf, 0)
-    memory_mask = memory_mask.expand(
-        batch_size, nhead, tgt_seq_length, src_seq_length
-    )
+    memory_mask = memory_mask.expand(batch_size, nhead, tgt_seq_length, src_seq_length)
 
     assert isinstance(tgt_mask, torch.Tensor)
     return enc_src_mask, tgt_mask, memory_mask

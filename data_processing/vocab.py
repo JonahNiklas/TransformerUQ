@@ -46,7 +46,7 @@ class Vocabulary:
                 idx += 1
 
         # Build id2token
-        self.id2token = [None] * len(self.token2id) # type: ignore
+        self.id2token = [None] * len(self.token2id)  # type: ignore
         for t, i in self.token2id.items():
             self.id2token[i] = t
 
@@ -113,7 +113,8 @@ def load_vocab(vocab_file: str) -> Vocabulary:
 
 _vocab_shared = None
 
-def output_to_text(output: List[int], lang: str="en") -> str:
+
+def output_to_text(output: List[int], lang: str = "en") -> str:
     global _vocab_shared
     if _vocab_shared is None:
         logger.debug("Loading shared vocab")
@@ -132,7 +133,7 @@ def output_to_text(output: List[int], lang: str="en") -> str:
 
 if __name__ == "__main__":
     # Test output_to_text
-    
+
     sample_sentence = "hi don't im such a cool person"
     tokenizer = MosesTokenizer(lang="en")
     tokenized_text = tokenizer.tokenize(sample_sentence)
@@ -146,10 +147,8 @@ if __name__ == "__main__":
     decoded = vocab.decode(encoded)
     print("Decoded text:")
     print(decoded)
-    
-    
+
     detokenizer = MosesDetokenizer(lang="en")
     detokenized_text = detokenizer.detokenize(decoded)
     print("Detokenized text:")
     print(detokenized_text)
-    
