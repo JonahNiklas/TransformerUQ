@@ -27,5 +27,11 @@ jobs:
     - name: Run MyPy
       run: poetry run mypy --explicit-package-bases . --exclude venv
     
+    - name: Check Black formatting
+      continue-on-error: true
+      run: |
+        echo "::warning::Running Black check (warning only)"
+        poetry run black --check . || echo "::warning::⚠️ Black formatting issues found. Run 'poetry run black .' locally to fix."
+    
     - name: Run Pytest
       run: poetry run pytest tests

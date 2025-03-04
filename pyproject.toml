@@ -29,6 +29,7 @@ datasets = "^3.3.2"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.14.1"
+black = "^24.4.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -44,3 +45,6 @@ check_untyped_defs = true
 warn_unused_ignores = true
 warn_return_any = true
 warn_unreachable = true
+
+[tool.black]
+exclude = "venv/"

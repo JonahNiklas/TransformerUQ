@@ -4,6 +4,7 @@ import torch
 from typing import Tuple
 from gpt2project.ddp import master_process
 
+
 def load_tokens(filename: str) -> torch.Tensor:
     npt = np.load(filename)
     npt = npt.astype(np.int32)  # added after video

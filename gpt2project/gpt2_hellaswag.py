@@ -1,4 +1,3 @@
-
 """
 Downloads and evaluates HellaSwag in Python.
 https://github.com/rowanz/hellaswag
@@ -25,6 +24,7 @@ gpt2-xl (1558M)
 
 The validation set of HellaSwag has a total of 10,042 examples.
 """
+
 from __future__ import annotations
 import torch.distributed as dist
 import os
@@ -53,6 +53,7 @@ device_type = "cuda" if "cuda" in device else "cpu"
 # -----------------------------------------------------------------------------
 DATA_CACHE_DIR = os.path.join(os.getcwd(), "local/hellaswag")
 
+
 def download_file(url: str, fname: str, chunk_size: int = 1024) -> None:
     """Helper function to download a file from a given url"""
     resp = requests.get(url, stream=True)
@@ -68,6 +69,7 @@ def download_file(url: str, fname: str, chunk_size: int = 1024) -> None:
             size = file.write(data)
             bar.update(size)
 
+
 hellaswags = {
     "train": "https://raw.githubusercontent.com/rowanz/hellaswag/master/data/hellaswag_train.jsonl",
     "val": "https://raw.githubusercontent.com/rowanz/hellaswag/master/data/hellaswag_val.jsonl",
@@ -75,6 +77,7 @@ hellaswags = {
 }
 
 enc = tiktoken.get_encoding("gpt2")
+
 
 def download(split: str) -> None:
     """Downloads HellaSwag DATA_CACHE_DIR"""
@@ -110,9 +113,11 @@ def render_example(example: Dict) -> Tuple[Dict, torch.Tensor, torch.Tensor, int
     tok_rows = []
     mask_rows = []
     for end in endings:
-        end_tokens = enc.encode(" " + end) # note: prepending " " because GPT-2 tokenizer
+        end_tokens = enc.encode(
+            " " + end
+        )  # note: prepending " " because GPT-2 tokenizer
         tok_rows.append(ctx_tokens + end_tokens)
-        mask_rows.append([0]*len(ctx_tokens) + [1]*len(end_tokens))
+        mask_rows.append([0] * len(ctx_tokens) + [1] * len(end_tokens))
         data["ending_tokens"].append(end_tokens)
 
     # have to be careful during the collation because the number of tokens in each row can differ
@@ -120,8 +125,8 @@ def render_example(example: Dict) -> Tuple[Dict, torch.Tensor, torch.Tensor, int
     tokens = torch.zeros((4, max_len), dtype=torch.long)
     mask = torch.zeros((4, max_len), dtype=torch.long)
     for i, (tok_row, mask_row) in enumerate(zip(tok_rows, mask_rows)):
-        tokens[i, :len(tok_row)] = torch.tensor(tok_row)
-        mask[i, :len(mask_row)] = torch.tensor(mask_row)
+        tokens[i, : len(tok_row)] = torch.tensor(tok_row)
+        mask[i, : len(mask_row)] = torch.tensor(mask_row)
 
     return data, tokens, mask, label
 
@@ -134,10 +139,11 @@ def iterate_examples(split: str) -> Generator[Dict, None, None]:
             example = json.loads(line)
             yield example
 
+
 @torch.no_grad()
 def evaluate(model_type: str, device: str) -> None:
 
-    torch.set_float32_matmul_precision('high') # use tf32
+    torch.set_float32_matmul_precision("high")  # use tf32
     model = GPT2LMHeadModel.from_pretrained(model_type)
     model.to(device)
     # model = torch.compile(model) # optionally torch compile the model
@@ -157,10 +163,14 @@ def evaluate(model_type: str, device: str) -> None:
         shift_tokens = (tokens[..., 1:]).contiguous()
         flat_shift_logits = shift_logits.view(-1, shift_logits.size(-1))
         flat_shift_tokens = shift_tokens.view(-1)
-        shift_losses = F.cross_entropy(flat_shift_logits, flat_shift_tokens, reduction='none')
+        shift_losses = F.cross_entropy(
+            flat_shift_logits, flat_shift_tokens, reduction="none"
+        )
         shift_losses = shift_losses.view(tokens.size(0), -1)
         # now get the average loss just for the completion region (where mask == 1), in each row
-        shift_mask = (mask[..., 1:]).contiguous() # we must shift mask, so we start at the last prompt token
+        shift_mask = (
+            mask[..., 1:]
+        ).contiguous()  # we must shift mask, so we start at the last prompt token
         masked_shift_losses = shift_losses * shift_mask
         # sum and divide by the number of 1s in the mask
         sum_loss = masked_shift_losses.sum(dim=1)
@@ -174,7 +184,9 @@ def evaluate(model_type: str, device: str) -> None:
         num_total += 1
         num_correct += int(pred == label)
         num_correct_norm += int(pred_norm == label)
-        print(f"{num_total} acc_norm: {num_correct_norm}/{num_total}={num_correct_norm/num_total:.4f}")
+        print(
+            f"{num_total} acc_norm: {num_correct_norm}/{num_total}={num_correct_norm/num_total:.4f}"
+        )
 
         # debug: pretty print a few examples, and the losses in each case
         if num_total < 10:
@@ -186,16 +198,22 @@ def evaluate(model_type: str, device: str) -> None:
             print(f"predicted: {pred_norm}, actual: {label}")
 
 
-def get_most_likely_row(tokens: torch.Tensor, mask: torch.Tensor, logits: torch.Tensor) -> int:
+def get_most_likely_row(
+    tokens: torch.Tensor, mask: torch.Tensor, logits: torch.Tensor
+) -> int:
     # evaluate the autoregressive loss at all positions
     shift_logits = (logits[..., :-1, :]).contiguous()
     shift_tokens = (tokens[..., 1:]).contiguous()
     flat_shift_logits = shift_logits.view(-1, shift_logits.size(-1))
     flat_shift_tokens = shift_tokens.view(-1)
-    shift_losses = F.cross_entropy(flat_shift_logits, flat_shift_tokens, reduction='none')
+    shift_losses = F.cross_entropy(
+        flat_shift_logits, flat_shift_tokens, reduction="none"
+    )
     shift_losses = shift_losses.view(tokens.size(0), -1)
     # now get the average loss just for the completion region (where mask == 1), in each row
-    shift_mask = (mask[..., 1:]).contiguous() # we must shift mask, so we start at the last prompt token
+    shift_mask = (
+        mask[..., 1:]
+    ).contiguous()  # we must shift mask, so we start at the last prompt token
     masked_shift_losses = shift_losses * shift_mask
     # sum and divide by the number of 1s in the mask
     sum_loss = masked_shift_losses.sum(dim=1)
@@ -207,40 +225,51 @@ def get_most_likely_row(tokens: torch.Tensor, mask: torch.Tensor, logits: torch.
     return int(pred_norm)
 
 
-def get_uncertainty_of_selected_tokens(tokens: torch.Tensor, mask: torch.Tensor, logits: torch.Tensor) -> float:
+def get_uncertainty_of_selected_tokens(
+    tokens: torch.Tensor, mask: torch.Tensor, logits: torch.Tensor
+) -> float:
     softmax_p = F.softmax(logits, dim=-1)
-    softmax_of_selected_tokens = torch.gather(softmax_p, -1, tokens.unsqueeze(-1)).squeeze(-1)
+    softmax_of_selected_tokens = torch.gather(
+        softmax_p, -1, tokens.unsqueeze(-1)
+    ).squeeze(-1)
     softmax_of_selected_tokens[~mask] = 0
     # Find uncertainty for the most likely row
-    uncertainty = BeamScore()(hypothesis=[tokens.tolist()], tgt_tokens=tokens.unsqueeze(0).unsqueeze(0), token_softmax_probs=softmax_of_selected_tokens.unsqueeze(0).unsqueeze(0))
+    uncertainty = BeamScore()(
+        hypothesis=[tokens.tolist()],
+        tgt_tokens=tokens.unsqueeze(0).unsqueeze(0),
+        token_softmax_probs=softmax_of_selected_tokens.unsqueeze(0).unsqueeze(0),
+    )
     assert uncertainty.shape == (1,)
     return uncertainty.item()
 
-def get_uncertainty_of_selected_tokens_mcdo(model: GPT, tokens: torch.Tensor, mask: torch.Tensor, num_mc_samples: int = 10) -> float:
+
+def get_uncertainty_of_selected_tokens_mcdo(
+    model: GPT, tokens: torch.Tensor, mask: torch.Tensor, num_mc_samples: int = 10
+) -> float:
     """
     Computes uncertainty using Monte Carlo dropout (MCdo).
-    
+
     This function runs several stochastic forward passes with dropout enabled
     so that the resulting log probabilities for the tokens in the completion region
     will vary. The variance of these log probabilities is taken as our uncertainty measure.
-    
+
     Args:
       model: The language model to use.
       tokens: A 1D torch.Tensor of token IDs (of shape (T,)) for one candidate completion.
-      mask: A 1D torch.Tensor of the same length as tokens, where 1 indicates a token that is 
+      mask: A 1D torch.Tensor of the same length as tokens, where 1 indicates a token that is
             part of the completion (and 0 indicates context tokens that are ignored).
       num_mc_samples: Number of MC dropout forward passes.
-    
+
     Returns:
       A scalar uncertainty value (a higher value indicates higher uncertainty).
     """
     # Save the current training/eval mode and enable dropout.
     _enable_test_time_dropout(model)
-    
+
     mc_samples = []
     # Our model expects a batch dimension, so add one.
     tokens = tokens.unsqueeze(0)  # shape: (1, T)
-    
+
     for _ in range(num_mc_samples):
         with torch.no_grad():
             # Perform a forward pass (dropout is active because model is in training mode)
@@ -248,28 +277,34 @@ def get_uncertainty_of_selected_tokens_mcdo(model: GPT, tokens: torch.Tensor, ma
         logits = logits.squeeze(0)  # Remove the batch dimension, now (T, vocab_size)
         log_probs = F.log_softmax(logits, dim=-1)  # (T, vocab_size)
         # Gather the log-probabilities for the provided token sequence.
-        selected_log_probs = torch.gather(log_probs, -1, tokens.squeeze(0).unsqueeze(-1)).squeeze(-1)  # (T,)
+        selected_log_probs = torch.gather(
+            log_probs, -1, tokens.squeeze(0).unsqueeze(-1)
+        ).squeeze(
+            -1
+        )  # (T,)
         # Only consider tokens in the completion region (mask==1)
         selected_log_probs = selected_log_probs[mask.bool()]
         mc_samples.append(selected_log_probs)
-        
+
     mc_samples_tensor = torch.stack(mc_samples, dim=0)  # Shape: (num_mc_samples, L)
     # Compute the variance across the MC samples for each token in the completion region.
     token_variances = torch.var(mc_samples_tensor, dim=0)
     # Average the per-token variance to yield a single uncertainty measure.
     uncertainty = token_variances.mean()
-    
+
     return uncertainty.item()
 
 
 @torch.no_grad()
-def evaluate_hellaswag(model: GPT, ddp: bool, ddp_rank: int, ddp_world_size: int) -> float:
+def evaluate_hellaswag(
+    model: GPT, ddp: bool, ddp_rank: int, ddp_world_size: int
+) -> float:
     num_correct_norm: int = 0
     num_total: int = 0
 
     correct_list = []
     uncertainty_list = []
-    pbar = tqdm(total=10042, desc="Evaluating HellaSwag")    
+    pbar = tqdm(total=10042, desc="Evaluating HellaSwag")
     for i, example in enumerate(iterate_examples("val")):
         # only process examples where i % ddp_world_size == ddp_rank
         if i % ddp_world_size != ddp_rank:
@@ -285,7 +320,9 @@ def evaluate_hellaswag(model: GPT, ddp: bool, ddp_rank: int, ddp_world_size: int
             # Use the existing routine to choose the candidate with the lowest (average) loss.
             pred_norm = get_most_likely_row(tokens, mask, logits)
             # Compute uncertainty via MC dropout for the selected candidate row.
-            uncertainty = get_uncertainty_of_selected_tokens(tokens[pred_norm], mask[pred_norm], logits[pred_norm])
+            uncertainty = get_uncertainty_of_selected_tokens(
+                tokens[pred_norm], mask[pred_norm], logits[pred_norm]
+            )
             # uncertainty = get_uncertainty_of_selected_tokens_mcdo(model, tokens[pred_norm], mask[pred_norm])
         num_total += 1
         num_correct_norm += int(pred_norm == label)
@@ -294,8 +331,8 @@ def evaluate_hellaswag(model: GPT, ddp: bool, ddp_rank: int, ddp_world_size: int
         uncertainty_list.append(uncertainty)
 
         pbar.update(1)
-        pbar.set_postfix({'acc': f'{num_correct_norm/num_total:.4f}'})
-    
+        pbar.set_postfix({"acc": f"{num_correct_norm/num_total:.4f}"})
+
     pbar.close()
     if ddp:
         num_total_tensor = torch.tensor(num_total, dtype=torch.long, device=device)
@@ -318,8 +355,9 @@ def evaluate_hellaswag(model: GPT, ddp: bool, ddp_rank: int, ddp_world_size: int
     return acc_norm
 
 
-
-def plot_retention_curve(correct_list: List[int], uncertainty_list: List[float]) -> None:
+def plot_retention_curve(
+    correct_list: List[int], uncertainty_list: List[float]
+) -> None:
     # Sort examples by uncertainty
     sorted_indices = np.argsort(uncertainty_list)
     correct_list = np.array(correct_list)[sorted_indices]
@@ -338,19 +376,19 @@ def plot_retention_curve(correct_list: List[int], uncertainty_list: List[float])
 
     # Plot retention curve
     plt.figure(figsize=(6, 5))
-    plt.plot(data_percentage, smoothed_accuracy, label='Cumulative Accuracy (Smoothed)')
+    plt.plot(data_percentage, smoothed_accuracy, label="Cumulative Accuracy (Smoothed)")
     # plt.plot(data_percentage, accuracy, alpha=0.3, label='Raw Cumulative Accuracy')
-    plt.xlabel('Percentage of data retained')
-    plt.ylabel('Accuracy')
-    plt.title('Retention Curve')
+    plt.xlabel("Percentage of data retained")
+    plt.ylabel("Accuracy")
+    plt.title("Retention Curve")
     # plt.ylim(0.28, 0.37)  # Set y-axis limits between 0.3 and 0.4
     plt.legend()
     plt.show()
-    
+
 
 if __name__ == "__main__":
 
-    gpt2 = GPT.from_pretrained('gpt2').to(device)
+    gpt2 = GPT.from_pretrained("gpt2").to(device)
     # generate_from_model(gpt2, "Hello, I'm a language model,")
     evaluate_hellaswag(gpt2, ddp=False, ddp_rank=0, ddp_world_size=1)
 
