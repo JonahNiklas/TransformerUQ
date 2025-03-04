@@ -7,7 +7,7 @@ from gpt2project.data_processing.load_commongen import get_common_gen_dataloader
 from gpt2project.gpt2_commongen import BLEU_eval, CommongenEval, ConceptUsageEval
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
-from gpt2project.search_methods_gpt import greedy_search_gpt
+from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 from hyperparameters import hyperparameters
 from uq.acquisition_func import BLEUVar, BeamScore
 
@@ -22,7 +22,7 @@ def evalutate_model_batch_with_uq(
 ) -> Tuple[List[str], List[List[str]], torch.Tensor]:
     encoding_tensors = torch.tensor(encoding_tensors).to(hyperparameters.device)
     outputs, uq = generate_autoregressivly_gpt2_with_uq(
-        model, tokenizer, encoding_tensors, greedy_search_gpt, aq_funcs, max_tokens=20
+        model, tokenizer, encoding_tensors, topk_sampling_gpt, aq_funcs, max_tokens=20
     )
     token_ids = outputs
     new_line_token = tokenizer.encode("\n")[0]
@@ -51,8 +51,10 @@ def plot_retention_curve(
 ) -> None:
     # Sort the results based on UQ
     sorted_indices = sorted(range(len(uq)), key=lambda i: uq[i].item())
+    assert sorted_indices != list(range(len(uq))), "UQ is not working"
     sorted_outputs = [output_texts[i] for i in sorted_indices]
     sorted_targets = [targets[i] for i in sorted_indices]
+    sorted_concepts = [concepts[i] for i in sorted_indices]
 
     # Evaluate and plot retention curve
     import matplotlib.pyplot as plt
@@ -63,7 +65,8 @@ def plot_retention_curve(
     for cutoff in cutoffs:
         selected_outputs = sorted_outputs[:cutoff]
         selected_targets = sorted_targets[:cutoff]
-        score = eval_function(selected_outputs, concepts, selected_targets)
+        selected_concepts = sorted_concepts[:cutoff]
+        score = eval_function(selected_outputs, selected_concepts, selected_targets)
         retention_scores.append(score)
 
     plt.figure()
@@ -84,7 +87,7 @@ model.eval()
 
 run_name = "gpt2-pretrained"
 
-dataloader = get_common_gen_dataloader(batch_size=1, shuffle=False)
+dataloader = get_common_gen_dataloader(batch_size=8, shuffle=False)
 print("Test examples:", len(dataloader))
 n_batch_to_validate = -1
 
@@ -122,7 +125,25 @@ for i, batch in tqdm(
     all_uqs = torch.cat((all_uqs, uq), dim=0)
 
 
+import pickle
 os.makedirs("local/gpt-results", exist_ok=True)
+pickle.dump(
+    {
+        "all_outputs": all_outputs,
+        "all_concepts": all_concepts,
+        "all_targets": all_targets,
+        "all_uqs": all_uqs,
+    },
+    open("local/gpt-results/cg_uq_results.pkl", "wb"),
+)
+
+# load the results
+import pickle
+results = pickle.load(open("local/gpt-results/cg_uq_results.pkl", "rb"))
+all_outputs = results["all_outputs"]
+all_concepts = results["all_concepts"]
+all_targets = results["all_targets"]
+all_uqs = results["all_uqs"]
 # Call the function for each acquisition function
 for i, aq_func in enumerate(aq_funcs):
     plot_retention_curve(
@@ -132,5 +153,6 @@ for i, aq_func in enumerate(aq_funcs):
         all_uqs[:, i],
         eval_function_commongen,
         aq_func.__class__.__name__,
-        filepath=f"local/gpt-results/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}.svg",
+        filepath=f"local/gpt-results/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}.png",
     )
+

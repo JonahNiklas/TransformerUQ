@@ -46,13 +46,10 @@ class CausalSelfAttention(nn.Module):
         self.n_head = config.n_head
         self.n_embd = config.n_embd
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, attention_mask: Optional[Tensor] = None) -> Tensor:
         B, T, C = (
             x.size()
         )  # batch size, sequence length, embedding dimensionality (n_embd)
-        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        # nh is "number of heads", hs is "head size", and C (number of channels) = nh * hs
-        # e.g. in GPT-2 (124M), n_head=12, hs=64, so nh*hs=C=768 channels in the Transformer
         qkv = self.c_attn(x)
         q, k, v = qkv.split(self.n_embd, dim=2)
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(
@@ -64,7 +61,15 @@ class CausalSelfAttention(nn.Module):
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(
             1, 2
         )  # (B, nh, T, hs)
-        y = F.scaled_dot_product_attention(q, k, v, is_causal=True)  # flash attention
+
+        if attention_mask is not None:
+            y = F.scaled_dot_product_attention(
+                q, k, v, attn_mask=attention_mask, is_causal=False
+            )
+        else:
+            # Original behavior with only causal masking
+            y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+
         y = (
             y.transpose(1, 2).contiguous().view(B, T, C)
         )  # re-assemble all head outputs side by side
@@ -100,8 +105,8 @@ class Block(nn.Module):
         self.ln_2 = nn.LayerNorm(config.n_embd)
         self.mlp = MLP(config)
 
-    def forward(self, x: Tensor) -> Tensor:
-        x = x + self.attn(self.ln_1(x))
+    def forward(self, x: Tensor, attention_mask: Optional[Tensor] = None) -> Tensor:
+        x = x + self.attn(self.ln_1(x), attention_mask)
         x = x + self.mlp(self.ln_2(x))
         return x
 
@@ -139,28 +144,69 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
+    def _create_padding_causal_mask(
+        self, idx: Tensor, pad_token_id: int, nhead: int
+    ) -> Tensor:
+        batch_size, seq_length = idx.size()
+        padding_mask = idx == pad_token_id
+        assert padding_mask.shape == (batch_size, seq_length)
+        padding_mask = torch.where(padding_mask == True, -torch.inf, 0)
+        padding_mask = padding_mask.unsqueeze(1).unsqueeze(2)
+        padding_mask = padding_mask.expand(batch_size, nhead, seq_length, seq_length)
+        assert padding_mask.shape == (batch_size, nhead, seq_length, seq_length)
+
+        causal_mask = torch.tril(
+            torch.ones(seq_length, seq_length, device=idx.device)
+        ).view(1, 1, seq_length, seq_length)
+        causal_mask = torch.where(causal_mask == 1, 0, -torch.inf)
+        assert causal_mask.shape == (1, 1, seq_length, seq_length)
+
+        combined_mask = padding_mask + causal_mask
+        assert combined_mask.shape == (batch_size, nhead, seq_length, seq_length)
+        return combined_mask
+
     def forward(
-        self, idx: Tensor, targets: Union[Tensor, None] = None
+        self, idx: Tensor, targets: Union[Tensor, None] = None, pad_token_id: int = 0
     ) -> Tuple[Tensor, Optional[Tensor]]:
         # idx is of shape (B, T)
         B, T = idx.size()
         assert (
             T <= self.config.block_size
         ), f"Cannot forward sequence of length {T}, block size is only {self.config.block_size}"
+
+        # support padded inputs for batched inference
+        attention_mask = None
+        if targets is None:
+            attention_mask = self._create_padding_causal_mask(
+                idx, pad_token_id, self.config.n_head
+            )
+
         # forward the token and position embeddings
         pos = torch.arange(0, T, dtype=torch.long, device=idx.device)  # shape (T)
         pos_emb = self.transformer.wpe(pos)  # position embeddings of shape (T, n_embd)
         tok_emb = self.transformer.wte(idx)  # token embeddings of shape (B, T, n_embd)
         x = tok_emb + pos_emb
+
         # forward the blocks of the transformer
         for block in self.transformer.h:
-            x = block(x)
+            x = block(x, attention_mask)
+
         # forward the final layernorm and the classifier
         x = self.transformer.ln_f(x)
         logits: Tensor = self.lm_head(x)  # (B, T, vocab_size)
         loss = None
         if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+            # Handle loss computation with padding tokens
+            if attention_mask is not None:
+                raise ValueError(
+                    "attention_mask is not supported for batched inference"
+                )
+            else:
+                # Fallback to computing loss on all tokens (original behavior)
+                loss = F.cross_entropy(
+                    logits.view(-1, logits.size(-1)), targets.view(-1)
+                )
+
         return logits, loss
 
     @classmethod

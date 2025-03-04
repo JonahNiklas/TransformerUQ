@@ -130,8 +130,7 @@ def generate_autoregressivly_gpt2_with_uq(
     search_method: GPT_search_method,
     aq_funcs: List[AcquisitionFunction],
     max_tokens: int = 32,
-    num_samples: int = 10,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor,torch.Tensor]:
     model.eval()
     tgt_tokens = tgt_tokens.to(hyperparameters.device)
     vocab_size = tokenizer.n_vocab

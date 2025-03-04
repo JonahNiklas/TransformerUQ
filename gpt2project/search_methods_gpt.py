@@ -6,7 +6,7 @@ from beam_search import AutoregressiveInferenceResults
 
 # TODO: fix this type hint
 GPT_search_method = Callable[
-    [nn.Module, torch.Tensor, int, int], "AutoregressiveInferenceResults"
+    [nn.Module, torch.Tensor, int, int], AutoregressiveInferenceResults
 ]
 
 
