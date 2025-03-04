@@ -50,7 +50,7 @@ def plot_retention_curve_squad(
     sorted_outputs = [output_texts[i] for i in sorted_indices]
     sorted_targets = [targets[i] for i in sorted_indices]
 
-    cutoffs = range(1, len(output_texts) + 1)
+    cutoffs = range(1, len(output_texts) + 1, 10)
     retention_scores = []
 
     for cutoff in cutoffs:
