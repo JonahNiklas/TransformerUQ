@@ -7,7 +7,7 @@ from gpt2project.data_processing.load_commongen import get_common_gen_dataloader
 from gpt2project.gpt2_commongen import BLEU_eval, CommongenEval, ConceptUsageEval
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
-from gpt2project.search_methods_gpt import greedy_search_gpt
+from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 from hyperparameters import hyperparameters
 from uq.acquisition_func import BLEUVar, BeamScore
 
@@ -22,7 +22,7 @@ def evalutate_model_batch_with_uq(
 ) -> Tuple[List[str], List[List[str]], torch.Tensor]:
     encoding_tensors = torch.tensor(encoding_tensors).to(hyperparameters.device)
     outputs, uq = generate_autoregressivly_gpt2_with_uq(
-        model, tokenizer, encoding_tensors, greedy_search_gpt, aq_funcs, max_tokens=20
+        model, tokenizer, encoding_tensors, topk_sampling_gpt, aq_funcs, max_tokens=20
     )
     token_ids = outputs
     new_line_token = tokenizer.encode("\n")[0]
@@ -51,6 +51,7 @@ def plot_retention_curve(
 ) -> None:
     # Sort the results based on UQ
     sorted_indices = sorted(range(len(uq)), key=lambda i: uq[i].item())
+    assert sorted_indices != list(range(len(uq))), "UQ is not working"
     sorted_outputs = [output_texts[i] for i in sorted_indices]
     sorted_targets = [targets[i] for i in sorted_indices]
     sorted_concepts = [concepts[i] for i in sorted_indices]
