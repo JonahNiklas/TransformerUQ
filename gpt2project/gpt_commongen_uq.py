@@ -87,7 +87,7 @@ model.eval()
 
 run_name = "gpt2-pretrained"
 
-dataloader = get_common_gen_dataloader(batch_size=1, shuffle=False)
+dataloader = get_common_gen_dataloader(batch_size=8, shuffle=False)
 print("Test examples:", len(dataloader))
 n_batch_to_validate = -1
 

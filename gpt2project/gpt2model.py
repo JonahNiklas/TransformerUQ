@@ -151,6 +151,7 @@ class GPT(nn.Module):
         padding_mask = idx == pad_token_id
         assert padding_mask.shape == (batch_size, seq_length)
         padding_mask = torch.where(padding_mask == True, -torch.inf, 0)
+        padding_mask = padding_mask.unsqueeze(1).unsqueeze(2)
         padding_mask = padding_mask.expand(batch_size, nhead, seq_length, seq_length)
         assert padding_mask.shape == (batch_size, nhead, seq_length, seq_length)
 
