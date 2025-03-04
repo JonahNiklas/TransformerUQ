@@ -30,7 +30,7 @@ class MultiHeadAttention(nn.Module):
         self, query: Tensor, key: Tensor, value: Tensor, mask: Tensor
     ) -> Tensor:
         batch_size, q_seq_length, _ = query.shape
-        k_seq_length= key.shape[1]
+        k_seq_length = key.shape[1]
 
         Q = self.W_q(query)
         K = self.W_k(key)

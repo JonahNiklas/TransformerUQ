@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from validate import validate
 
+
 def main() -> None:
     vocab = load_vocab(constants.file_paths.vocab)
 
@@ -37,7 +38,11 @@ def main() -> None:
     model.to(device)
 
     checkpoint_to_load = 175000
-    model.load_state_dict(torch.load(f"checkpoints/checkpoint-{checkpoint_to_load}.pth")["model_state_dict"])
+    model.load_state_dict(
+        torch.load(f"checkpoints/checkpoint-{checkpoint_to_load}.pth")[
+            "model_state_dict"
+        ]
+    )
 
     # Validate model on OOD data
     validate(model, test_ood_loader)

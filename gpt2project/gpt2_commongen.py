@@ -106,7 +106,7 @@ def _clean_and_decode_output_tokens(
     ]
     new_line_token = tokenizer.encode("\n")[0]
     non_breaking_space_token = tokenizer.encode("\xa0")[0]
-    
+
     output_texts = []
     # clean the output tokens and decode them
     for b in range(len(token_ids)):  # iterate over batch
@@ -131,7 +131,7 @@ if __name__ == "__main__":
 
     # Example of iterating through the DataLoader
     outputs = []
-    
+
     pbar = tqdm(
         enumerate(dataloader),
         desc="Running commongen validation (avg: N/A)",

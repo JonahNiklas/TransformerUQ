@@ -62,6 +62,7 @@ log_dir = "log"
 os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, f"log.txt")
 
+
 def main() -> None:
 
     train_loader = DataLoaderLite(

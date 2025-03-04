@@ -2,11 +2,23 @@ import os
 from typing import List
 import torch
 
-from uq.acquisition_func import AcquisitionFunction, BeamScore, BLEUVar, mpnet_cosine, mpnet_norm, mpnet_dot, roberta_cosine
+from uq.acquisition_func import (
+    AcquisitionFunction,
+    BeamScore,
+    BLEUVar,
+    mpnet_cosine,
+    mpnet_norm,
+    mpnet_dot,
+    roberta_cosine,
+)
 from data_processing.dataloader import get_data_loader
-from hyperparameters import hyperparameters 
+from hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
-from uq.plot_uq import plot_combined_roc_curve, plot_data_retained_curve, plot_uq_histogram_and_roc
+from uq.plot_uq import (
+    plot_combined_roc_curve,
+    plot_data_retained_curve,
+    plot_uq_histogram_and_roc,
+)
 from utils.checkpoints import load_checkpoint
 from uq.validate_uq import ValidationResult, validate_uq
 from data_processing.vocab import load_vocab, output_to_text
@@ -15,8 +27,8 @@ from constants import constants
 
 def main() -> None:
     # Load shared vocabulary
-    run_id="7sy5cau3"
-    run_name="Bayes"
+    run_id = "7sy5cau3"
+    run_name = "Bayes"
     checkpoint = "checkpoints/checkpoint-300000b.pth"
     # wandb.restore(checkpoint, run_path=f"sondresorbye-magson/TransformerUQ/{run_id}")  # type: ignore
     shared_vocab = load_vocab(constants.file_paths.vocab)
@@ -44,10 +56,7 @@ def main() -> None:
 
     # Load the checkpoint
     load_checkpoint(
-        model, 
-        optimizer, 
-        checkpoint,
-        remove_orig_prefix= not torch.cuda.is_available()
+        model, optimizer, checkpoint, remove_orig_prefix=not torch.cuda.is_available()
     )
 
     # Set up the test data loader with the shared vocabulary
@@ -55,7 +64,7 @@ def main() -> None:
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size,# // hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size,  # // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -65,7 +74,7 @@ def main() -> None:
         src_file="local/data/test_ood/bpe_test_ood.nl",
         tgt_file="local/data/test_ood/bpe_test_ood.en",
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size,# // hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size,  # // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -79,7 +88,7 @@ def main() -> None:
         mpnet_norm(),
         mpnet_dot(),
     ]
-    
+
     val_spec = [
         {
             "search_method": "greedy",
@@ -99,12 +108,13 @@ def main() -> None:
         },
     ]
 
-
     for spec in val_spec:
         search_method: str = str(spec["search_method"])
         dropout: bool = bool(spec["dropout"])
         filename = f"val_{search_method}_{dropout}"
-        os.makedirs(f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True)
+        os.makedirs(
+            f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True
+        )
         print(f"Validating model with {search_method} search, dropout={dropout}")
         validation_results_id = load_or_validate(
             model,
@@ -112,8 +122,8 @@ def main() -> None:
             search_method,
             aq_funcs,
             dropout,
-            filename+"_id",
-            run_id
+            filename + "_id",
+            run_id,
         )
 
         # for i, aq_func in enumerate(aq_funcs):
@@ -130,33 +140,39 @@ def main() -> None:
             search_method,
             aq_funcs,
             dropout,
-            filename+"_ood",
-            run_id
+            filename + "_ood",
+            run_id,
         )
-        plot_data_retained_curve(validation_results_id,
-                    methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                    save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id.svg",
-                    run_name=run_name)
-        
-        plot_data_retained_curve(validation_results_ood,
-                        methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                    save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood.svg",
-                    run_name=run_name)
-        
-        for i, aq_func in enumerate(aq_funcs):
-            plot_uq_histogram_and_roc(validation_results_id[i],
-                                        validation_results_ood[i],
-                                        aq_func.__class__.__name__,
-                                        f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_hist_{aq_func.__class__.__name__}.svg",
-                                        run_name)
-        
-        plot_combined_roc_curve(validation_results_id,
-                                validation_results_ood,
-                                methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-                                save_path= f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_roc.svg",
+        plot_data_retained_curve(
+            validation_results_id,
+            methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id.svg",
+            run_name=run_name,
         )
 
-            
+        plot_data_retained_curve(
+            validation_results_ood,
+            methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood.svg",
+            run_name=run_name,
+        )
+
+        for i, aq_func in enumerate(aq_funcs):
+            plot_uq_histogram_and_roc(
+                validation_results_id[i],
+                validation_results_ood[i],
+                aq_func.__class__.__name__,
+                f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_hist_{aq_func.__class__.__name__}.svg",
+                run_name,
+            )
+
+        plot_combined_roc_curve(
+            validation_results_id,
+            validation_results_ood,
+            methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_roc.svg",
+        )
+
 
 # Validate the model and calculate BLEU score
 def load_or_validate(
@@ -166,20 +182,28 @@ def load_or_validate(
     aq_funcs: List[AcquisitionFunction],
     enable_dropout: bool,
     filename: str,
-    run_id: str
+    run_id: str,
 ) -> List[ValidationResult]:
     cache_file = f"local/results/{run_id}/{filename}.pth"
-    validation_results:List[ValidationResult] = []
+    validation_results: List[ValidationResult] = []
     if os.path.exists(cache_file):
         print(f"Loading cached results from {cache_file}...")
         cache = torch.load(cache_file)
         validation_results = cache
     else:
-        validation_results =  validate_uq(model, loader, sample_beam_greed, aq_funcs, enable_dropout,num_batches_to_validate_on=None)
+        validation_results = validate_uq(
+            model,
+            loader,
+            sample_beam_greed,
+            aq_funcs,
+            enable_dropout,
+            num_batches_to_validate_on=None,
+        )
         os.makedirs(f"local/results/{run_id}", exist_ok=True)
         torch.save(validation_results, cache_file)
         print(f"Cached validation results in local/results/{run_id}/{filename}.pth")
     return validation_results
-    
+
+
 if __name__ == "__main__":
     main()
