@@ -6,16 +6,19 @@ on:
   pull_request:
     branches: [ main ]
 
-# Add permissions for writing to pull requests
+# Add permissions for writing to pull requests and contents
 permissions:
   pull-requests: write
-  contents: read
+  contents: write
 
 jobs:
   type-check:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.head_ref }}
     
     - name: Install Poetry
       run: pipx install poetry
@@ -37,11 +40,18 @@ jobs:
       continue-on-error: true
       run: poetry run black --check .
     
-    - uses: mainmatter/continue-on-error-comment@v1
+    - name: Fix Black formatting issues
+      if: steps.black-check.outcome == 'failure'
+      run: poetry run black .
+    
+    - name: Commit formatting changes
+      if: steps.black-check.outcome == 'failure' && github.event_name == 'pull_request'
+      uses: EndBug/add-and-commit@v9
       with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        outcome: ${{ steps.black-check.outcome }}
-        test-id: "Black code formatting"
+        message: 'Fix formatting with Black'
+        default_author: github_actions
+        add: '.'
+        push: origin HEAD:${{ github.head_ref }}
     
     - name: Run Pytest
       run: poetry run pytest tests
