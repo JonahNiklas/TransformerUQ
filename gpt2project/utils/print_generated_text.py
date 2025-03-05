@@ -8,7 +8,8 @@ def print_generated_text_with_colors(
     if isinstance(generated_text, str):
         generated_text = [generated_text]
 
-    print(prompt)
+    if prompt is not None:
+        print(prompt)
     colors = [
         "\033[91m",  # red
         "\033[92m",  # green
