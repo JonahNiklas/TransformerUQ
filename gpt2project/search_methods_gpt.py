@@ -58,8 +58,8 @@ def topk_sampling_gpt(
     vocab_size: int,
     max_generated_len: int,
     break_on_newline: bool,
-    k: int = 8,
-    temperature: float = 0.3,
+    k: int = 10,
+    temperature: float = 0.5,
 ) -> "AutoregressiveInferenceResults":
     with torch.no_grad():
         prompt_len = tgt_tokens.size(1)
