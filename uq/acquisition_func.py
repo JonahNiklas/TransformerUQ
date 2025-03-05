@@ -6,6 +6,9 @@ import torch
 from typing import Union, List, cast
 from hyperparameters import hyperparameters
 from sentence_transformers import SentenceTransformer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _length_penalty(output: torch.Tensor, alpha: float) -> torch.Tensor:
@@ -234,6 +237,8 @@ class BLEUVar(AcquisitionFunction):
                         hypothesis[b][i], [hypothesis[b][j]]
                     ).score
                     bleu_distances[b] += (1 - bleu_dist / 100) ** 2
+        if (bleu_distances < 0.001).any():
+            logger.warning(f"Very low BLEU distances detected: {bleu_distances}")
         return bleu_distances / self.num_inferences
 
 

@@ -10,16 +10,16 @@ def generate_input_text(words: List[str]) -> str:
     template = f"""Task: Generate a meaningful sentence using the provided words.
 
 Example 1:
-Words: dog, run, park.
-Sentence: The dog ran happily in the park.
+Words: field, look, stand.
+Sentence: The player stood in the field looking at the batter.
 
 Example 2:
-Words: chef, cook, kitchen.
-Sentence: The chef cooked a delicious meal in the kitchen.
+Words: climb, building, side.
+Sentence: I climbed the side of the building.
 
 Now try:
 Words: {", ".join(words)}.
-Sentence: """
+Sentence:"""
     return template
 
 
@@ -55,7 +55,9 @@ def collate_fn(batch: Any) -> Tuple[List[str], List[str], List[str], torch.Tenso
     )
 
 
-def get_common_gen_dataloader(batch_size: int, shuffle: bool) -> DataLoader:
+def get_common_gen_dataloader(
+    batch_size: int, shuffle: bool
+) -> DataLoader[Tuple[List[str], List[List[str]], List[List[str]], torch.Tensor]]:
     # Load the CommonGen dataset
     dataset = load_dataset("common_gen", split="validation")
     merged_dataset = []
