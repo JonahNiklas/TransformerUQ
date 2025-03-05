@@ -19,7 +19,7 @@ Sentence: The chef cooked a delicious meal in the kitchen.
 
 Now try:
 Words: {", ".join(words)}.
-Sentence: """
+Sentence:"""
     return template
 
 
@@ -55,7 +55,9 @@ def collate_fn(batch: Any) -> Tuple[List[str], List[str], List[str], torch.Tenso
     )
 
 
-def get_common_gen_dataloader(batch_size: int, shuffle: bool) -> DataLoader:
+def get_common_gen_dataloader(
+    batch_size: int, shuffle: bool
+) -> DataLoader[Tuple[List[str], List[List[str]], List[List[str]], torch.Tensor]]:
     # Load the CommonGen dataset
     dataset = load_dataset("common_gen", split="validation")
     merged_dataset = []

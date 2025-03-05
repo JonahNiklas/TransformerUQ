@@ -42,7 +42,6 @@ from torch.nn import functional as F
 from transformers import GPT2LMHeadModel
 from typing import Dict, Tuple, Generator, List
 
-from gpt2project.gpt2_generate import generate_from_model
 from gpt2project.gpt2model import GPT
 from uq.acquisition_func import BeamScore
 from uq.generate_with_uq import _enable_test_time_dropout

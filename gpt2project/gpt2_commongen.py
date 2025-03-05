@@ -7,9 +7,6 @@ from tqdm import tqdm
 from gpt2project.data_processing.load_commongen import get_common_gen_dataloader
 from gpt2project.gpt2_generate import (
     generate_autoregressivly_gpt2,
-    generate_autoregressivly_gpt2_with_uq,
-    generate_karpathy,
-    karpathy,
 )
 from gpt2project.search_methods_gpt import (
     GPT_search_method,
@@ -17,6 +14,7 @@ from gpt2project.search_methods_gpt import (
     topk_sampling_gpt,
 )
 from sacrebleu import corpus_bleu
+from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from gpt2project.gpt2model import GPT
 
@@ -81,43 +79,18 @@ def evaluate_model_batch(
         tokenizer,
         encoding_tensors,
         search_method=greedy_search_gpt,
+        break_on_newline=True,
         max_tokens=20,
     )
     token_ids = outputs.token_ids
 
-    output_texts = _clean_and_decode_output_tokens(token_ids, tokenizer)
+    output_texts = decode_token_id_batch(token_ids, tokenizer)
     score = eval_function_commongen(output_texts, concepts, targets_texts)
     if score == 0:
         logger.debug(f"Output texts: {output_texts}")
         logger.debug(f"Concepts: {concepts}")
         logger.debug(f"Targets texts: {targets_texts}")
     return score
-
-
-def _clean_and_decode_output_tokens(
-    token_ids: torch.Tensor,
-    tokenizer: tiktoken.Encoding,
-) -> List[str]:
-    remove_prefix_tokens = [
-        tokenizer.encode("\n")[0],
-        tokenizer.encode("~")[0],
-        tokenizer.encode("~~")[0],
-        tokenizer.encode(" ")[0],
-    ]
-    new_line_token = tokenizer.encode("\n")[0]
-    non_breaking_space_token = tokenizer.encode("\xa0")[0]
-
-    output_texts = []
-    # clean the output tokens and decode them
-    for b in range(len(token_ids)):  # iterate over batch
-        ids = token_ids[b][len(encoding_tensors[b]) :]
-        ids = ids[ids != non_breaking_space_token]
-        while ids[0] in remove_prefix_tokens:
-            ids = ids[1:]
-        if new_line_token in ids:
-            ids = ids[: ids.tolist().index(new_line_token)]
-        output_texts.append(tokenizer.decode(ids.tolist()))
-    return output_texts
 
 
 if __name__ == "__main__":
@@ -147,7 +120,7 @@ if __name__ == "__main__":
             encoding_tensors=encoding_tensors,
             concepts=concepts,
             targets_texts=target_texts,
-            eval_function_commongen=ConceptUsageEval(),
+            eval_function_commongen=BLEU_eval(),
         )
         outputs.append(output)
 
@@ -160,6 +133,7 @@ if __name__ == "__main__":
     # Average score:  3.9192467438661587
     # Average score 26.02: 3.009
     # Average score 03.03: 7.994
+    # Average score 04.03: 8.412
 
     # # Example input words
     # words = ["tree", "car", "crash"]
