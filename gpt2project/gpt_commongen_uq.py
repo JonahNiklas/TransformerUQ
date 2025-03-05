@@ -124,9 +124,7 @@ if __name__ == "__main__":
         open(f"local/gpt-results/cg_ret_curve_{run_name}.pkl", "wb"),
     )
 
-    data = pickle.load(
-        open(f"local/gpt-results/cg_ret_curve_{run_name}.pkl", "rb")
-    )
+    data = pickle.load(open(f"local/gpt-results/cg_ret_curve_{run_name}.pkl", "rb"))
     all_outputs = data["all_outputs"]
     all_concepts = data["all_concepts"]
     all_targets = data["all_targets"]
