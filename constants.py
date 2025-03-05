@@ -1,6 +1,4 @@
 from pydantic import BaseModel
-
-
 class FilePaths(BaseModel):
     vocab: str = "local/vocab_shared.pkl"
     train_en: str = "local/data/training/train.en"
