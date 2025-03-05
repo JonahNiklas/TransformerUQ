@@ -10,12 +10,12 @@ def generate_input_text(words: List[str]) -> str:
     template = f"""Task: Generate a meaningful sentence using the provided words.
 
 Example 1:
-Words: dog, run, park.
-Sentence: The dog ran happily in the park.
+Words: field, look, stand.
+Sentence: The player stood in the field looking at the batter.
 
 Example 2:
-Words: chef, cook, kitchen.
-Sentence: The chef cooked a delicious meal in the kitchen.
+Words: climb, building, side.
+Sentence: I climbed the side of the building.
 
 Now try:
 Words: {", ".join(words)}.
