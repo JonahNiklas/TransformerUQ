@@ -1,4 +1,5 @@
 import os
+import pickle
 from typing import Any, List, Tuple
 import tiktoken
 import torch
@@ -11,6 +12,11 @@ from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from uq.acquisition_func import BLEUVar, BeamScore
+
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def evalutate_model_batch_with_uq(
@@ -44,8 +50,10 @@ def plot_retention_curve(
 ) -> None:
     # Sort the results based on UQ
     sorted_indices = sorted(range(len(uq)), key=lambda i: uq[i].item())
+    assert sorted_indices != list(range(len(uq))), "UQ is not working"
     sorted_outputs = [output_texts[i] for i in sorted_indices]
     sorted_targets = [targets[i] for i in sorted_indices]
+    sorted_concepts = [concepts[i] for i in sorted_indices]
 
     # Evaluate and plot retention curve
     import matplotlib.pyplot as plt
@@ -56,7 +64,8 @@ def plot_retention_curve(
     for cutoff in cutoffs:
         selected_outputs = sorted_outputs[:cutoff]
         selected_targets = sorted_targets[:cutoff]
-        score = eval_function(selected_outputs, concepts, selected_targets)
+        selected_concepts = sorted_concepts[:cutoff]
+        score = eval_function(selected_outputs, selected_concepts, selected_targets)
         retention_scores.append(score)
 
     plt.figure()
@@ -105,6 +114,22 @@ if __name__ == "__main__":
         all_targets.extend(targets)
         all_uqs = torch.cat((all_uqs, uq), dim=0)
 
+    pickle.dump(
+        {
+            "all_outputs": all_outputs,
+            "all_concepts": all_concepts,
+            "all_targets": all_targets,
+            "all_uqs": all_uqs,
+        },
+        open(f"local/gpt-results/cg_ret_curve_{run_name}.pkl", "wb"),
+    )
+
+    data = pickle.load(open(f"local/gpt-results/cg_ret_curve_{run_name}.pkl", "rb"))
+    all_outputs = data["all_outputs"]
+    all_concepts = data["all_concepts"]
+    all_targets = data["all_targets"]
+    all_uqs = data["all_uqs"]
+
     os.makedirs("local/gpt-results", exist_ok=True)
     # Call the function for each acquisition function
     for i, aq_func in enumerate(aq_funcs):
@@ -115,5 +140,5 @@ if __name__ == "__main__":
             all_uqs[:, i],
             eval_function_commongen,
             aq_func.__class__.__name__,
-            filepath=f"local/gpt-results/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}.svg",
+            filepath=f"local/gpt-results/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}.png",
         )
