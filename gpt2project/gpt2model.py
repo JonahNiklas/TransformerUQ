@@ -280,21 +280,16 @@ if __name__ == "__main__":
     ]  # "Hello, I'm a language model,"
     token_tensor = torch.tensor(tokens, dtype=torch.long).unsqueeze(0).repeat(5, 1)
 
-    from gpt2project.gpt2_generate import generate_from_model, karpathy
-
-    # generate_from_model(model, prompt, max_length=30)
-    print("loaded==============")
-    karpathy(model)
-    # testing huggingface model directly
-    # model2 = GPT2LMHeadModel.from_pretrained("gpt2")
-    # # print("huggingface==================")
-    # # karpathy(model2)
-    print("our method================")
     from gpt2project.gpt2_generate import generate_autoregressivly_gpt2
     from gpt2project.search_methods_gpt import topk_sampling_gpt
 
     auto_inf_res = generate_autoregressivly_gpt2(
-        model, tokenizer, token_tensor, search_method=topk_sampling_gpt, max_tokens=30
+        model,
+        tokenizer,
+        token_tensor,
+        search_method=topk_sampling_gpt,
+        max_tokens=30,
+        break_on_newline=True,
     )
     for i in range(5):
         print(f"> {tokenizer.decode(auto_inf_res.token_ids[i].tolist())}")
