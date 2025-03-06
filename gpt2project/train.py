@@ -38,6 +38,7 @@ from gpt2project.ddp import (
     device_type,
     ddp_local_rank,
 )
+from gpt2project.utils.checkpoint import save_checkpoint
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -156,6 +157,7 @@ def main() -> None:
                 log_file,
                 step,
                 last_step,
+                optimizer,
             )
 
         # once in a while evaluate hellaswag
@@ -259,8 +261,9 @@ def evaluate_validation_loss(
     log_file: str,
     step: int,
     last_step: bool,
+    optimizer: torch.optim.Optimizer,
 ) -> None:
-    raw_model = model.module if ddp else model
+    raw_model: GPT = model.module if ddp else model
     model.eval()
     val_loader.reset()
     with torch.no_grad():
@@ -292,15 +295,7 @@ def evaluate_validation_loss(
         if step > 0 and (step % hyperparameters.training.save_every == 0 or last_step):
             # optionally write model checkpoints
             checkpoint_path = os.path.join(log_dir, f"model_{step:05d}.pt")
-            checkpoint = {
-                "model": raw_model.state_dict(),
-                "config": raw_model.config,
-                "step": step,
-                "val_loss": val_loss_accum.item(),
-            }
-            # you might also want to add optimizer.state_dict() and
-            # rng seeds etc., if you wanted to more exactly resume training
-            torch.save(checkpoint, checkpoint_path)
+            save_checkpoint(model, step, val_loss_accum.item(), checkpoint_path, optimizer)
 
             # Log model checkpoint as wandb artifact
             if hyperparameters.wandb.enabled:
@@ -312,20 +307,10 @@ def evaluate_validation_loss(
                     metadata={
                         "step": step,
                         "val_loss": val_loss_accum.item(),
-                        "model_config": {
-                            "vocab_size": raw_model.config.vocab_size,
-                            "block_size": raw_model.config.block_size,
-                            "n_layer": raw_model.config.n_layer,
-                            "n_head": raw_model.config.n_head,
-                            "n_embd": raw_model.config.n_embd,
-                        },
+                        "model_config": raw_model.config.model_dump(),
                     },
                 )
-
-                # Add the model file to the artifact
                 model_artifact.add_file(checkpoint_path)
-
-                # Log the artifact to wandb
                 wandb.log_artifact(model_artifact)
 
 
