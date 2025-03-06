@@ -13,6 +13,7 @@ from hyperparameters import hyperparameters
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2
 from gpt2project.search_methods_gpt import topk_sampling_gpt
 
+
 def evaluate_model_batch(
     model: GPT,
     tokenizer: tiktoken.Encoding,
@@ -22,7 +23,11 @@ def evaluate_model_batch(
 ) -> float:
     # Use the padded encoding tensor directly to generate responses
     outputs = generate_autoregressivly_gpt2(
-        model, tokenizer, encoding_tensors, search_method=topk_sampling_gpt, break_on_newline=False, 
+        model,
+        tokenizer,
+        encoding_tensors,
+        search_method=topk_sampling_gpt,
+        break_on_newline=False,
     )
     token_ids = outputs.token_ids
 
@@ -34,13 +39,14 @@ def evaluate_model_batch(
     score = eval_function_squad(output_texts, targets)
     return score
 
+
 if __name__ == "__main__":
     # Load the GPT-2 model and tokenizer
     model_name = "gpt2"
     tokenizer = tiktoken.get_encoding(model_name)
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
 
-    dataloader = get_squad_dataloader(1, shuffle=False,force_new_clean=True)
+    dataloader = get_squad_dataloader(1, shuffle=False, force_new_clean=True)
     print("Test examples:", len(dataloader))
     n_batch_to_validate = 10
     # Example of iterating through the DataLoader

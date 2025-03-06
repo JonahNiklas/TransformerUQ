@@ -59,7 +59,9 @@ class SquadDataset(Dataset):
         return context, question, answers
 
 
-def collate_fn(batch: List[Tuple[str, str, List[str]]]) -> Tuple[List[str], List[str], List[List[str]]]:
+def collate_fn(
+    batch: List[Tuple[str, str, List[str]]]
+) -> Tuple[List[str], List[str], List[List[str]]]:
     contexts, questions, answers = zip(*batch)
     return list(contexts), list(questions), list(answers)
 
@@ -69,7 +71,9 @@ def get_squad_dataloader(
 ) -> DataLoader:
     dataframe = get_squad_dataframe(force_new_clean)
     dataset = SquadDataset(dataframe)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn)
+    dataloader = DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
+    )
     return dataloader
 
 

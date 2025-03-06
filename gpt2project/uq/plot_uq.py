@@ -4,6 +4,7 @@ from gpt2project.gpt2_commongen import CommongenEval
 from gpt2project.gpt2_squad import SquadEval
 import matplotlib.pyplot as plt
 
+
 def plot_retention_curve_cg(
     output_texts: List[str],
     concepts: List[List[str]],
@@ -39,6 +40,7 @@ def plot_retention_curve_cg(
     plt.savefig(filepath)
     plt.show()
 
+
 def plot_retention_curve_squad(
     output_texts: List[str],
     targets: List[List[str]],
@@ -56,8 +58,12 @@ def plot_retention_curve_squad(
     retention_scores = []
 
     for cutoff in cutoffs:
-        selected_outputs = sorted_outputs[:cutoff] if cutoff > 1 else [sorted_outputs[0]]
-        selected_targets = sorted_targets[:cutoff] if cutoff > 1 else [sorted_targets[0]]
+        selected_outputs = (
+            sorted_outputs[:cutoff] if cutoff > 1 else [sorted_outputs[0]]
+        )
+        selected_targets = (
+            sorted_targets[:cutoff] if cutoff > 1 else [sorted_targets[0]]
+        )
         score = eval_function_squad(selected_outputs, selected_targets)
         retention_scores.append(score)
 
