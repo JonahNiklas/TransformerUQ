@@ -19,6 +19,7 @@ from gpt2project.ddp import (
 from transformers import GPT2LMHeadModel
 from gpt2project.hyperparameters import GPT2ModelConfig as GPTConfig
 
+
 class CausalSelfAttention(nn.Module):
 
     def __init__(self, config: GPTConfig):

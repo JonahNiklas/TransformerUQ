@@ -295,7 +295,9 @@ def evaluate_validation_loss(
         if step > 0 and (step % hyperparameters.training.save_every == 0 or last_step):
             # optionally write model checkpoints
             checkpoint_path = os.path.join(log_dir, f"model_{step:05d}.pt")
-            save_checkpoint(model, step, val_loss_accum.item(), checkpoint_path, optimizer)
+            save_checkpoint(
+                model, step, val_loss_accum.item(), checkpoint_path, optimizer
+            )
 
             # Log model checkpoint as wandb artifact
             if hyperparameters.wandb.enabled:

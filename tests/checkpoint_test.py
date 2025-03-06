@@ -13,7 +13,7 @@ def test_save_load_checkpoint() -> None:
         vocab_size=100,
         n_layer=1,
         n_head=1,
-        n_embd=24,        
+        n_embd=24,
     )
     test_training_config = TrainingConfig(max_lr=0.001, weight_decay=0.0)
     device_type = "cpu"
@@ -42,4 +42,3 @@ def test_save_load_checkpoint() -> None:
         assert (param == loaded_param).all()
 
     os.remove(test_checkpoint_path)
-
