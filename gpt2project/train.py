@@ -90,13 +90,15 @@ def main() -> None:
     torch.set_float32_matmul_precision("high")
 
     # create model
-    model = GPT(GPTConfig(
-        vocab_size=hyperparameters.model.vocab_size,
-        block_size=hyperparameters.model.block_size,
-        n_layer=hyperparameters.model.n_layer,
-        n_head=hyperparameters.model.n_head,
-        n_embd=hyperparameters.model.n_embd,
-    ))
+    model = GPT(
+        GPTConfig(
+            vocab_size=hyperparameters.model.vocab_size,
+            block_size=hyperparameters.model.block_size,
+            n_layer=hyperparameters.model.n_layer,
+            n_head=hyperparameters.model.n_head,
+            n_embd=hyperparameters.model.n_embd,
+        )
+    )
     # model = GPT.from_pretrained("gpt2") # or init from OpenAI GPT-2
     model.to(device)
     use_compile = (
@@ -132,7 +134,7 @@ def main() -> None:
     optimizer = raw_model.configure_optimizers(
         weight_decay=hyperparameters.training.weight_decay,
         learning_rate=hyperparameters.training.max_lr,
-        device_type=device_type
+        device_type=device_type,
     )
 
     with open(log_file, "w") as f:  # open for writing to clear the file
@@ -157,7 +159,9 @@ def main() -> None:
             )
 
         # once in a while evaluate hellaswag
-        if (step % hyperparameters.training.evaluate_every == 0 or last_step) and (not use_compile):
+        if (step % hyperparameters.training.evaluate_every == 0 or last_step) and (
+            not use_compile
+        ):
             evaluate_hellaswag(
                 model,
                 device,
@@ -171,7 +175,10 @@ def main() -> None:
             )
 
         # once in a while generate from the model (except step 0, which is noise)
-        if ((step > 0 and step % hyperparameters.training.evaluate_every == 0) or last_step) and (not use_compile):
+        if (
+            (step > 0 and step % hyperparameters.training.evaluate_every == 0)
+            or last_step
+        ) and (not use_compile):
             generate_from_model(
                 model,
                 device,
@@ -203,7 +210,9 @@ def main() -> None:
             loss.backward()
         if ddp:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)
-        norm = torch.nn.utils.clip_grad_norm_(model.parameters(), hyperparameters.training.grad_clip)
+        norm = torch.nn.utils.clip_grad_norm_(
+            model.parameters(), hyperparameters.training.grad_clip
+        )
         # determine and set the learning rate for this iteration
         lr = get_lr(step)
         for param_group in optimizer.param_groups:
@@ -223,7 +232,7 @@ def main() -> None:
             )
             with open(log_file, "a") as f:
                 f.write(f"{step} train {loss_accum.item():.6f}\n")
-            
+
             # Log metrics to wandb
             if hyperparameters.wandb.enabled:
                 wandb.log(
@@ -270,7 +279,7 @@ def evaluate_validation_loss(
         logger.info(f"validation loss: {val_loss_accum.item():.4f}")
         with open(log_file, "a") as f:
             f.write(f"{step} val {val_loss_accum.item():.4f}\n")
-        
+
         # Log validation metrics to wandb
         if hyperparameters.wandb.enabled:
             wandb.log(
@@ -279,7 +288,7 @@ def evaluate_validation_loss(
                 },
                 step=step,
             )
-        
+
         if step > 0 and (step % hyperparameters.training.save_every == 0 or last_step):
             # optionally write model checkpoints
             checkpoint_path = os.path.join(log_dir, f"model_{step:05d}.pt")
@@ -292,12 +301,12 @@ def evaluate_validation_loss(
             # you might also want to add optimizer.state_dict() and
             # rng seeds etc., if you wanted to more exactly resume training
             torch.save(checkpoint, checkpoint_path)
-            
+
             # Log model checkpoint as wandb artifact
             if hyperparameters.wandb.enabled:
                 # Create a model artifact
                 model_artifact = wandb.Artifact(
-                    name=f"model-checkpoint-{step}", 
+                    name=f"model-checkpoint-{step}",
                     type="model",
                     description=f"GPT-2 model checkpoint at step {step}",
                     metadata={
@@ -309,13 +318,13 @@ def evaluate_validation_loss(
                             "n_layer": raw_model.config.n_layer,
                             "n_head": raw_model.config.n_head,
                             "n_embd": raw_model.config.n_embd,
-                        }
-                    }
+                        },
+                    },
                 )
-                
+
                 # Add the model file to the artifact
                 model_artifact.add_file(checkpoint_path)
-                
+
                 # Log the artifact to wandb
                 wandb.log_artifact(model_artifact)
 
@@ -366,7 +375,7 @@ def evaluate_hellaswag(
         )
         with open(log_file, "a") as f:
             f.write(f"{step} hella {acc_norm:.4f}\n")
-        
+
         # Log hellaswag metrics to wandb
         if hyperparameters.wandb.enabled:
             wandb.log(
@@ -422,7 +431,7 @@ def generate_from_model(
         decoded = enc.decode(token_list)
         logger.info(f"rank {ddp_rank} sample {i}: {decoded}")
         generated_samples.append(decoded)
-    
+
     # Log generated text samples to wandb
     if ddp_rank == 0:  # Only log from the first process to avoid duplicates
         if hyperparameters.wandb.enabled:
