@@ -7,7 +7,12 @@ import torch.utils.data as data
 from sacrebleu import corpus_bleu
 from tqdm import tqdm
 
-from beam_search import beam_search_batched, beam_search_unbatched, greedy_search, top_k_sampling
+from beam_search import (
+    beam_search_batched,
+    beam_search_unbatched,
+    greedy_search,
+    top_k_sampling,
+)
 from constants import constants
 from generate import generate_autoregressivly
 from data_processing.vocab import load_vocab, output_to_text
@@ -44,8 +49,13 @@ def validate(
                 [output_to_text(ref) for ref in ground_truth.tolist()]
             )
 
-            if num_batches_to_validate_on is not None and i + 1 >= num_batches_to_validate_on:
-                logger.info(f"Only  validating on {num_batches_to_validate_on} batches, stopping")
+            if (
+                num_batches_to_validate_on is not None
+                and i + 1 >= num_batches_to_validate_on
+            ):
+                logger.info(
+                    f"Only  validating on {num_batches_to_validate_on} batches, stopping"
+                )
                 break
 
     if save_hypotheses_to_file:

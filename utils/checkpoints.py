@@ -13,10 +13,13 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, path: str) -> 
         path,
     )
 
+
 def load_checkpoint(
     model: nn.Module, optimizer: optim.Optimizer, path: str, remove_orig_prefix: bool
 ) -> None:
-    checkpoint = torch.load(path, map_location=hyperparameters.device, weights_only=True)
+    checkpoint = torch.load(
+        path, map_location=hyperparameters.device, weights_only=True
+    )
 
     if remove_orig_prefix:
         checkpoint["model_state_dict"] = {

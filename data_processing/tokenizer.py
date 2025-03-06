@@ -14,7 +14,7 @@ from hyperparameters import hyperparameters
 
 
 class ParallelCorpusTokenizer:
-    def __init__(self, num_processes: int | None =None, chunksize: int=1000) -> None:
+    def __init__(self, num_processes: int | None = None, chunksize: int = 1000) -> None:
         """
         :param num_processes: Number of processes to use for tokenization.
                               Defaults to all available CPU cores.
@@ -29,7 +29,9 @@ class ParallelCorpusTokenizer:
         """Tokenize a single line (helper for multiprocessing)."""
         return " ".join(tokenizer.tokenize(line.strip())) + "\n"
 
-    def tokenize_file(self, input_path: str, output_path: str, lang: str ="en") -> None:
+    def tokenize_file(
+        self, input_path: str, output_path: str, lang: str = "en"
+    ) -> None:
         """
         Tokenize a file line by line using multiprocessing.
 
@@ -39,7 +41,9 @@ class ParallelCorpusTokenizer:
         """
 
         if os.path.exists(output_path):
-            logger.warning(f"Output file {output_path} already exists. Skipping tokenization.")
+            logger.warning(
+                f"Output file {output_path} already exists. Skipping tokenization."
+            )
             return
 
         tokenizer = self.en_tokenizer if lang == "en" else self.de_tokenizer
@@ -122,13 +126,17 @@ class ParallelCorpusTokenizer:
         """
 
         if os.path.exists(output_codes_path):
-            logger.warning(f"Output file {output_codes_path} already exists. Skipping BPE learning.")
+            logger.warning(
+                f"Output file {output_codes_path} already exists. Skipping BPE learning."
+            )
             return
 
         with open(input_path, "r", encoding="utf-8") as infile, open(
             output_codes_path, "w", encoding="utf-8"
         ) as outfile:
-            subword_nmt.learn_bpe.learn_bpe(infile, outfile, num_symbols=hyperparameters.vocab.bpe_num_symbols)
+            subword_nmt.learn_bpe.learn_bpe(
+                infile, outfile, num_symbols=hyperparameters.vocab.bpe_num_symbols
+            )
 
     def _apply_bpe_line(self, line: str, bpe: subword_nmt.apply_bpe.BPE) -> str:
         """Apply BPE to a single line."""
@@ -140,7 +148,9 @@ class ParallelCorpusTokenizer:
         Apply BPE to a tokenized corpus line by line, using multiprocessing.
         """
         if os.path.exists(output_path):
-            logger.warning(f"Output file {output_path} already exists. Skipping BPE application.")
+            logger.warning(
+                f"Output file {output_path} already exists. Skipping BPE application."
+            )
             return
 
         # Load the BPE codes

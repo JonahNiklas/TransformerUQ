@@ -22,6 +22,7 @@ torch.set_float32_matmul_precision("high")
 torch_compile = os.getenv("TORCH_COMPILE", "TRUE") != "FALSE"
 use_wandb = os.getenv("USE_WANDB", "TRUE") != "FALSE"
 
+
 def main() -> None:
     logger.info("Tokenize data")
     tokenizer = ParallelCorpusTokenizer()
@@ -46,9 +47,13 @@ def main() -> None:
 
     logger.info("Merge the tokenized training data")
     if not os.path.exists(constants.file_paths.tokenized_train_merged):
-        with open(constants.file_paths.tokenized_train_en, "r", encoding="utf-8") as f_en, \
-            open(constants.file_paths.tokenized_train_de, "r", encoding="utf-8") as f_de, \
-            open(constants.file_paths.tokenized_train_merged, "w", encoding="utf-8") as f_out:
+        with open(
+            constants.file_paths.tokenized_train_en, "r", encoding="utf-8"
+        ) as f_en, open(
+            constants.file_paths.tokenized_train_de, "r", encoding="utf-8"
+        ) as f_de, open(
+            constants.file_paths.tokenized_train_merged, "w", encoding="utf-8"
+        ) as f_out:
             for line in f_en:
                 f_out.write(line)
             for line in f_de:
@@ -101,7 +106,9 @@ def main() -> None:
             min_freq=hyperparameters.vocab.token_min_freq,
             save_path=constants.file_paths.vocab,
         )
-        logger.warning("Shared vocab file not found. Building vocab from training data.")
+        logger.warning(
+            "Shared vocab file not found. Building vocab from training data."
+        )
 
     shared_vocab = load_vocab(constants.file_paths.vocab)
     logger.info(f"Shared vocab size: {len(shared_vocab)}")
@@ -121,7 +128,8 @@ def main() -> None:
         src_file=constants.file_paths.bpe_dev_de,
         tgt_file=constants.file_paths.bpe_dev_en,
         vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size // hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size
+        // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -161,8 +169,8 @@ def main() -> None:
     def get_lr(step: int) -> float:
         d_model = hyperparameters.transformer.hidden_size
         warmup_steps = hyperparameters.training.learning_rate_warm_up_steps
-        step = max(1, step) # Avoid division by zero
-        out: float = (d_model ** -0.5) * min(step ** -0.5, step * (warmup_steps ** -1.5))
+        step = max(1, step)  # Avoid division by zero
+        out: float = (d_model**-0.5) * min(step**-0.5, step * (warmup_steps**-1.5))
         return out
 
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, get_lr)

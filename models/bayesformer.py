@@ -30,7 +30,7 @@ class BayesMultiheadAttention(nn.Module):
         self, query: Tensor, key: Tensor, value: Tensor, mask: Tensor
     ) -> Tensor:
         batch_size, q_seq_length, _ = query.shape
-        k_seq_length= key.shape[1]
+        k_seq_length = key.shape[1]
 
         query = self.dropout(query)  # red dropout
         key = self.dropout(key)  # green dropout
@@ -88,7 +88,9 @@ class BayesEncoderLayer(nn.Module):
         self.dropout_skip_connection = nn.Dropout(dropout)
 
         # Dropout on the input to the feed-forward block
-        self.dropout_mlp_input = nn.Dropout(hyperparameters.transformer.dropout_mlp_input)
+        self.dropout_mlp_input = nn.Dropout(
+            hyperparameters.transformer.dropout_mlp_input
+        )
 
     def forward(self, x: Tensor, mask: Tensor) -> Tensor:
         # Self-attention sub-layer
@@ -151,7 +153,9 @@ class BayesDecoderLayer(nn.Module):
         self.dropout_skip_connection = nn.Dropout(dropout)
 
         # Dropout on the input to the feed-forward block
-        self.dropout_mlp_input = nn.Dropout(hyperparameters.transformer.dropout_mlp_input)
+        self.dropout_mlp_input = nn.Dropout(
+            hyperparameters.transformer.dropout_mlp_input
+        )
 
     def forward(
         self, x: Tensor, enc_output: Tensor, tgt_mask: Tensor, memory_mask: Tensor

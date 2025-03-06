@@ -15,6 +15,8 @@ def plot_retention_curve_cg(
 ) -> None:
     # Sort the results based on UQ
     sorted_indices = sorted(range(len(uq)), key=lambda i: uq[i].item())
+    assert sorted_indices != list(range(len(uq))), "UQ is not working"
+
     sorted_outputs = [output_texts[i] for i in sorted_indices]
     sorted_targets = [targets[i] for i in sorted_indices]
     sorted_concepts = [concepts[i] for i in sorted_indices]

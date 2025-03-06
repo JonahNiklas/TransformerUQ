@@ -35,6 +35,16 @@
             }
         },
         {
+            "name": "gpt2_train",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.train",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
+        {
             "name": "gpt2_hellaswag",
             "type": "debugpy",
             "request": "launch",

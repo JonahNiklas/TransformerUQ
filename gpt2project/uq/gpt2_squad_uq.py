@@ -66,6 +66,7 @@ def load_or_generate_inference(
     torch.save((all_outputs, all_targets, all_uqs), filename)
     print("Saved inference results to file:", filename)
     return all_outputs, all_targets, all_uqs
+
 if __name__ == "__main__":
     # Load the GPT-2 model and tokenizer
     model_name = "gpt2"
