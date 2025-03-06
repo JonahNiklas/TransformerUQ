@@ -43,7 +43,7 @@ if __name__ == "__main__":
     tokenizer = tiktoken.get_encoding(model_name)
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
 
-    dataloader = get_squad_dataloader(1, shuffle=False, force_new_clean=True)
+    dataloader = get_squad_dataloader(1, shuffle=False)
     print("Test examples:", len(dataloader))
     n_batch_to_validate = 10
     # Example of iterating through the DataLoader

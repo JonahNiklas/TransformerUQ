@@ -1,18 +1,6 @@
 from typing import List, Tuple
-import pandas as pd
-import os
 from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
-
-# deprecated
-# def extract_answers(answer_str: str) -> List[str]:
-#     match = re.search(r"array\((\[.*?\]),\s*dtype", answer_str, re.DOTALL)
-#     if match:
-#         text_array = ast.literal_eval(match.group(1))
-#         assert isinstance(text_array, list)
-#         return text_array
-
-#     return []
 
 
 def extract_answers(answer_dict: dict) -> List[str]:
@@ -21,56 +9,42 @@ def extract_answers(answer_dict: dict) -> List[str]:
     return text
 
 
-def get_squad_dataframe(force_new_clean: bool = False) -> pd.DataFrame:
+def get_squad_data() -> Tuple[List[str], List[str], List[List[str]]]:
+    data = load_dataset("christti/squad-augmented-v2", split="validation")
 
-    cleaned_file_path = "local/gpt-data/squad/validation_cleaned.csv"
-    if not os.path.exists(cleaned_file_path) or force_new_clean:
-        data = load_dataset("christti/squad-augmented-v2", split="validation")
+    # Extract the relevant columns and apply extract_answers
+    contexts = data["context"]
+    questions = data["question"]
+    answers = [extract_answers(answer) for answer in data["answers"]]
 
-        # Convert the dataset to a pandas DataFrame
-        df = pd.DataFrame(data)
-
-        # Select the relevant columns
-        cleaned_data = df[["context", "question", "answers"]]
-
-        cleaned_data.loc[:, "answers"] = cleaned_data["answers"].apply(extract_answers)
-
-        # Save the cleaned data to a new CSV file
-        os.makedirs("local/gpt-data/squad", exist_ok=True)
-        cleaned_data.to_csv(cleaned_file_path, index=False)
-
-    cleaned_data = pd.read_csv(cleaned_file_path)
-    cleaned_data["answers"] = cleaned_data["answers"].apply(eval)
-    return cleaned_data
+    return list(contexts), list(questions), answers
 
 
 class SquadDataset(Dataset):
-    def __init__(self, dataframe: pd.DataFrame):
-        self.data = dataframe
+    def __init__(self) -> None:
+        contexts, questions, answers = get_squad_data()
+        self.contexts = contexts
+        self.questions = questions
+        self.answers = answers
 
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self.contexts)
 
     def __getitem__(self, idx: int) -> Tuple[str, str, List[str]]:
-        item = self.data.iloc[idx]
-        context = item["context"]
-        question = item["question"]
-        answers = item["answers"]
-        return context, question, answers
+        return self.contexts[idx], self.questions[idx], self.answers[idx]
 
 
 def collate_fn(
-    batch: List[Tuple[str, str, List[str]]]
+    batch: List[Tuple[str, str, List[str]]],
 ) -> Tuple[List[str], List[str], List[List[str]]]:
     contexts, questions, answers = zip(*batch)
     return list(contexts), list(questions), list(answers)
 
 
 def get_squad_dataloader(
-    batch_size: int, shuffle: bool = True, force_new_clean: bool = False
-) -> DataLoader:
-    dataframe = get_squad_dataframe(force_new_clean)
-    dataset = SquadDataset(dataframe)
+    batch_size: int, shuffle: bool = True
+) -> DataLoader[Tuple[List[str], List[str], List[List[str]]]]:
+    dataset = SquadDataset()
     dataloader = DataLoader(
         dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
     )
@@ -104,7 +78,3 @@ class TargetUsageEval(SquadEval):
                     scores[i] = 1.0
                     break
         return sum(scores) / len(scores)
-
-
-if __name__ == "__main__":
-    get_squad_dataframe(force_new_clean=True)
