@@ -24,10 +24,9 @@ def evalutate_model_batch_with_uq(
     model: GPT,
     tokenizer: tiktoken.Encoding,
     encoding_tensors: torch.Tensor,
-    targets: List[List[str]],
     aq_funcs: List[Any],
-) -> Tuple[List[str], List[List[str]], torch.Tensor]:
-    outputs, uq = generate_autoregressivly_gpt2_with_uq(
+) -> Tuple[List[List[str]], torch.Tensor]:
+    hypothesis, uq = generate_autoregressivly_gpt2_with_uq(
         model,
         tokenizer,
         encoding_tensors,
@@ -36,8 +35,7 @@ def evalutate_model_batch_with_uq(
         aq_funcs,
         max_tokens=20,
     )
-    output_texts = decode_token_id_batch(outputs, tokenizer)
-    return output_texts, targets, uq
+    return hypothesis, uq
 
 
 def load_or_generate_inference_commongen(
@@ -47,9 +45,9 @@ def load_or_generate_inference_commongen(
     n_batch_to_validate: int,
     aq_funcs: List[AcquisitionFunction],
     shuffle: bool,
-) -> Tuple[List[str], List[List[str]], List[List[str]], torch.Tensor]:
+) -> Tuple[List[List[str]], List[List[str]], List[List[str]], torch.Tensor]:
     filename = f"local/gpt-results/commongen/commongen_outputs_{run_name}_b{batch_size}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
-    all_outputs: List[str] = []
+    all_outputs: List[List[str]] = [[] for _ in range(len(aq_funcs))]
     all_concepts: List[List[str]] = []
     all_targets: List[List[str]] = []
     all_uqs = torch.empty((0, len(aq_funcs))).to(hyperparameters.device)
@@ -62,19 +60,19 @@ def load_or_generate_inference_commongen(
     print("Generating inference results...")
 
     dataloader = get_common_gen_dataloader(batch_size=batch_size, shuffle=shuffle)
-    for i, (input_texts, concepts, target_texts, encoding_tensors) in tqdm(
+    for i, (input_texts, concepts, targets, encoding_tensors) in tqdm(
         enumerate(dataloader),
         desc="Running commongen validation",
         total=len(dataloader),
     ):
-        output_texts, targets, uq = evalutate_model_batch_with_uq(
+        output_texts, uq = evalutate_model_batch_with_uq(
             model=model,
             tokenizer=tokenizer,
             encoding_tensors=encoding_tensors,
-            targets=target_texts,
             aq_funcs=aq_funcs,
         )
-        all_outputs.extend(output_texts)
+        for aq in range(len(aq_funcs)):
+            all_outputs[aq].extend(output_texts[aq])
         all_concepts.extend(concepts)
         all_targets.extend(targets)
         all_uqs = torch.cat((all_uqs, uq), dim=0)
@@ -97,7 +95,7 @@ if __name__ == "__main__":
 
     run_name = "gpt2-pretrained"
 
-    n_batch_to_validate = -1
+    n_batch_to_validate = 10
     batch_size = 1
 
     aq_funcs = [BeamScore(), BLEUVar()]
@@ -112,7 +110,7 @@ if __name__ == "__main__":
     # Call the function for each acquisition function
     for i, aq_func in enumerate(aq_funcs):
         plot_retention_curve_cg(
-            all_outputs,
+            all_outputs[i],
             all_concepts,
             all_targets,
             all_uqs[:, i],

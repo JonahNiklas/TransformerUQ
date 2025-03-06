@@ -24,9 +24,9 @@ def evaluate_model_batch_with_uq(
     tokenizer: tiktoken.Encoding,
     encoding_tensors: torch.Tensor,
     aq_funcs: List[AcquisitionFunction],
-) -> Tuple[List[str], torch.Tensor]:
+) -> Tuple[List[List[str]], torch.Tensor]:
     # Use the padded encoding tensor directly to generate responses
-    token_ids, uq = generate_autoregressivly_gpt2_with_uq(
+    output_texts, uq = generate_autoregressivly_gpt2_with_uq(
         model,
         tokenizer,
         encoding_tensors,
@@ -34,9 +34,8 @@ def evaluate_model_batch_with_uq(
         break_on_newline=False,
         aq_funcs=aq_funcs,
     )
-    decoded_texts = decode_token_id_batch(token_ids, tokenizer)
 
-    return decoded_texts, uq
+    return output_texts, uq
 
 
 def load_or_generate_inference(
@@ -73,7 +72,7 @@ def load_or_generate_inference(
         )
         for aq in range(len(aq_funcs)):
             all_output_texts[aq].extend(
-                output
+                output[aq]
             )  # should be output[aq] once we fix the returning blue-mean instead of first inference
         all_targets.extend(targets)
         all_uqs = torch.cat((all_uqs, uq), dim=0)
@@ -92,7 +91,7 @@ if __name__ == "__main__":
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
     model.eval()
 
-    n_batch_to_validate = 1000
+    n_batch_to_validate = 10
     batch_size = 1
     aq_funcs = [BeamScore(), BLEUVar()]
     eval_squad = TargetUsageEval()

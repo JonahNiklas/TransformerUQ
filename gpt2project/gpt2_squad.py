@@ -9,6 +9,7 @@ from gpt2project.data_processing.load_squad import (
     get_squad_dataloader,
 )
 from gpt2project.gpt2model import GPT
+from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2
 from gpt2project.search_methods_gpt import topk_sampling_gpt
@@ -30,12 +31,8 @@ def evaluate_model_batch(
         break_on_newline=False,
     )
     token_ids = outputs.token_ids
+    output_texts = decode_token_id_batch(token_ids, tokenizer)
 
-    # remove the prompt from the tokens and decode them
-    output_texts = [
-        tokenizer.decode(token_ids[b][len(encoding_tensors[b]) :].tolist())
-        for b in range(len(token_ids))
-    ]
     score = eval_function_squad(output_texts, targets)
     return score
 
