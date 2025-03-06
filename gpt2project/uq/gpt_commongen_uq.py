@@ -12,7 +12,7 @@ from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 from gpt2project.uq.plot_uq import plot_retention_curve_cg
 from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
-from uq.acquisition_func import BLEUVar, BeamScore
+from uq.acquisition_func import AcquisitionFunction, BLEUVar, BeamScore
 
 import logging
 
@@ -39,26 +39,28 @@ def evalutate_model_batch_with_uq(
     output_texts = decode_token_id_batch(outputs, tokenizer)
     return output_texts, targets, uq
 
-if __name__ == "__main__":
-    # Load the  GPT-2 model and tokenizer
-    model_name = "gpt2"
-    tokenizer = tiktoken.get_encoding(model_name)
-    model = GPT.from_pretrained(model_name)
-    model.to(hyperparameters.device)
-    model.eval()
 
-    run_name = "gpt2-pretrained"
+def load_or_generate_inference_commongen(
+    model: GPT,
+    tokenizer: tiktoken.Encoding,
+    batch_size: int,
+    n_batch_to_validate: int,
+    aq_funcs: List[AcquisitionFunction],
+    shuffle: bool,
+) -> Tuple[List[List[str]], List[List[str]], torch.Tensor]:
+    filename = f"local/gpt-results/commongen/commongen_outputs_{run_name}_b{batch_size}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
+    if os.path.exists(filename):
+        all_outputs, all_concepts, all_targets, all_uqs = torch.load(filename)
+        print("Loaded inference results from file.")
+        return all_outputs, all_concepts, all_targets, all_uqs
 
-    dataloader = get_common_gen_dataloader(batch_size=1, shuffle=False)
-    print("Test examples:", len(dataloader))
-
-    aq_funcs = [BeamScore(), BLEUVar()]
-    eval_function_commongen = ConceptUsageEval()
-
+    print("Generating inference results...")
     all_outputs: List[str] = []
     all_concepts: List[str] = []
     all_targets: List[List[str]] = []
     all_uqs = torch.empty((0, len(aq_funcs))).to(hyperparameters.device)
+
+    dataloader = get_common_gen_dataloader(batch_size=batch_size, shuffle=shuffle)
     for i, (input_texts, concepts, target_texts, encoding_tensors) in tqdm(
         enumerate(dataloader),
         desc="Running commongen validation",
@@ -75,25 +77,37 @@ if __name__ == "__main__":
         all_concepts.extend(concepts)
         all_targets.extend(targets)
         all_uqs = torch.cat((all_uqs, uq), dim=0)
+        if i == n_batch_to_validate:
+            break
 
-    pickle.dump(
-        {
-            "all_outputs": all_outputs,
-            "all_concepts": all_concepts,
-            "all_targets": all_targets,
-            "all_uqs": all_uqs,
-        },
-        open(f"local/gpt-results/cg_ret_curve_{run_name}.pkl", "wb"),
+    torch.save((all_outputs, all_concepts, all_targets, all_uqs), filename)
+    print("Saved inference results to file:", filename)
+    return all_outputs, all_concepts, all_targets, all_uqs
+
+
+if __name__ == "__main__":
+    # Load the  GPT-2 model and tokenizer
+    os.makedirs("local/gpt-results/commongen", exist_ok=True)
+    model_name = "gpt2"
+    tokenizer = tiktoken.get_encoding(model_name)
+    model = GPT.from_pretrained(model_name)
+    model.to(hyperparameters.device)
+    model.eval()
+
+    run_name = "gpt2-pretrained"
+
+    n_batch_to_validate = -1
+    batch_size = 1
+
+    aq_funcs = [BeamScore(), BLEUVar()]
+    eval_function_commongen = ConceptUsageEval()
+
+    all_outputs, all_concepts, all_targets, all_uqs = (
+        load_or_generate_inference_commongen(
+            model, tokenizer, batch_size, n_batch_to_validate, aq_funcs, shuffle=False
+        )
     )
 
-    data = pickle.load(open(f"local/gpt-results/cg_ret_curve_{run_name}.pkl", "rb"))
-    all_outputs = data["all_outputs"]
-    all_concepts = data["all_concepts"]
-    all_targets = data["all_targets"]
-    all_uqs = data["all_uqs"]
-
-    
-    os.makedirs("local/gpt-results/commongen", exist_ok=True)
     # Call the function for each acquisition function
     for i, aq_func in enumerate(aq_funcs):
         plot_retention_curve_cg(
