@@ -24,7 +24,7 @@ class MultiHeadAttention(nn.Module):
 
         self.out = nn.Linear(d_model, d_model)
 
-        self.p_dropout = p_dropout
+        self.attention_dropout = nn.Dropout(p_dropout)
 
     def forward(
         self, query: Tensor, key: Tensor, value: Tensor, mask: Tensor
@@ -50,7 +50,7 @@ class MultiHeadAttention(nn.Module):
             V,
             attn_mask=mask,
             dropout_p=(
-                hyperparameters.transformer.dropout if self.training else 0.0
+                self.attention_dropout.p if self.attention_dropout.training else 0.0
             ),  # green dropout
         )
 
