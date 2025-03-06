@@ -19,11 +19,10 @@ def evaluate_model_batch(
     encoding_tensors: torch.Tensor,
     targets: List[List[str]],
     eval_function_squad: SquadEval,
-    remove_prefix_tokens: List[int],
-) -> List[float]:
+) -> float:
     # Use the padded encoding tensor directly to generate responses
     outputs = generate_autoregressivly_gpt2(
-        model, tokenizer, encoding_tensors, search_method=topk_sampling_gpt
+        model, tokenizer, encoding_tensors, search_method=topk_sampling_gpt, break_on_newline=False, 
     )
     token_ids = outputs.token_ids
 
@@ -58,9 +57,8 @@ if __name__ == "__main__":
             encoding_tensors,
             targets,
             eval_function_squad=TargetUsageEval(),
-            remove_prefix_tokens=[],
         )
-        outputs.extend(output)
+        outputs.append(output)
 
     print(f"{torch.mean(torch.tensor(outputs)).item():.5f}")
     # Output on all 10570 examples: 0.01315

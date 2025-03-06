@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 def plot_retention_curve_cg(
     output_texts: List[str],
-    concepts: List[str],
+    concepts: List[List[str]],
     targets: List[List[str]],
     uq: torch.Tensor,
     eval_function: CommongenEval,

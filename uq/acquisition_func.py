@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 def _length_penalty(output: torch.Tensor, alpha: float) -> torch.Tensor:
     lengths = torch.sum(output != 0, dim=1)
-    return torch.tensor(((5 + lengths) / 6) ** alpha)
+    penalty : torch.Tensor = ((5 + lengths) / 6) ** alpha
+    return penalty
 
 
 class AcquisitionFunction:

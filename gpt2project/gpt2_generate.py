@@ -75,7 +75,7 @@ def generate_autoregressivly_gpt2_with_uq(
                 decode_token_list(output.token_ids[b].tolist(), tokenizer)
             )
 
-    output_hypothesis = []
+    # output_hypothesis = []
     for i, aq_func in enumerate(aq_funcs):
         uq = aq_func(hypothesis, token_ids, softmax_probs)
         uqs[:, i] = uq

@@ -1,7 +1,9 @@
 import os
 from typing import List, Tuple
+from idna import decode
 import tiktoken
 import torch
+from tqdm import tqdm
 from gpt2project.data_processing.load_squad import (
     create_squad_prompt,
     create_squad_prompt_batched,
@@ -10,6 +12,7 @@ from gpt2project.data_processing.load_squad import (
 )
 from gpt2project.gpt2model import GPT
 from gpt2project.uq.plot_uq import plot_retention_curve_squad
+from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.search_methods_gpt import topk_sampling_gpt
@@ -23,10 +26,12 @@ def evaluate_model_batch_with_uq(
     aq_funcs: List[AcquisitionFunction],
 ) -> Tuple[List[str], torch.Tensor]:
     # Use the padded encoding tensor directly to generate responses
-    outputs, uq, hypotheses = generate_autoregressivly_gpt2_with_uq(
-        model, tokenizer, encoding_tensors, topk_sampling_gpt, aq_funcs
+    token_ids, uq = generate_autoregressivly_gpt2_with_uq(
+        model, tokenizer, encoding_tensors, topk_sampling_gpt, break_on_newline=False, aq_funcs=aq_funcs
     )
-    return hypotheses, uq
+    decoded_texts = decode_token_id_batch(token_ids, tokenizer)
+
+    return decoded_texts, uq
 
 def load_or_generate_inference(
     model: GPT,
@@ -38,39 +43,42 @@ def load_or_generate_inference(
 ) -> Tuple[List[List[str]], List[List[str]], torch.Tensor]:
     filename = f"local/gpt-results/squad/squad_outputs_{run_name}_b{batch_size}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
     if os.path.exists(filename):
-        all_outputs, all_targets, all_uqs = torch.load(filename)
+        all_output_texts, all_targets, all_uqs = torch.load(filename)
         print("Loaded inference results from file.")
-        return all_outputs, all_targets, all_uqs
+        return all_output_texts, all_targets, all_uqs
 
     print("Generating inference results...")
-    all_outputs = [[] for _ in range(len(aq_funcs))]
+    all_output_texts = [[] for _ in range(len(aq_funcs))]
     all_targets = []
     all_uqs = torch.zeros((0, len(aq_funcs))).to(hyperparameters.device)
 
     dataloader = get_squad_dataloader(batch_size,shuffle=shuffle)
-    for i, batch in enumerate(dataloader):
+    for i, (context, question, targets) in tqdm(
+        enumerate(dataloader),
+        desc="Running squad validation",
+        total=len(dataloader) if n_batch_to_validate == -1 else n_batch_to_validate,
+    ):
         if i == n_batch_to_validate:
             break
-        context, question, targets = batch
         tokens = tokenizer.encode_batch(create_squad_prompt_batched(context, question))
         encoding_tensors = torch.tensor(tokens).to(hyperparameters.device)
         output, uq = evaluate_model_batch_with_uq(
             model, tokenizer, encoding_tensors, aq_funcs
         )
         for aq in range(len(aq_funcs)):
-            all_outputs[aq].extend(output[aq])
+            all_output_texts[aq].extend(output) # should be output[aq] once we fix the returning blue-mean instead of first inference
         all_targets.extend(targets)
         all_uqs = torch.cat((all_uqs, uq), dim=0)
 
     os.makedirs("local/gpt-results/squad", exist_ok=True)
-    torch.save((all_outputs, all_targets, all_uqs), filename)
+    torch.save((all_output_texts, all_targets, all_uqs), filename)
     print("Saved inference results to file:", filename)
-    return all_outputs, all_targets, all_uqs
+    return all_output_texts, all_targets, all_uqs
 
 if __name__ == "__main__":
     # Load the GPT-2 model and tokenizer
     model_name = "gpt2"
-    run_name = "gpt2-pre-1000test"
+    run_name = "gpt2-pre-1000"
     tokenizer = tiktoken.get_encoding(model_name)
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
     model.eval()
