@@ -98,7 +98,13 @@ if __name__ == "__main__":
     eval_squad = TargetUsageEval()
 
     all_outputs, all_targets, all_uqs = load_or_generate_inference(
-        model, tokenizer, batch_size, n_batch_to_validate, aq_funcs, shuffle=False, run_name=run_name
+        model,
+        tokenizer,
+        batch_size,
+        n_batch_to_validate,
+        aq_funcs,
+        shuffle=False,
+        run_name=run_name,
     )
 
     os.makedirs("local/gpt-results/squad", exist_ok=True)

@@ -104,7 +104,13 @@ if __name__ == "__main__":
 
     all_outputs, all_concepts, all_targets, all_uqs = (
         load_or_generate_inference_commongen(
-            model, tokenizer, batch_size, n_batch_to_validate, aq_funcs, shuffle=False, run_name=run_name
+            model,
+            tokenizer,
+            batch_size,
+            n_batch_to_validate,
+            aq_funcs,
+            shuffle=False,
+            run_name=run_name,
         )
     )
 
