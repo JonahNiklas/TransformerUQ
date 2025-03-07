@@ -21,7 +21,6 @@ def save_checkpoint(
         "val_loss": val_loss,
         "optimizer": optimizer.state_dict(),
     }
-    # you might also want to add rng seeds etc., if you wanted to more exactly resume training
     torch.save(checkpoint, checkpoint_path)
 
 
