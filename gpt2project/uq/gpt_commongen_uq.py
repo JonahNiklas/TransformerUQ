@@ -20,24 +20,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def evalutate_model_batch_with_uq(
-    model: GPT,
-    tokenizer: tiktoken.Encoding,
-    encoding_tensors: torch.Tensor,
-    aq_funcs: List[Any],
-) -> Tuple[List[List[str]], torch.Tensor]:
-    hypothesis, uq = generate_autoregressivly_gpt2_with_uq(
-        model,
-        tokenizer,
-        encoding_tensors,
-        topk_sampling_gpt,
-        True,
-        aq_funcs,
-        max_tokens=20,
-    )
-    return hypothesis, uq
-
-
 def load_or_generate_inference_commongen(
     model: GPT,
     tokenizer: tiktoken.Encoding,
@@ -60,17 +42,20 @@ def load_or_generate_inference_commongen(
 
     print("Generating inference results...")
 
-    dataloader = get_common_gen_dataloader(batch_size=batch_size, shuffle=shuffle)
+    dataloader = get_common_gen_dataloader(batch_size, shuffle=shuffle)
     for i, (input_texts, concepts, targets, encoding_tensors) in tqdm(
         enumerate(dataloader),
         desc="Running commongen validation",
-        total=len(dataloader),
+        total=len(dataloader) if n_batch_to_validate == -1 else n_batch_to_validate,
     ):
-        output_texts, uq = evalutate_model_batch_with_uq(
-            model=model,
-            tokenizer=tokenizer,
-            encoding_tensors=encoding_tensors,
+        output_texts, uq = generate_autoregressivly_gpt2_with_uq(
+            model,
+            tokenizer,
+            encoding_tensors,
+            topk_sampling_gpt,
+            break_on_newline=True,
             aq_funcs=aq_funcs,
+            max_tokens=20,
         )
         for aq in range(len(aq_funcs)):
             all_outputs[aq].extend(output_texts[aq])
@@ -96,7 +81,7 @@ if __name__ == "__main__":
 
     run_name = "gpt2-pretrained"
 
-    n_batch_to_validate = 10
+    n_batch_to_validate = -1
     batch_size = 1
 
     aq_funcs = [BeamScore(), BLEUVar()]
@@ -123,5 +108,5 @@ if __name__ == "__main__":
             all_uqs[:, i],
             eval_function_commongen,
             aq_func.__class__.__name__,
-            filepath=f"local/gpt-results/commongen/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}.svg",
+            filepath=f"local/gpt-results/commongen/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}_n{n_batch_to_validate}.svg",
         )

@@ -19,26 +19,7 @@ from gpt2project.search_methods_gpt import topk_sampling_gpt
 from uq.acquisition_func import AcquisitionFunction, BLEUVar, BeamScore
 
 
-def evaluate_model_batch_with_uq(
-    model: GPT,
-    tokenizer: tiktoken.Encoding,
-    encoding_tensors: torch.Tensor,
-    aq_funcs: List[AcquisitionFunction],
-) -> Tuple[List[List[str]], torch.Tensor]:
-    # Use the padded encoding tensor directly to generate responses
-    output_texts, uq = generate_autoregressivly_gpt2_with_uq(
-        model,
-        tokenizer,
-        encoding_tensors,
-        topk_sampling_gpt,
-        break_on_newline=False,
-        aq_funcs=aq_funcs,
-    )
-
-    return output_texts, uq
-
-
-def load_or_generate_inference(
+def load_or_generate_inference_squad(
     model: GPT,
     tokenizer: tiktoken.Encoding,
     batch_size: int,
@@ -56,7 +37,7 @@ def load_or_generate_inference(
     print("Generating inference results...")
     all_output_texts = [[] for _ in range(len(aq_funcs))]
     all_targets = []
-    all_uqs = torch.zeros((0, len(aq_funcs))).to(hyperparameters.device)
+    all_uqs = torch.empty((0, len(aq_funcs))).to(hyperparameters.device)
 
     dataloader = get_squad_dataloader(batch_size, shuffle=shuffle)
     for i, (context, question, targets) in tqdm(
@@ -68,13 +49,16 @@ def load_or_generate_inference(
             break
         tokens = tokenizer.encode_batch(create_squad_prompt_batched(context, question))
         encoding_tensors = torch.tensor(tokens).to(hyperparameters.device)
-        output, uq = evaluate_model_batch_with_uq(
-            model, tokenizer, encoding_tensors, aq_funcs
+        output_texts, uq = generate_autoregressivly_gpt2_with_uq(
+            model,
+            tokenizer,
+            encoding_tensors,
+            topk_sampling_gpt,
+            break_on_newline=False,
+            aq_funcs=aq_funcs,
         )
         for aq in range(len(aq_funcs)):
-            all_output_texts[aq].extend(
-                output[aq]
-            )  # should be output[aq] once we fix the returning blue-mean instead of first inference
+            all_output_texts[aq].extend(output_texts[aq])
         all_targets.extend(targets)
         all_uqs = torch.cat((all_uqs, uq), dim=0)
 
@@ -97,7 +81,7 @@ if __name__ == "__main__":
     aq_funcs = [BeamScore(), BLEUVar()]
     eval_squad = TargetUsageEval()
 
-    all_outputs, all_targets, all_uqs = load_or_generate_inference(
+    all_outputs, all_targets, all_uqs = load_or_generate_inference_squad(
         model,
         tokenizer,
         batch_size,
