@@ -21,9 +21,7 @@ class DropoutEmbedding(nn.Module):
         """
         super().__init__()
         self.dropout = dropout
-        self.embedding = nn.Embedding(
-            num_embeddings, embedding_dim
-        )
+        self.embedding = nn.Embedding(num_embeddings, embedding_dim)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         # When training, apply dropout to the embedding weights.
