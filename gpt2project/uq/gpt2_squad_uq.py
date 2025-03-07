@@ -45,6 +45,7 @@ def load_or_generate_inference(
     n_batch_to_validate: int,
     aq_funcs: List[AcquisitionFunction],
     shuffle: bool,
+    run_name: str,
 ) -> Tuple[List[List[str]], List[List[str]], torch.Tensor]:
     filename = f"local/gpt-results/squad/squad_outputs_{run_name}_b{batch_size}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
     if os.path.exists(filename):
@@ -91,13 +92,13 @@ if __name__ == "__main__":
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
     model.eval()
 
-    n_batch_to_validate = 10
+    n_batch_to_validate = 1000
     batch_size = 1
     aq_funcs = [BeamScore(), BLEUVar()]
     eval_squad = TargetUsageEval()
 
     all_outputs, all_targets, all_uqs = load_or_generate_inference(
-        model, tokenizer, batch_size, n_batch_to_validate, aq_funcs, shuffle=False
+        model, tokenizer, batch_size, n_batch_to_validate, aq_funcs, shuffle=False, run_name=run_name
     )
 
     os.makedirs("local/gpt-results/squad", exist_ok=True)

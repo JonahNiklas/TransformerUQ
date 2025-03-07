@@ -45,6 +45,7 @@ def load_or_generate_inference_commongen(
     n_batch_to_validate: int,
     aq_funcs: List[AcquisitionFunction],
     shuffle: bool,
+    run_name: str,
 ) -> Tuple[List[List[str]], List[List[str]], List[List[str]], torch.Tensor]:
     filename = f"local/gpt-results/commongen/commongen_outputs_{run_name}_b{batch_size}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
     all_outputs: List[List[str]] = [[] for _ in range(len(aq_funcs))]
@@ -103,7 +104,7 @@ if __name__ == "__main__":
 
     all_outputs, all_concepts, all_targets, all_uqs = (
         load_or_generate_inference_commongen(
-            model, tokenizer, batch_size, n_batch_to_validate, aq_funcs, shuffle=False
+            model, tokenizer, batch_size, n_batch_to_validate, aq_funcs, shuffle=False, run_name=run_name
         )
     )
 
