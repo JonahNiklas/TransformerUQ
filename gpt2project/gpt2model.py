@@ -35,6 +35,8 @@ class CausalSelfAttention(nn.Module):
         # regularization
         self.n_head = config.n_head
         self.n_embd = config.n_embd
+        self.attention_dropout = nn.Dropout(config.dropout)
+        self.resid_dropout = nn.Dropout(config.dropout)
 
     def forward(self, x: Tensor) -> Tensor:
         B, T, C = (
@@ -54,12 +56,18 @@ class CausalSelfAttention(nn.Module):
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(
             1, 2
         )  # (B, nh, T, hs)
-        y = F.scaled_dot_product_attention(q, k, v, is_causal=True)  # flash attention
+        y = F.scaled_dot_product_attention(
+            q,
+            k,
+            v,
+            is_causal=True,
+            dropout_p=self.attention_dropout.p if self.attention_dropout.training else 0.0,
+        )  # flash attention
         y = (
             y.transpose(1, 2).contiguous().view(B, T, C)
         )  # re-assemble all head outputs side by side
         # output projection
-        y = self.c_proj(y)
+        y = self.resid_dropout(self.c_proj(y))
         return y
 
 
@@ -73,11 +81,12 @@ class MLP(nn.Module):
         self.c_proj.NANOGPT_SCALE_INIT = torch.tensor(
             1.0
         )  # scale init (not used in the original code)
-
+        self.resid_dropout = nn.Dropout(config.dropout)
     def forward(self, x: Tensor) -> Tensor:
         x = self.c_fc(x)
         x = self.gelu(x)
         x = self.c_proj(x)
+        x = self.resid_dropout(x)
         return x
 
 
@@ -106,6 +115,7 @@ class GPT(nn.Module):
             dict(
                 wte=nn.Embedding(config.vocab_size, config.n_embd),
                 wpe=nn.Embedding(config.block_size, config.n_embd),
+                drop=nn.Dropout(config.dropout),
                 h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
                 ln_f=nn.LayerNorm(config.n_embd),
             )
@@ -141,7 +151,7 @@ class GPT(nn.Module):
         pos = torch.arange(0, T, dtype=torch.long, device=idx.device)  # shape (T)
         pos_emb = self.transformer.wpe(pos)  # position embeddings of shape (T, n_embd)
         tok_emb = self.transformer.wte(idx)  # token embeddings of shape (B, T, n_embd)
-        x = tok_emb + pos_emb
+        x = self.transformer.drop(tok_emb + pos_emb)
         # forward the blocks of the transformer
         for block in self.transformer.h:
             x = block(x)

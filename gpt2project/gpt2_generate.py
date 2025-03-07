@@ -30,7 +30,6 @@ def generate_autoregressivly_gpt2(
     break_on_newline: bool,
     max_tokens: int = 32,
 ) -> AutoregressiveInferenceResults:
-    model.eval()
     tgt_tokens = tgt_tokens.to(hyperparameters.device)
     vocab_size = tokenizer.n_vocab
     output = search_method(model, tgt_tokens, vocab_size, max_tokens, break_on_newline)
@@ -46,7 +45,6 @@ def generate_autoregressivly_gpt2_with_uq(
     aq_funcs: List[AcquisitionFunction],
     max_tokens: int = 32,
 ) -> Tuple[List[List[str]], torch.Tensor]:
-    model.eval()
     tgt_tokens = tgt_tokens.to(hyperparameters.device)
     vocab_size = tokenizer.n_vocab
     batch_size = tgt_tokens.size(0)
