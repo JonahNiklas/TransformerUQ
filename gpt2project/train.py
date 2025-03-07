@@ -7,6 +7,7 @@ import math
 import time
 import os
 import torch.nn.functional as F
+import wandb
 
 from gpt2project.dataloader import DataLoaderLite
 from gpt2project.gpt2_hellaswag import (
@@ -15,6 +16,7 @@ from gpt2project.gpt2_hellaswag import (
     render_example,
 )
 from gpt2project.gpt2model import GPT, GPTConfig
+from gpt2project.hyperparameters import hyperparameters
 import logging
 
 # -----------------------------------------------------------------------------
@@ -36,19 +38,23 @@ from gpt2project.ddp import (
     device_type,
     ddp_local_rank,
 )
+from gpt2project.utils.checkpoint import save_checkpoint
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-torch.manual_seed(1337)
+torch.manual_seed(hyperparameters.generation.seed)
 if torch.cuda.is_available():
-    torch.cuda.manual_seed(1337)
+    torch.cuda.manual_seed(hyperparameters.generation.seed)
 
 enc = tiktoken.get_encoding("gpt2")
 
-total_batch_size = 524288  # 2**19, ~0.5M, in number of tokens
-B = 16  # micro batch size
-T = 1024  # sequence length
+total_batch_size = hyperparameters.training.total_batch_size
+B = hyperparameters.training.micro_batch_size
+T = hyperparameters.training.sequence_length
+max_steps = hyperparameters.training.max_steps
+warmup_steps = hyperparameters.training.warmup_steps
+
 assert (
     total_batch_size % (B * T * ddp_world_size) == 0
 ), "make sure total_batch_size is divisible by B * T * ddp_world_size"
@@ -72,10 +78,28 @@ def main() -> None:
         B=B, T=T, process_rank=ddp_rank, num_processes=ddp_world_size, split="val"
     )
 
+    # Initialize wandb for experiment tracking
+    if master_process:
+        wandb.init(
+            project=hyperparameters.wandb.project,
+            entity=hyperparameters.wandb.entity,
+            config=hyperparameters.model_dump(),
+            dir=hyperparameters.wandb.dir,
+            mode=hyperparameters.wandb.mode,
+        )
+
     torch.set_float32_matmul_precision("high")
 
     # create model
-    model = GPT(GPTConfig(vocab_size=50304))
+    model = GPT(
+        GPTConfig(
+            vocab_size=hyperparameters.model.vocab_size,
+            block_size=hyperparameters.model.block_size,
+            n_layer=hyperparameters.model.n_layer,
+            n_head=hyperparameters.model.n_head,
+            n_embd=hyperparameters.model.n_embd,
+        )
+    )
     # model = GPT.from_pretrained("gpt2") # or init from OpenAI GPT-2
     model.to(device)
     use_compile = (
@@ -89,10 +113,8 @@ def main() -> None:
         model.module if ddp else model
     )  # always contains the "raw" unwrapped model
 
-    max_lr = 6e-4
-    min_lr = max_lr * 0.1
-    warmup_steps = 715
-    max_steps = 19073  # 19,073 steps is ~1 epoch, if data is 10B tokens and batch size 0.5M tokens
+    max_lr = hyperparameters.training.max_lr
+    min_lr = hyperparameters.training.min_lr
 
     def get_lr(it: int) -> float:
         # 1) linear warmup for warmup_iters steps
@@ -111,7 +133,9 @@ def main() -> None:
 
     # optimize!
     optimizer = raw_model.configure_optimizers(
-        weight_decay=0.1, learning_rate=6e-4, device_type=device_type
+        weight_decay=hyperparameters.training.weight_decay,
+        learning_rate=hyperparameters.training.max_lr,
+        device_type=device_type,
     )
 
     with open(log_file, "w") as f:  # open for writing to clear the file
@@ -122,7 +146,7 @@ def main() -> None:
         last_step = step == max_steps - 1
 
         # once in a while evaluate our validation loss
-        if step % 250 == 0 or last_step:
+        if step % hyperparameters.training.evaluate_every == 0 or last_step:
             evaluate_validation_loss(
                 model,
                 val_loader,
@@ -133,10 +157,13 @@ def main() -> None:
                 log_file,
                 step,
                 last_step,
+                optimizer,
             )
 
         # once in a while evaluate hellaswag
-        if (step % 250 == 0 or last_step) and (not use_compile):
+        if (step % hyperparameters.training.evaluate_every == 0 or last_step) and (
+            not use_compile
+        ):
             evaluate_hellaswag(
                 model,
                 device,
@@ -150,7 +177,10 @@ def main() -> None:
             )
 
         # once in a while generate from the model (except step 0, which is noise)
-        if ((step > 0 and step % 250 == 0) or last_step) and (not use_compile):
+        if (
+            (step > 0 and step % hyperparameters.training.evaluate_every == 0)
+            or last_step
+        ) and (not use_compile):
             generate_from_model(
                 model,
                 device,
@@ -158,6 +188,7 @@ def main() -> None:
                 ddp_rank,
                 ddp_world_size,
                 enc,
+                step,
             )
 
         # do one step of the optimization
@@ -181,7 +212,9 @@ def main() -> None:
             loss.backward()
         if ddp:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)
-        norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        norm = torch.nn.utils.clip_grad_norm_(
+            model.parameters(), hyperparameters.training.grad_clip
+        )
         # determine and set the learning rate for this iteration
         lr = get_lr(step)
         for param_group in optimizer.param_groups:
@@ -202,6 +235,18 @@ def main() -> None:
             with open(log_file, "a") as f:
                 f.write(f"{step} train {loss_accum.item():.6f}\n")
 
+            # Log metrics to wandb
+            if hyperparameters.wandb.enabled:
+                wandb.log(
+                    {
+                        "train/loss": loss_accum.item(),
+                        "train/learning_rate": lr,
+                        "train/grad_norm": norm,
+                        "train/tokens_per_sec": tokens_per_sec,
+                    },
+                    step=step,
+                )
+
     if ddp:
         destroy_process_group()
 
@@ -216,13 +261,14 @@ def evaluate_validation_loss(
     log_file: str,
     step: int,
     last_step: bool,
+    optimizer: torch.optim.Optimizer,
 ) -> None:
-    raw_model = model.module if ddp else model
+    raw_model: GPT = model.module if ddp else model
     model.eval()
     val_loader.reset()
     with torch.no_grad():
         val_loss_accum = torch.tensor(0.0, device=device)
-        val_loss_steps = 20
+        val_loss_steps = hyperparameters.training.val_loss_steps
         for val_loss_step_idx in range(val_loss_steps):
             x, y = val_loader.next_batch()
             x, y = x.to(device), y.to(device)
@@ -236,18 +282,38 @@ def evaluate_validation_loss(
         logger.info(f"validation loss: {val_loss_accum.item():.4f}")
         with open(log_file, "a") as f:
             f.write(f"{step} val {val_loss_accum.item():.4f}\n")
-        if step > 0 and (step % 5000 == 0 or last_step):
+
+        # Log validation metrics to wandb
+        if hyperparameters.wandb.enabled:
+            wandb.log(
+                {
+                    "val/loss": val_loss_accum.item(),
+                },
+                step=step,
+            )
+
+        if step > 0 and (step % hyperparameters.training.save_every == 0 or last_step):
             # optionally write model checkpoints
             checkpoint_path = os.path.join(log_dir, f"model_{step:05d}.pt")
-            checkpoint = {
-                "model": raw_model.state_dict(),
-                "config": raw_model.config,
-                "step": step,
-                "val_loss": val_loss_accum.item(),
-            }
-            # you might also want to add optimizer.state_dict() and
-            # rng seeds etc., if you wanted to more exactly resume training
-            torch.save(checkpoint, checkpoint_path)
+            save_checkpoint(
+                model, step, val_loss_accum.item(), checkpoint_path, optimizer
+            )
+
+            # Log model checkpoint as wandb artifact
+            if hyperparameters.wandb.enabled:
+                # Create a model artifact
+                model_artifact = wandb.Artifact(
+                    name=f"model-checkpoint-{step}",
+                    type="model",
+                    description=f"GPT-2 model checkpoint at step {step}",
+                    metadata={
+                        "step": step,
+                        "val_loss": val_loss_accum.item(),
+                        "model_config": raw_model.config.model_dump(),
+                    },
+                )
+                model_artifact.add_file(checkpoint_path)
+                wandb.log_artifact(model_artifact)
 
 
 def evaluate_hellaswag(
@@ -297,6 +363,17 @@ def evaluate_hellaswag(
         with open(log_file, "a") as f:
             f.write(f"{step} hella {acc_norm:.4f}\n")
 
+        # Log hellaswag metrics to wandb
+        if hyperparameters.wandb.enabled:
+            wandb.log(
+                {
+                    "eval/hellaswag_accuracy": acc_norm,
+                    "eval/hellaswag_correct": num_correct_norm,
+                    "eval/hellaswag_total": num_total,
+                },
+                step=step,
+            )
+
 
 def generate_from_model(
     model: GPT,
@@ -305,15 +382,16 @@ def generate_from_model(
     ddp_rank: int,
     ddp_world_size: int,
     enc: tiktoken.Encoding,
+    step: int = 0,
 ) -> None:
     model.eval()
-    num_return_sequences = 4
-    max_length = 32
+    num_return_sequences = hyperparameters.generation.num_return_sequences
+    max_length = hyperparameters.generation.max_length
     tokens = torch.tensor(enc.encode("Hello, I'm a language model,"), dtype=torch.long)
     tokens = tokens.unsqueeze(0).repeat(num_return_sequences, 1)
     xgen = tokens.to(device)
     sample_rng = torch.Generator(device=device)
-    sample_rng.manual_seed(42 + ddp_rank)
+    sample_rng.manual_seed(hyperparameters.generation.seed + ddp_rank)
     while xgen.size(1) < max_length:
         # forward the model to get the logits
         with torch.no_grad():
@@ -334,10 +412,21 @@ def generate_from_model(
             # append to the sequence
             xgen = torch.cat((xgen, xcol), dim=1)
     # print the generated text
+    generated_samples = []
     for i in range(num_return_sequences):
         token_list = xgen[i, :max_length].tolist()
         decoded = enc.decode(token_list)
         logger.info(f"rank {ddp_rank} sample {i}: {decoded}")
+        generated_samples.append(decoded)
+
+    # Log generated text samples to wandb
+    if ddp_rank == 0:  # Only log from the first process to avoid duplicates
+        if hyperparameters.wandb.enabled:
+            # Create a wandb Table for the generated samples
+            columns = ["sample_id", "generated_text"]
+            data = [[i, sample] for i, sample in enumerate(generated_samples)]
+            table = wandb.Table(columns=columns, data=data)  # type: ignore
+            wandb.log({"generated_samples": table}, step=step)
 
 
 if __name__ == "__main__":
