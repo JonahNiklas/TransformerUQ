@@ -15,6 +15,7 @@ class GPT2ModelConfig(BaseModel):
     n_layer: int = Field(default=12, description="Number of transformer layers")
     n_head: int = Field(default=12, description="Number of attention heads")
     n_embd: int = Field(default=768, description="Embedding dimension")
+    dropout: float = Field(default=0.1, description="Dropout rate")
 
 
 class TrainingConfig(BaseModel):
