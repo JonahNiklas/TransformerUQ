@@ -48,10 +48,9 @@ if __name__ == "__main__":
     n_batch_to_validate = 10
     # Example of iterating through the DataLoader
     outputs = []
-    for i, batch in enumerate(dataloader):
+    for i, (context, question, targets) in enumerate(dataloader):
         if i == n_batch_to_validate:
             break
-        context, question, targets = batch
         tokens = tokenizer.encode_batch(create_squad_prompt_batched(context, question))
         encoding_tensors = torch.tensor(tokens).to(hyperparameters.device)
         output = evaluate_model_batch(

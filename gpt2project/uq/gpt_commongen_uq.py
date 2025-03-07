@@ -1,6 +1,5 @@
 import os
-import pickle
-from typing import Any, List, Tuple
+from typing import List, Tuple
 import tiktoken
 import torch
 from tqdm import tqdm
@@ -10,7 +9,6 @@ from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 from gpt2project.uq.plot_uq import plot_retention_curve_cg
-from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from uq.acquisition_func import AcquisitionFunction, BLEUVar, BeamScore
 
@@ -20,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def load_or_generate_inference_commongen(
+def eval_commongen(
     model: GPT,
     tokenizer: tiktoken.Encoding,
     batch_size: int,
@@ -37,10 +35,10 @@ def load_or_generate_inference_commongen(
 
     if os.path.exists(filename):
         all_outputs, all_concepts, all_targets, all_uqs = torch.load(filename)
-        print("Loaded inference results from file.")
+        logger.info("Loaded inference results from file.")
         return all_outputs, all_concepts, all_targets, all_uqs
 
-    print("Generating inference results...")
+    logger.info("Generating inference results...")
 
     dataloader = get_common_gen_dataloader(batch_size, shuffle=shuffle)
     for i, (input_texts, concepts, targets, encoding_tensors) in tqdm(
@@ -66,7 +64,7 @@ def load_or_generate_inference_commongen(
             break
 
     torch.save((all_outputs, all_concepts, all_targets, all_uqs), filename)
-    print("Saved inference results to file:", filename)
+    logger.info("Saved inference results to file: %s", filename)
     return all_outputs, all_concepts, all_targets, all_uqs
 
 
@@ -88,7 +86,7 @@ if __name__ == "__main__":
     eval_function_commongen = ConceptUsageEval()
 
     all_outputs, all_concepts, all_targets, all_uqs = (
-        load_or_generate_inference_commongen(
+        eval_commongen(
             model,
             tokenizer,
             batch_size,
