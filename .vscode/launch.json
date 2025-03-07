@@ -68,11 +68,42 @@
             "name": "gpt_commongen_uq",
             "type": "debugpy",
             "request": "launch",
-            "module": "gpt2project.gpt_commongen_uq",
+            "module": "gpt2project.uq.gpt_commongen_uq",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
+        {
+            "name": "data_processing.load_squad",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.data_processing.load_squad",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
+        {
+            "name": "gpt2_squad",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.gpt2_squad",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
+        {
+            "name": "gpt2_squad_uq",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.uq.gpt2_squad_uq",
             "env": {
                 "TORCH_COMPILE": "FALSE",
                 "USE_WANDB": "FALSE",
             }
         }
+
     ]
 }

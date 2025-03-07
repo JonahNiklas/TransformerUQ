@@ -45,7 +45,7 @@ def generate_autoregressivly_gpt2_with_uq(
     break_on_newline: bool,
     aq_funcs: List[AcquisitionFunction],
     max_tokens: int = 32,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[List[List[str]], torch.Tensor]:
     model.eval()
     tgt_tokens = tgt_tokens.to(hyperparameters.device)
     vocab_size = tokenizer.n_vocab
@@ -60,7 +60,6 @@ def generate_autoregressivly_gpt2_with_uq(
     hypothesis: List[List[str]] = [[] for _ in range(batch_size)]
 
     uqs = torch.empty(batch_size, len(aq_funcs)).to(hyperparameters.device)
-    # mean_hypothesis: List[str] = []
 
     for n in range(hyperparameters.uq.num_inferences):
         output = search_method(
@@ -75,16 +74,14 @@ def generate_autoregressivly_gpt2_with_uq(
                 decode_token_list(output.token_ids[b].tolist(), tokenizer)
             )
 
+    output_hypothesis = []
     for i, aq_func in enumerate(aq_funcs):
         uq = aq_func(hypothesis, token_ids, softmax_probs)
         uqs[:, i] = uq
-        # TODO: mean hypothesis instead of first
-        # if aq_func.multiple_inference:
-        #     hyp = BLEU_mean_output_batch(hypothesis)
-        # else:
-        #     hyp = [hypothesis[b][0] for b in range(batch_size)]
+        if aq_func.multiple_inference:
+            hyp = BLEU_mean_output_batch(hypothesis)
+        else:
+            hyp = [hypothesis[b][0] for b in range(batch_size)]
+        output_hypothesis.append(hyp)
 
-    token_ids = token_ids[:, 0, :]
-    assert token_ids.shape == (batch_size, max_tokens)
-
-    return token_ids, uqs
+    return output_hypothesis, uqs
