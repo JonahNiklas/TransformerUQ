@@ -23,6 +23,7 @@ from utils.checkpoints import load_checkpoint
 from uq.validate_uq import ValidationResult, validate_uq
 from data_processing.vocab import load_vocab, output_to_text
 from constants import constants
+import time
 
 
 def main() -> None:
@@ -93,27 +94,33 @@ def main() -> None:
         {
             "search_method": "greedy",
             "dropout": True,
+            "fast_dropout": True,
         },
         {
             "search_method": "beam",
             "dropout": True,
+            "fast_dropout": True,
         },
         {
             "search_method": "sample",
             "dropout": True,
+            "fast_dropout": True,
         },
         {
             "search_method": "sample",
             "dropout": False,
+            "fast_dropout": False,
         },
     ]
 
     for spec in val_spec:
         search_method: str = str(spec["search_method"])
         dropout: bool = bool(spec["dropout"])
-        filename = f"val_{search_method}_{dropout}"
+        fast_dropout: bool = bool(spec["fast_dropout"])
+        filename = f"val_{search_method}_{dropout}{"_fast" if fast_dropout else ""}"
         os.makedirs(
-            f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True
+            f"local/results/{run_id}/{search_method}/dropout{dropout}{"/fast" if fast_dropout else ""}",
+            exist_ok=True,
         )
         print(f"Validating model with {search_method} search, dropout={dropout}")
         validation_results_id = load_or_validate(
@@ -124,6 +131,7 @@ def main() -> None:
             dropout,
             filename + "_id",
             run_id,
+            enable_fast_dropout=fast_dropout,
         )
 
         # for i, aq_func in enumerate(aq_funcs):
@@ -142,18 +150,20 @@ def main() -> None:
             dropout,
             filename + "_ood",
             run_id,
+            enable_fast_dropout=fast_dropout,
         )
+        plot_file_name = f"local/results/{run_id}/{search_method}/dropout{dropout}{"/fast" if fast_dropout else ""}/{run_name}_{search_method}_drop{dropout}_"
         plot_data_retained_curve(
             validation_results_id,
             methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id.svg",
+            save_path=f"{plot_file_name}retcurve_id.svg",
             run_name=run_name,
         )
 
         plot_data_retained_curve(
             validation_results_ood,
             methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood.svg",
+            save_path=f"{plot_file_name}retcurve_ood.svg",
             run_name=run_name,
         )
 
@@ -162,7 +172,7 @@ def main() -> None:
                 validation_results_id[i],
                 validation_results_ood[i],
                 aq_func.__class__.__name__,
-                f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_hist_{aq_func.__class__.__name__}.svg",
+                f"{plot_file_name}hist_{aq_func.__class__.__name__}.svg",
                 run_name,
             )
 
@@ -170,7 +180,7 @@ def main() -> None:
             validation_results_id,
             validation_results_ood,
             methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_roc.svg",
+            save_path=f"{plot_file_name}roc.svg",
         )
 
 
@@ -183,6 +193,7 @@ def load_or_validate(
     enable_dropout: bool,
     filename: str,
     run_id: str,
+    enable_fast_dropout: bool,
 ) -> List[ValidationResult]:
     cache_file = f"local/results/{run_id}/{filename}.pth"
     validation_results: List[ValidationResult] = []
@@ -191,13 +202,19 @@ def load_or_validate(
         cache = torch.load(cache_file)
         validation_results = cache
     else:
+        print("starting timer")
+        start_time = time.time()
         validation_results = validate_uq(
             model,
             loader,
             sample_beam_greed,
             aq_funcs,
             enable_dropout,
+            enable_fast_dropout,
             num_batches_to_validate_on=None,
+        )
+        print(
+            f"Validation with {sample_beam_greed} search, dropout={enable_dropout} and fast_dropout={enable_fast_dropout} {time.time() - start_time} seconds"
         )
         os.makedirs(f"local/results/{run_id}", exist_ok=True)
         torch.save(validation_results, cache_file)
