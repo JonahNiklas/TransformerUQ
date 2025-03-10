@@ -103,7 +103,28 @@
                 "TORCH_COMPILE": "FALSE",
                 "USE_WANDB": "FALSE",
             }
-        }
+        },
+        {
+            "name": "gpt_trivia_uq",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.uq.gpt_trivia_uq",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
+        {
+            "name": "gpt_lambada_uq",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.uq.gpt_lambada_uq",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
+
 
     ]
 }
