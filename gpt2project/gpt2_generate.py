@@ -42,10 +42,13 @@ def generate_autoregressivly_gpt2_with_uq(
     tokenizer: tiktoken.Encoding,
     tgt_tokens: torch.Tensor,
     search_method: GPT_search_method,
+    enable_mcdo: bool,
     break_on_newline: bool,
     aq_funcs: List[AcquisitionFunctionGPT],
     max_tokens: int = 32,
 ) -> Tuple[List[List[str]], torch.Tensor]:
+    if enable_mcdo:
+        _enable_test_time_dropout(model)
     tgt_tokens = tgt_tokens.to(hyperparameters.device)
     vocab_size = tokenizer.n_vocab
     batch_size = tgt_tokens.size(0)
@@ -78,3 +81,13 @@ def generate_autoregressivly_gpt2_with_uq(
         output_hypothesis.append(hyp)
 
     return output_hypothesis, uqs
+
+
+def _enable_test_time_dropout(model: nn.Module) -> None:
+    assert any(
+        isinstance(module, nn.Dropout) for module in model.modules()
+    ), "No dropout layer found in model"
+    model.eval()
+    for module in model.modules():
+        if isinstance(module, nn.Dropout):
+            module.train()
