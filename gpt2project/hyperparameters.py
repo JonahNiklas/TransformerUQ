@@ -1,8 +1,19 @@
 from __future__ import annotations
-from typing import Literal
+import logging
+from typing import Literal, cast
 from pydantic import BaseModel, Field
 import os
 
+logger = logging.getLogger(__name__)
+
+transformer_impl_raw = os.getenv("TRANSFORMER_IMPL")
+transformer_impl_str = transformer_impl_raw or "transformer"
+if transformer_impl_raw is None:
+    logger.warning("TRANSFORMER_IMPL is not set, using default value: transformer")
+if transformer_impl_str not in ("transformer", "bayesformer"):
+    raise ValueError(f"Invalid TRANSFORMER_IMPL value: {transformer_impl_str}, must be one of: transformer, bayesformer")
+
+transformer_impl: Literal["transformer", "bayesformer"] = cast(Literal["transformer", "bayesformer"], transformer_impl_str)
 
 class GPT2ModelConfig(BaseModel):
     """Configuration for the GPT2 model architecture."""
@@ -23,7 +34,7 @@ class GPT2ModelConfig(BaseModel):
         default=0.05, description="Dropout rate for pre-embedding"
     )
     transformer_impl: Literal["transformer", "bayesformer"] = Field(
-        default="bayesformer", description="Transformer implementation"
+        default=transformer_impl, description="Transformer implementation"
     )
 
 
@@ -37,7 +48,7 @@ class TrainingConfig(BaseModel):
     sequence_length: int = Field(default=1024, description="Sequence length")
 
     max_steps: int = Field(
-        default=19073,
+        default=19073 * 4,
         description="Maximum number of training steps (19,073 steps is ~1 epoch for 10B tokens and batch size 0.5M tokens)",
     )
     warmup_steps: int = Field(
@@ -58,7 +69,7 @@ class TrainingConfig(BaseModel):
         default=250, description="Evaluate validation loss and hellaswag every X steps"
     )
     save_every: int = Field(
-        default=5000, description="Save model checkpoint every X steps"
+        default=20000, description="Save model checkpoint every X steps"
     )
 
     grad_clip: float = Field(default=1.0, description="Gradient clipping norm")
