@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 import os
 from typing import Tuple
 import torch
 from gpt2project.hyperparameters import GPT2ModelConfig, TrainingConfig, hyperparameters
 from gpt2project.gpt2model import GPT
+from gpt2project.bayesformer_gpt import BayesformerGPT
 from gpt2project.ddp import device_type
 
 
 def save_checkpoint(
-    model: GPT,
+    model: GPT | BayesformerGPT,
     step: int,
     val_loss: float,
     checkpoint_path: str,
@@ -24,7 +27,9 @@ def save_checkpoint(
     torch.save(checkpoint, checkpoint_path)
 
 
-def load_checkpoint(checkpoint_path: str) -> Tuple[GPT, int, torch.optim.Optimizer]:
+def load_checkpoint(
+    checkpoint_path: str,
+) -> Tuple[GPT | BayesformerGPT, int, torch.optim.Optimizer]:
     checkpoint = torch.load(checkpoint_path)
     model_config = GPT2ModelConfig.model_validate(checkpoint["model_config"])
     model = GPT(model_config)
