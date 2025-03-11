@@ -17,13 +17,13 @@ from gpt2project.ddp import (
     ddp_local_rank,
 )
 from transformers import GPT2LMHeadModel
-from gpt2project.dropout_embedding import DropoutEmbedding, LearnedPositionalEncoding
-from gpt2project.hyperparameters import GPT2ModelConfig as GPTConfig
+from gpt2project.dropout_embedding import DropoutEmbedding
+from gpt2project.hyperparameters import GPT2ModelConfig
 
 
 class BayesformerSelfAttention(nn.Module):
 
-    def __init__(self, config: GPTConfig):
+    def __init__(self, config: GPT2ModelConfig):
         super().__init__()
         assert config.n_embd % config.n_head == 0
         # key, query, value projections for all heads, but in a batch
@@ -76,7 +76,7 @@ class BayesformerSelfAttention(nn.Module):
 
 class BayesformerMLP(nn.Module):
 
-    def __init__(self, config: GPTConfig):
+    def __init__(self, config: GPT2ModelConfig):
         super().__init__()
         self.c_fc = nn.Linear(config.n_embd, 4 * config.n_embd)
         self.gelu = nn.GELU(approximate="tanh")
@@ -96,7 +96,7 @@ class BayesformerMLP(nn.Module):
 
 class BayesformerBlock(nn.Module):
 
-    def __init__(self, config: GPTConfig):
+    def __init__(self, config: GPT2ModelConfig):
         super().__init__()
         self.ln_1 = nn.LayerNorm(config.n_embd)
         self.attn = BayesformerSelfAttention(config)
@@ -117,7 +117,7 @@ class BayesformerBlock(nn.Module):
 
 class BayesformerGPT(nn.Module):
 
-    def __init__(self, config: GPTConfig):
+    def __init__(self, config: GPT2ModelConfig):
         super().__init__()
         self.config = config
 
@@ -126,7 +126,7 @@ class BayesformerGPT(nn.Module):
                 wte=DropoutEmbedding(
                     config.vocab_size, config.n_embd, config.dropout_pre_embedding
                 ),
-                wpe=LearnedPositionalEncoding(
+                wpe=DropoutEmbedding(
                     config.block_size, config.n_embd, config.dropout_pre_embedding
                 ),
                 h=nn.ModuleList(
@@ -198,7 +198,7 @@ class BayesformerGPT(nn.Module):
         config_args["vocab_size"] = 50257  # always 50257 for GPT model checkpoints
         config_args["block_size"] = 1024  # always 1024 for GPT model checkpoints
         # create a from-scratch initialized minGPT model
-        config = GPTConfig(**config_args)
+        config = GPT2ModelConfig(**config_args, transformer_impl="bayesformer")
         model = BayesformerGPT(config)
         sd = model.state_dict()
         sd_keys = list(sd.keys())

@@ -17,12 +17,12 @@ from gpt2project.ddp import (
     ddp_local_rank,
 )
 from transformers import GPT2LMHeadModel
-from gpt2project.hyperparameters import GPT2ModelConfig as GPTConfig
+from gpt2project.hyperparameters import GPT2ModelConfig
 
 
 class CausalSelfAttention(nn.Module):
 
-    def __init__(self, config: GPTConfig):
+    def __init__(self, config: GPT2ModelConfig):
         super().__init__()
         assert config.n_embd % config.n_head == 0
         # key, query, value projections for all heads, but in a batch
@@ -75,7 +75,7 @@ class CausalSelfAttention(nn.Module):
 
 class MLP(nn.Module):
 
-    def __init__(self, config: GPTConfig):
+    def __init__(self, config: GPT2ModelConfig):
         super().__init__()
         self.c_fc = nn.Linear(config.n_embd, 4 * config.n_embd)
         self.gelu = nn.GELU(approximate="tanh")
@@ -95,7 +95,7 @@ class MLP(nn.Module):
 
 class Block(nn.Module):
 
-    def __init__(self, config: GPTConfig):
+    def __init__(self, config: GPT2ModelConfig):
         super().__init__()
         self.ln_1 = nn.LayerNorm(config.n_embd)
         self.attn = CausalSelfAttention(config)
@@ -110,7 +110,7 @@ class Block(nn.Module):
 
 class GPT(nn.Module):
 
-    def __init__(self, config: GPTConfig):
+    def __init__(self, config: GPT2ModelConfig):
         super().__init__()
         self.config = config
 
@@ -184,7 +184,7 @@ class GPT(nn.Module):
         config_args["vocab_size"] = 50257  # always 50257 for GPT model checkpoints
         config_args["block_size"] = 1024  # always 1024 for GPT model checkpoints
         # create a from-scratch initialized minGPT model
-        config = GPTConfig(**config_args)
+        config = GPT2ModelConfig(**config_args, transformer_impl="transformer")
         model = GPT(config)
         sd = model.state_dict()
         sd_keys = list(sd.keys())

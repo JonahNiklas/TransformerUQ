@@ -22,6 +22,9 @@ class GPT2ModelConfig(BaseModel):
     dropout_pre_embedding: float = Field(
         default=0.05, description="Dropout rate for pre-embedding"
     )
+    transformer_impl: Literal["transformer", "bayesformer"] = Field(
+        default="bayesformer", description="Transformer implementation"
+    )
 
 
 class TrainingConfig(BaseModel):

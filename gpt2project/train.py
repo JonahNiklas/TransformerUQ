@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime
 from typing import Tuple
 import tiktoken
 import numpy as np
@@ -9,13 +10,14 @@ import os
 import torch.nn.functional as F
 import wandb
 
+from gpt2project.bayesformer_gpt import BayesformerGPT
 from gpt2project.dataloader import DataLoaderLite
 from gpt2project.gpt2_hellaswag import (
     get_most_likely_row,
     iterate_examples,
     render_example,
 )
-from gpt2project.gpt2model import GPT, GPTConfig
+from gpt2project.gpt2model import GPT
 from gpt2project.hyperparameters import hyperparameters
 import logging
 
@@ -64,7 +66,8 @@ if master_process:
     logger.info(f"=> calculated gradient accumulation steps: {grad_accum_steps}")
 
 # create the log directory we will write checkpoints to and log to
-log_dir = "log"
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+log_dir = f"gpt2project/local/gpt2_log/{timestamp}"
 os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, f"log.txt")
 
@@ -91,21 +94,19 @@ def main() -> None:
     torch.set_float32_matmul_precision("high")
 
     # create model
-    model = GPT(
-        GPTConfig(
-            vocab_size=hyperparameters.model.vocab_size,
-            block_size=hyperparameters.model.block_size,
-            n_layer=hyperparameters.model.n_layer,
-            n_head=hyperparameters.model.n_head,
-            n_embd=hyperparameters.model.n_embd,
-        )
-    )
+    model: GPT | BayesformerGPT
+    if hyperparameters.model.transformer_impl == "transformer":
+        model = GPT(hyperparameters.model)
+    elif hyperparameters.model.transformer_impl == "bayesformer":
+        model = BayesformerGPT(hyperparameters.model)
+    else:
+        raise ValueError(f"Invalid transformer implementation: {hyperparameters.model.transformer_impl}")
+
     # model = GPT.from_pretrained("gpt2") # or init from OpenAI GPT-2
     model.to(device)
-    use_compile = (
-        False  # torch.compile interferes with HellaSwag eval and Generation. TODO fix
-    )
+    use_compile = os.getenv("TORCH_COMPILE", "TRUE") != "FALSE"
     if use_compile:
+        logger.info("Compiling model...")
         model = torch.compile(model)  # type: ignore
     if ddp:
         model = DDP(model, device_ids=[ddp_local_rank])  # type: ignore
@@ -252,7 +253,7 @@ def main() -> None:
 
 
 def evaluate_validation_loss(
-    model: GPT,
+    model: GPT | BayesformerGPT,
     val_loader: DataLoaderLite,
     device: str,
     device_type: str,
@@ -263,7 +264,7 @@ def evaluate_validation_loss(
     last_step: bool,
     optimizer: torch.optim.Optimizer,
 ) -> None:
-    raw_model: GPT = model.module if ddp else model
+    raw_model: GPT | BayesformerGPT = model.module if ddp else model
     model.eval()
     val_loader.reset()
     with torch.no_grad():
@@ -294,9 +295,12 @@ def evaluate_validation_loss(
 
         if step > 0 and (step % hyperparameters.training.save_every == 0 or last_step):
             # optionally write model checkpoints
-            checkpoint_path = os.path.join(log_dir, f"model_{step:05d}.pt")
+            checkpoint_path = os.path.join(
+                log_dir,
+                f"model_{hyperparameters.model.transformer_impl}_{step:05d}.pt",
+            )
             save_checkpoint(
-                model, step, val_loss_accum.item(), checkpoint_path, optimizer
+                raw_model, step, val_loss_accum.item(), checkpoint_path, optimizer
             )
 
             # Log model checkpoint as wandb artifact
@@ -317,7 +321,7 @@ def evaluate_validation_loss(
 
 
 def evaluate_hellaswag(
-    model: GPT,
+    model: GPT | BayesformerGPT,
     device: str,
     device_type: str,
     ddp: bool,
@@ -376,7 +380,7 @@ def evaluate_hellaswag(
 
 
 def generate_from_model(
-    model: GPT,
+    model: GPT | BayesformerGPT,
     device: str,
     device_type: str,
     ddp_rank: int,
@@ -430,4 +434,5 @@ def generate_from_model(
 
 
 if __name__ == "__main__":
+    print("Starting training...")
     main()

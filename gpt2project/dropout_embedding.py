@@ -51,25 +51,3 @@ class DropoutEmbedding(nn.Module):
             out = self.embedding(input)
             assert isinstance(out, torch.Tensor)
             return out
-
-
-class LearnedPositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, max_len: int, dropout: float) -> None:
-        super().__init__()
-        self.pos_embedding = DropoutEmbedding(
-            max_len,
-            d_model,
-            dropout=dropout,
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (batch_size, seq_len, d_model)
-        batch_size, seq_len, _ = x.size()
-        positions = (
-            torch.arange(0, seq_len, device=x.device)
-            .unsqueeze(0)
-            .expand(batch_size, seq_len)
-        )
-        pos_embeddings = self.pos_embedding(positions)
-        x = x + pos_embeddings
-        return x
