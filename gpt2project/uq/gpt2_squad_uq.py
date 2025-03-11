@@ -6,10 +6,10 @@ from tqdm import tqdm
 from gpt2project.data_processing.load_squad import (
     create_squad_prompt_batched,
     get_squad_dataloader,
-    TargetUsageEval,
 )
 from gpt2project.gpt2model import GPT
-from gpt2project.uq.plot_uq import plot_retention_curve_squad
+from gpt2project.uq.plot_uq import calc_retention_curve
+from gpt2project.utils.benchmark_eval_funcs import TargetUsageEval
 from hyperparameters import hyperparameters
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.search_methods_gpt import topk_sampling_gpt
@@ -92,14 +92,17 @@ if __name__ == "__main__":
         run_name=run_name,
     )
 
-    os.makedirs("local/gpt-results/squad", exist_ok=True)
-    # Call the function for each acquisition function
-    for i, aq_func in enumerate(aq_funcs):
-        plot_retention_curve_squad(
-            all_outputs[i],
-            all_targets,
-            all_uqs[:, i],
-            squad_eval_function,
-            aq_func.__class__.__name__,
-            filepath=f"local/gpt-results/squad/squad_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_squad.__class__.__name__}.svg",
-        )
+    stepsize = 25
+    calc_retention_curve(
+        all_outputs,
+        all_targets,
+        all_uqs,
+        eval_function=squad_eval_function,
+        aq_func_names=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+        stepsize=stepsize,
+        benchmark_name="squad",
+        model_name=model_name,
+        folder="local/gpt-results/squad",
+        filename=f"plot_data_{run_name}_{squad_eval_function.__class__.__name__}_b{batch_size}_n{n_batch_to_validate}_step{stepsize}.pt",
+    )
+        

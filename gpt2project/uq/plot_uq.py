@@ -1,9 +1,11 @@
 from typing import List, Any, Union
 import torch
-import matplotlib.pyplot as plt
-
 from gpt2project.uq.general_plotter import PlotData, cache_plot_data
-from gpt2project.utils.benchmark_eval_funcs import KeywordEval, MultipleTargetEval
+from gpt2project.utils.benchmark_eval_funcs import (
+    KeywordEval,
+    MultipleTargetEval,
+    SingleTargetEval,
+)
 
 
 def calc_retention_curve_cg(
@@ -20,7 +22,7 @@ def calc_retention_curve_cg(
     filename: str,
 ) -> None:
     assert len(output_texts) == len(aq_func_names) == uqs.size(1)
-    retention_scores = [[] for _ in range(len(aq_func_names))]
+    retention_scores: List[List[float]] = [[] for _ in range(len(aq_func_names))]
 
     for aq, aq_func_name in enumerate(aq_func_names):
         # Sort the results based on UQ
@@ -74,7 +76,7 @@ def calc_retention_curve(
     filename: str,
 ) -> None:
     assert len(output_texts) == len(aq_func_names) == uqs.size(1)
-    retention_scores = [[] for _ in range(len(aq_func_names))]
+    retention_scores: List[List[float]]= [[] for _ in range(len(aq_func_names))]
 
     for aq, aq_func_name in enumerate(aq_func_names):
         # Sort the results based on UQ
@@ -98,7 +100,7 @@ def calc_retention_curve(
                 sorted_targets[:cutoff] if cutoff > 1 else [sorted_targets[0]]
             )
             score = eval_function(selected_outputs, selected_targets)
-            retention_scores.append(score)
+            retention_scores[aq].append(score)
     cache_plot_data(
         PlotData(
             eval_method=eval_function.__class__.__name__,

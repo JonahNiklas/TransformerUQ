@@ -1,14 +1,15 @@
 import os
 from typing import List, Tuple
+from regex import F
 import tiktoken
 import torch
 from tqdm import tqdm
-from gpt2project.data_processing.load_squad import TargetUsageEval
 from gpt2project.data_processing.load_triviaQA import get_triviaqa_dataloader
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
-from gpt2project.uq.plot_uq import plot_retention_curve_squad
+from gpt2project.uq.plot_uq import calc_retention_curve
+from gpt2project.utils.benchmark_eval_funcs import TargetUsageEval
 from hyperparameters import hyperparameters
 from uq.acquisition_func import AcquisitionFunction, BLEUVar, BeamScore
 
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     aq_funcs = [BeamScore(), BLEUVar()]
     eval_function_triviaqa = TargetUsageEval()
 
-    all_outputs, all_questions, all_answers, all_uqs = eval_triviaqa(
+    all_outputs, all_questions, all_targets, all_uqs = eval_triviaqa(
         model,
         tokenizer,
         batch_size,
@@ -95,13 +96,18 @@ if __name__ == "__main__":
         run_name=run_name,
     )
 
-    # Call the function for each acquisition function
-    for i, aq_func in enumerate(aq_funcs):
-        plot_retention_curve_squad(
-            all_outputs[i],
-            all_answers,
-            all_uqs[:, i],
-            eval_function_triviaqa,
-            aq_func.__class__.__name__,
-            filepath=f"local/gpt-results/triviaqa/triviaqa_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_triviaqa.__class__.__name__}_n{n_batch_to_validate}.svg",
-        )
+    stepsize = 25
+    calc_retention_curve(
+        all_outputs,
+        all_targets,
+        all_uqs,
+        eval_function=eval_function_triviaqa,
+        aq_func_names=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+        stepsize=stepsize,
+        benchmark_name="triviaqa",
+        model_name=model_name,
+        folder="local/gpt-results/triviaqa",
+        filename=f"plot_data_{run_name}_{eval_function_triviaqa.__class__.__name__}_b{batch_size}_n{n_batch_to_validate}_step{stepsize}.pt",
+    )
+        
+

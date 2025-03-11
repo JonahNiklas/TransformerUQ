@@ -53,7 +53,7 @@ class F1Eval(SingleTargetEval):
         Returns:
             float: Average F1 score.
         """
-        scores = []
+        scores: List[float] = []
         for b in range(len(output_text)):
             output_text[b] = output_text[b].lower()
             target[b] = target[b].lower()
@@ -105,3 +105,11 @@ class ConceptUsageEval(KeywordEval):
                     score += 1
             scores.append(score / len(concepts[b]))
         return np.mean(scores).item()
+
+
+if __name__ == "__main__":
+    f1_eval = F1Eval()
+    output_text = ["hello", "worrd", "world"]
+    target = ["hello", "world", "world"]
+    score = f1_eval(output_text, target)
+    print(score)
