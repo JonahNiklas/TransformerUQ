@@ -1,8 +1,13 @@
-from typing import List, Any
+import logging
+from typing import Any, List
+
+import matplotlib.pyplot as plt
 import torch
+
 from gpt2project.gpt2_commongen import CommongenEval
 from gpt2project.gpt2_squad import SquadEval
-import matplotlib.pyplot as plt
+
+logger = logging.getLogger(__name__)
 
 
 def plot_retention_curve_cg(
@@ -38,6 +43,7 @@ def plot_retention_curve_cg(
     plt.ylabel("Evaluation Score")
     plt.title(f"Retention Curve for {aq_func_name}")
     plt.savefig(filepath)
+    logger.info("Saved retention curve to %s", filepath)
     plt.show()
 
 
@@ -73,4 +79,5 @@ def plot_retention_curve_squad(
     plt.ylabel(f"Evaluation Score: {eval_function_squad.__class__.__name__}")
     plt.title(f"Retention Curve for {aq_func_name}")
     plt.savefig(filepath)
+    logger.info("Saved retention curve to %s", filepath)
     plt.show()
