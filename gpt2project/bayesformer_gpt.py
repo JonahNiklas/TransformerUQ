@@ -17,10 +17,11 @@ from gpt2project.ddp import (
     ddp_local_rank,
 )
 from transformers import GPT2LMHeadModel
+from gpt2project.dropout_embedding import DropoutEmbedding, LearnedPositionalEncoding
 from gpt2project.hyperparameters import GPT2ModelConfig as GPTConfig
 
 
-class CausalSelfAttention(nn.Module):
+class BayesformerSelfAttention(nn.Module):
 
     def __init__(self, config: GPTConfig):
         super().__init__()
@@ -45,6 +46,9 @@ class CausalSelfAttention(nn.Module):
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         # nh is "number of heads", hs is "head size", and C (number of channels) = nh * hs
         # e.g. in GPT-2 (124M), n_head=12, hs=64, so nh*hs=C=768 channels in the Transformer
+
+        x = self.attention_dropout(x)  # red, green, blue dropout
+
         qkv = self.c_attn(x)
         q, k, v = qkv.split(self.n_embd, dim=2)
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(
@@ -61,9 +65,6 @@ class CausalSelfAttention(nn.Module):
             k,
             v,
             is_causal=True,
-            dropout_p=(
-                self.attention_dropout.p if self.attention_dropout.training else 0.0
-            ),
         )  # flash attention
         y = (
             y.transpose(1, 2).contiguous().view(B, T, C)
@@ -73,7 +74,7 @@ class CausalSelfAttention(nn.Module):
         return y
 
 
-class MLP(nn.Module):
+class BayesformerMLP(nn.Module):
 
     def __init__(self, config: GPTConfig):
         super().__init__()
@@ -93,22 +94,28 @@ class MLP(nn.Module):
         return x
 
 
-class Block(nn.Module):
+class BayesformerBlock(nn.Module):
 
     def __init__(self, config: GPTConfig):
         super().__init__()
         self.ln_1 = nn.LayerNorm(config.n_embd)
-        self.attn = CausalSelfAttention(config)
+        self.attn = BayesformerSelfAttention(config)
         self.ln_2 = nn.LayerNorm(config.n_embd)
-        self.mlp = MLP(config)
+        self.mlp = BayesformerMLP(config)
+
+        # Bayesformer-specific dropout between attention and MLP
+        self.dropout_mlp_input = nn.Dropout(
+            config.dropout_mlp_input
+        )  # Bayesformer typically uses 0.05 here
 
     def forward(self, x: Tensor) -> Tensor:
         x = x + self.attn(self.ln_1(x))
+        x = self.dropout_mlp_input(x)
         x = x + self.mlp(self.ln_2(x))
         return x
 
 
-class GPT(nn.Module):
+class BayesformerGPT(nn.Module):
 
     def __init__(self, config: GPTConfig):
         super().__init__()
@@ -116,10 +123,15 @@ class GPT(nn.Module):
 
         self.transformer = nn.ModuleDict(
             dict(
-                wte=nn.Embedding(config.vocab_size, config.n_embd),
-                wpe=nn.Embedding(config.block_size, config.n_embd),
-                drop=nn.Dropout(config.dropout),
-                h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
+                wte=DropoutEmbedding(
+                    config.vocab_size, config.n_embd, config.dropout_pre_embedding
+                ),
+                wpe=LearnedPositionalEncoding(
+                    config.block_size, config.n_embd, config.dropout_pre_embedding
+                ),
+                h=nn.ModuleList(
+                    [BayesformerBlock(config) for _ in range(config.n_layer)]
+                ),
                 ln_f=nn.LayerNorm(config.n_embd),
             )
         )
@@ -154,20 +166,22 @@ class GPT(nn.Module):
         pos = torch.arange(0, T, dtype=torch.long, device=idx.device)  # shape (T)
         pos_emb = self.transformer.wpe(pos)  # position embeddings of shape (T, n_embd)
         tok_emb = self.transformer.wte(idx)  # token embeddings of shape (B, T, n_embd)
-        x = self.transformer.drop(tok_emb + pos_emb)
+        x = tok_emb + pos_emb
         # forward the blocks of the transformer
         for block in self.transformer.h:
             x = block(x)
+
         # forward the final layernorm and the classifier
         x = self.transformer.ln_f(x)
         logits: Tensor = self.lm_head(x)  # (B, T, vocab_size)
+
         loss = None
         if targets is not None:
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
         return logits, loss
 
     @classmethod
-    def from_pretrained(cls, model_type: str) -> "GPT":
+    def from_pretrained(cls, model_type: str) -> "BayesformerGPT":
         """Loads pretrained GPT-2 model weights from huggingface"""
         assert model_type in {"gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"}
         from transformers import GPT2LMHeadModel
@@ -185,7 +199,7 @@ class GPT(nn.Module):
         config_args["block_size"] = 1024  # always 1024 for GPT model checkpoints
         # create a from-scratch initialized minGPT model
         config = GPTConfig(**config_args)
-        model = GPT(config)
+        model = BayesformerGPT(config)
         sd = model.state_dict()
         sd_keys = list(sd.keys())
         sd_keys = [
@@ -261,38 +275,3 @@ class GPT(nn.Module):
             optim_groups, lr=learning_rate, betas=(0.9, 0.95), eps=1e-8, fused=use_fused
         )
         return optimizer
-
-
-if __name__ == "__main__":
-    # simple test
-    torch.manual_seed(42)
-    torch.cuda.manual_seed(42)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = GPT.from_pretrained("gpt2").to(device)
-    prompt = "Hello, I'm a language model,"
-    tokenizer = tiktoken.get_encoding("gpt2")
-    tokens = [
-        15496,
-        11,
-        314,
-        1101,
-        257,
-        3303,
-        2746,
-        11,
-    ]  # "Hello, I'm a language model,"
-    token_tensor = torch.tensor(tokens, dtype=torch.long).unsqueeze(0).repeat(5, 1)
-
-    from gpt2project.gpt2_generate import generate_autoregressivly_gpt2
-    from gpt2project.search_methods_gpt import topk_sampling_gpt
-
-    auto_inf_res = generate_autoregressivly_gpt2(
-        model,
-        tokenizer,
-        token_tensor,
-        search_method=topk_sampling_gpt,
-        max_tokens=30,
-        break_on_newline=True,
-    )
-    for i in range(5):
-        print(f"> {tokenizer.decode(auto_inf_res.token_ids[i].tolist())}")
