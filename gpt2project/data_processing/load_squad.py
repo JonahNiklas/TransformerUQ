@@ -60,21 +60,3 @@ def create_squad_prompt_batched(contexts: List[str], questions: List[str]) -> Li
     return [
         create_squad_prompt(contexts[i], questions[i]) for i in range(len(contexts))
     ]
-
-
-class SquadEval:
-    def __call__(self, output_text: List[str], targets: List[List[str]]) -> float:
-        raise NotImplementedError("Evaluation function not implemented.")
-
-
-class TargetUsageEval(SquadEval):
-    # Evaluate the model based on the presence of the target in the output
-    # score is 1 if any of the targets is present in the output
-    def __call__(self, output_text: List[str], targets: List[List[str]]) -> float:
-        scores = [0.0] * len(output_text)
-        for i in range(len(output_text)):
-            for t in targets[i]:
-                if t in output_text[i]:
-                    scores[i] = 1.0
-                    break
-        return sum(scores) / len(scores)

@@ -124,6 +124,16 @@
                 "USE_WANDB": "FALSE",
             }
         },
+        {
+            "name": "plot_test",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.uq.plot_test",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
 
 
     ]

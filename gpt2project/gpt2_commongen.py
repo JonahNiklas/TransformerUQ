@@ -13,7 +13,7 @@ from gpt2project.search_methods_gpt import (
     greedy_search_gpt,
     topk_sampling_gpt,
 )
-from sacrebleu import corpus_bleu
+from gpt2project.utils.benchmark_eval_funcs import BLEU_eval, MultipleTargetEval
 from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from gpt2project.gpt2model import GPT
@@ -25,53 +25,13 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-class CommongenEval:
-    def __call__(
-        self,
-        output_text: List[str],
-        concepts: List[List[str]],
-        targets: List[List[str]],
-    ) -> float:
-        raise NotImplementedError("Evaluation function not implemented.")
-
-
-class BLEU_eval(CommongenEval):
-    def __call__(
-        self,
-        output_text: List[str],
-        concepts: List[List[str]],
-        targets: List[List[str]],
-    ) -> float:
-        # Calculate BLEU score
-        bleu = corpus_bleu(output_text, targets)
-        return bleu.score
-
-
-class ConceptUsageEval(CommongenEval):
-    def __call__(
-        self,
-        output_text: List[str],
-        concepts: List[List[str]],
-        targets: List[List[str]],
-    ) -> float:
-        scores = []
-        for b in range(len(output_text)):
-            score = 0
-            output_text[b] = output_text[b].lower()
-            for c in concepts[b]:
-                if c.lower() in output_text[b]:
-                    score += 1
-            scores.append(score / len(concepts[b]))
-        return np.mean(scores).item()
-
-
 def evaluate_model_batch(
     model: GPT,
     tokenizer: tiktoken.Encoding,
     encoding_tensors: torch.Tensor,
     concepts: List[List[str]],
     targets_texts: List[List[str]],
-    eval_function_commongen: CommongenEval,
+    eval_function_commongen: MultipleTargetEval,
 ) -> float:
     # Use the padded encoding tensor directly to generate responses
     outputs = generate_autoregressivly_gpt2(

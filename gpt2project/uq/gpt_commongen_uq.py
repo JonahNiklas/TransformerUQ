@@ -4,11 +4,11 @@ import tiktoken
 import torch
 from tqdm import tqdm
 from gpt2project.data_processing.load_commongen import get_common_gen_dataloader
-from gpt2project.gpt2_commongen import BLEU_eval, CommongenEval, ConceptUsageEval
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
-from gpt2project.uq.plot_uq import plot_retention_curve_cg
+from gpt2project.uq.plot_uq import calc_retention_curve_cg
+from gpt2project.utils.benchmark_eval_funcs import ConceptUsageEval
 from hyperparameters import hyperparameters
 from uq.acquisition_func import AcquisitionFunction, BLEUVar, BeamScore
 
@@ -85,26 +85,27 @@ if __name__ == "__main__":
     aq_funcs = [BeamScore(), BLEUVar()]
     eval_function_commongen = ConceptUsageEval()
 
-    all_outputs, all_concepts, all_targets, all_uqs = (
-        eval_commongen(
-            model,
-            tokenizer,
-            batch_size,
-            n_batch_to_validate,
-            aq_funcs,
-            shuffle=False,
-            run_name=run_name,
-        )
+    all_outputs, all_concepts, all_targets, all_uqs = eval_commongen(
+        model,
+        tokenizer,
+        batch_size,
+        n_batch_to_validate,
+        aq_funcs,
+        shuffle=False,
+        run_name=run_name,
     )
-
+    stepsize = 25
     # Call the function for each acquisition function
-    for i, aq_func in enumerate(aq_funcs):
-        plot_retention_curve_cg(
-            all_outputs[i],
-            all_concepts,
-            all_targets,
-            all_uqs[:, i],
-            eval_function_commongen,
-            aq_func.__class__.__name__,
-            filepath=f"local/gpt-results/commongen/cg_ret_curve_{run_name}_{aq_func.__class__.__name__}_{eval_function_commongen.__class__.__name__}_n{n_batch_to_validate}.svg",
-        )
+    calc_retention_curve_cg(
+        all_outputs,
+        all_concepts,
+        all_targets,
+        all_uqs,
+        eval_function_commongen,
+        aq_func_names=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+        model_name=model_name,
+        benchmark_name="commongen",
+        stepsize=stepsize,
+        folder="local/gpt-results/commongen",
+        filename=f"plot_data_{run_name}_{eval_function_commongen.__class__.__name__}_b{batch_size}_n{n_batch_to_validate}_step{stepsize}.pt",
+    )
