@@ -13,7 +13,7 @@ from gpt2project.uq.plot_uq import calc_retention_curve
 from gpt2project.utils.benchmark_eval_funcs import TargetUsageEval
 from hyperparameters import hyperparameters
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
-from gpt2project.search_methods_gpt import topk_sampling_gpt
+from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -54,7 +54,8 @@ def eval_squad(
             model,
             tokenizer,
             encoding_tensors,
-            topk_sampling_gpt,
+            greedy_search_gpt,
+            enable_mcdo=True,
             break_on_newline=False,
             aq_funcs=aq_funcs,
         )
