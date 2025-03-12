@@ -7,15 +7,16 @@ from typing import List, Tuple
 
 from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import (
-    AutoregressiveInferenceResults,
+    AutoregressiveInferenceResultsGPT,
     GPT_search_method,
     topk_sampling_gpt,
 )
+from gpt2project.uq.gpt_aq_funcs import AcquisitionFunctionGPT
 from gpt2project.utils.decode import decode_token_id_batch, decode_token_list
 from hyperparameters import hyperparameters
 from torch.functional import F
 
-from uq.acquisition_func import AcquisitionFunction, BLEU_mean_output_batch
+from uq.acquisition_func import BLEU_mean_output_batch
 
 enc = tiktoken.get_encoding("gpt2")
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -29,7 +30,7 @@ def generate_autoregressivly_gpt2(
     search_method: GPT_search_method,
     break_on_newline: bool,
     max_tokens: int = 32,
-) -> AutoregressiveInferenceResults:
+) -> AutoregressiveInferenceResultsGPT:
     model.eval()
     tgt_tokens = tgt_tokens.to(hyperparameters.device)
     vocab_size = tokenizer.n_vocab
@@ -43,7 +44,7 @@ def generate_autoregressivly_gpt2_with_uq(
     tgt_tokens: torch.Tensor,
     search_method: GPT_search_method,
     break_on_newline: bool,
-    aq_funcs: List[AcquisitionFunction],
+    aq_funcs: List[AcquisitionFunctionGPT],
     max_tokens: int = 32,
 ) -> Tuple[List[List[str]], torch.Tensor]:
     model.eval()
@@ -51,13 +52,8 @@ def generate_autoregressivly_gpt2_with_uq(
     vocab_size = tokenizer.n_vocab
     batch_size = tgt_tokens.size(0)
 
-    token_ids = torch.empty(
-        batch_size, hyperparameters.uq.num_inferences, max_tokens, dtype=torch.int
-    ).to(hyperparameters.device)
-    softmax_probs = torch.empty(
-        batch_size, hyperparameters.uq.num_inferences, max_tokens
-    ).to(hyperparameters.device)
     hypothesis: List[List[str]] = [[] for _ in range(batch_size)]
+    inference_results: List[AutoregressiveInferenceResultsGPT] = []
 
     uqs = torch.empty(batch_size, len(aq_funcs)).to(hyperparameters.device)
 
@@ -67,8 +63,7 @@ def generate_autoregressivly_gpt2_with_uq(
         )
         assert output.token_ids.shape == (batch_size, max_tokens)
 
-        token_ids[:, n, :] = output.token_ids
-        softmax_probs[:, n, :] = output.get_softmax_probs_for_selected_token()
+        inference_results.append(output)
         for b in range(batch_size):
             hypothesis[b].append(
                 decode_token_list(output.token_ids[b].tolist(), tokenizer)
@@ -76,7 +71,7 @@ def generate_autoregressivly_gpt2_with_uq(
 
     output_hypothesis = []
     for i, aq_func in enumerate(aq_funcs):
-        uq = aq_func(hypothesis, token_ids, softmax_probs)
+        uq = aq_func(hypothesis, inference_results)
         uqs[:, i] = uq
         if aq_func.multiple_inference:
             hyp = BLEU_mean_output_batch(hypothesis)

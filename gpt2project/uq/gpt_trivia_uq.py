@@ -8,10 +8,10 @@ from gpt2project.data_processing.load_triviaQA import get_triviaqa_dataloader
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
+from gpt2project.uq.gpt_aq_funcs import AcquisitionFunctionGPT, BLEUVar, BeamScore
 from gpt2project.uq.plot_uq import calc_retention_curve
 from gpt2project.utils.benchmark_eval_funcs import TargetUsageEval
 from hyperparameters import hyperparameters
-from uq.acquisition_func import AcquisitionFunction, BLEUVar, BeamScore
 
 import logging
 
@@ -24,7 +24,7 @@ def eval_triviaqa(
     tokenizer: tiktoken.Encoding,
     batch_size: int,
     n_batch_to_validate: int,
-    aq_funcs: List[AcquisitionFunction],
+    aq_funcs: List[AcquisitionFunctionGPT],
     shuffle: bool,
     run_name: str,
 ) -> Tuple[List[List[str]], List[List[str]], List[List[str]], torch.Tensor]:

@@ -37,18 +37,18 @@ class SingleTargetEval:
         raise NotImplementedError("Evaluation function not implemented.")
 
 
-class F1Eval(SingleTargetEval):
+class F1Eval(MultipleTargetEval):
     def __call__(
         self,
         output_text: List[str],
-        target: List[str],
+        target: List[List[str]],
     ) -> float:
         """
         Evaluate the model based on the F1 score between the output and the target.
 
         Args:
             output_text (List[str]): List of generated output texts.
-            target (List[str]): List of target texts.
+            target (List[List[str]]): List of target texts. All inner lists have length 1.
 
         Returns:
             float: Average F1 score.
@@ -56,10 +56,10 @@ class F1Eval(SingleTargetEval):
         scores: List[float] = []
         for b in range(len(output_text)):
             output_text[b] = output_text[b].lower()
-            target[b] = target[b].lower()
-            tp = len(set(output_text[b].split()) & set(target[b].split()))
-            fp = len(set(output_text[b].split()) - set(target[b].split()))
-            fn = len(set(target[b].split()) - set(output_text[b].split()))
+            target_b = target[b][0].lower()
+            tp = len(set(output_text[b].split()) & set(target_b.split()))
+            fp = len(set(output_text[b].split()) - set(target_b.split()))
+            fn = len(set(target_b.split()) - set(output_text[b].split()))
             if tp == 0:
                 scores.append(0)
             else:
@@ -110,6 +110,6 @@ class ConceptUsageEval(KeywordEval):
 if __name__ == "__main__":
     f1_eval = F1Eval()
     output_text = ["hello", "worrd", "world"]
-    target = ["hello", "world", "world"]
+    target = [["hello"], ["world"], ["world"]]
     score = f1_eval(output_text, target)
     print(score)

@@ -7,11 +7,11 @@ from gpt2project.data_processing.load_lambada import get_lambada_dataloader
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
+from gpt2project.uq.general_plotter import plot_ret_curve
+from gpt2project.uq.gpt_aq_funcs import BALD, AcquisitionFunctionGPT, BLEUVar, BeamScore
 from gpt2project.uq.plot_uq import calc_retention_curve
 from gpt2project.utils.benchmark_eval_funcs import F1Eval, TargetUsageEval
 from hyperparameters import hyperparameters
-from uq.acquisition_func import AcquisitionFunction, BLEUVar, BeamScore
-
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -32,7 +32,7 @@ def eval_lambada(
     tokenizer: tiktoken.Encoding,
     batch_size: int,
     n_batch_to_validate: int,
-    aq_funcs: List[AcquisitionFunction],
+    aq_funcs: List[AcquisitionFunctionGPT],
     shuffle: bool,
     run_name: str,
 ) -> Tuple[List[List[str]], List[List[str]], torch.Tensor]:
@@ -67,7 +67,7 @@ def eval_lambada(
             all_outputs[aq].extend(
                 [break_on_space_or_punctuation(text) for text in output_texts[aq]]
             )
-        all_targets.extend(targets)
+        all_targets.extend([targets])
         all_uqs = torch.cat((all_uqs, uq), dim=0)
         if i == n_batch_to_validate:
             break
@@ -86,13 +86,13 @@ if __name__ == "__main__":
     model.to(hyperparameters.device)
     model.eval()
 
-    run_name = "gpt2-pretrained"
+    run_name = "gpt2-testf1"
 
     n_batch_to_validate = -1
     batch_size = 1
 
-    aq_funcs = [BeamScore(), BLEUVar()]
-    eval_function_lambada = TargetUsageEval()# TODO: change to F1Eval()
+    aq_funcs = [BeamScore(), BLEUVar(), BALD()]
+    eval_function_lambada = F1Eval()  # TODO: change to F1Eval()
 
     all_outputs, all_targets, all_uqs = eval_lambada(
         model,
@@ -117,3 +117,10 @@ if __name__ == "__main__":
         filename=f"plot_data_{run_name}_{eval_function_lambada.__class__.__name__}_b{batch_size}_n{n_batch_to_validate}_step{stepsize}.pt",
     )
 
+    plot_ret_curve(
+        plot_data_paths=[
+            f"local/gpt-results/lambada/plot_data_{run_name}_{eval_function_lambada.__class__.__name__}_b{batch_size}_n{n_batch_to_validate}_step{stepsize}.pt",
+        ],
+        title="LAMBADA",
+        save_filepath=f"local/gpt-results/lambada/lambada_ret_curve_{run_name}_{eval_function_lambada.__class__.__name__}_b{batch_size}_n{n_batch_to_validate}_step{stepsize}.svg",
+    )

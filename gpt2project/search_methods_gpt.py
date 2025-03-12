@@ -7,7 +7,7 @@ from gpt2project.constants import PADDING_TOKEN_ID
 from hyperparameters import hyperparameters
 
 GPT_search_method = Callable[
-    [nn.Module, torch.Tensor, int, int, bool], "AutoregressiveInferenceResults"
+    [nn.Module, torch.Tensor, int, int, bool], "AutoregressiveInferenceResultsGPT"
 ]
 
 
@@ -17,7 +17,7 @@ def greedy_search_gpt(
     vocab_size: int,
     max_generated_len: int,
     break_on_newline: bool,
-) -> "AutoregressiveInferenceResults":
+) -> "AutoregressiveInferenceResultsGPT":
     with torch.no_grad():
         prompt_len = tgt_tokens.size(1)
         total_len = prompt_len + max_generated_len
@@ -49,7 +49,7 @@ def greedy_search_gpt(
         tgt_tokens, softmax_probs, break_on_newline
     )
 
-    return AutoregressiveInferenceResults(tgt_tokens, softmax_probs)
+    return AutoregressiveInferenceResultsGPT(tgt_tokens, softmax_probs)
 
 
 def topk_sampling_gpt(
@@ -60,7 +60,7 @@ def topk_sampling_gpt(
     break_on_newline: bool,
     k: int = 10,
     temperature: float = 0.5,
-) -> "AutoregressiveInferenceResults":
+) -> "AutoregressiveInferenceResultsGPT":
     with torch.no_grad():
         prompt_len = tgt_tokens.size(1)
         total_len = prompt_len + max_generated_len
@@ -95,7 +95,7 @@ def topk_sampling_gpt(
         tgt_tokens, softmax_probs, break_on_newline
     )
 
-    return AutoregressiveInferenceResults(tgt_tokens, softmax_probs)
+    return AutoregressiveInferenceResultsGPT(tgt_tokens, softmax_probs)
 
 
 tokenizer = tiktoken.get_encoding("gpt2")
@@ -113,15 +113,15 @@ def _clean_inference_results(
     for i in range(tgt_tokens.size(0)):
         for j in range(1, tgt_tokens.size(1)):
             if tgt_tokens[i, j] in stop_token_ids:
-                tgt_tokens[i, j + 1 :] = padding_token_id
-                softmax_probs[i, j + 1 :, padding_token_id] = 1.0
+                tgt_tokens[i, j:] = padding_token_id
+                softmax_probs[i, j:, padding_token_id] = 1.0
                 break
 
     return tgt_tokens, softmax_probs
 
 
 @dataclass
-class AutoregressiveInferenceResults:
+class AutoregressiveInferenceResultsGPT:
     """
     Results of autoregressive inference (batch_size, max_len)
     """
