@@ -100,7 +100,9 @@ def main() -> None:
     elif hyperparameters.model.transformer_impl == "bayesformer":
         model = BayesformerGPT(hyperparameters.model)
     else:
-        raise ValueError(f"Invalid transformer implementation: {hyperparameters.model.transformer_impl}")
+        raise ValueError(
+            f"Invalid transformer implementation: {hyperparameters.model.transformer_impl}"
+        )
 
     # model = GPT.from_pretrained("gpt2") # or init from OpenAI GPT-2
     model.to(device)
@@ -162,9 +164,7 @@ def main() -> None:
             )
 
         # once in a while evaluate hellaswag
-        if (step % hyperparameters.training.evaluate_every == 0 or last_step) and (
-            not use_compile
-        ):
+        if step % hyperparameters.training.evaluate_every == 0 or last_step:
             evaluate_hellaswag(
                 model,
                 device,
@@ -179,9 +179,8 @@ def main() -> None:
 
         # once in a while generate from the model (except step 0, which is noise)
         if (
-            (step > 0 and step % hyperparameters.training.evaluate_every == 0)
-            or last_step
-        ) and (not use_compile):
+            step > 0 and step % hyperparameters.training.evaluate_every == 0
+        ) or last_step:
             generate_from_model(
                 model,
                 device,
