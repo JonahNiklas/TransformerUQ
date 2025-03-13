@@ -1,4 +1,4 @@
-from gpt2project.uq.general_plotter import plot_ret_curve
+from utils.general_plotter import plot_ret_curve
 
 if __name__ == "__main__":
     plot_ret_curve(

@@ -1,6 +1,6 @@
 from typing import List, Any, Union
 import torch
-from gpt2project.uq.general_plotter import PlotData, cache_plot_data
+from utils.general_plotter import PlotData, cache_plot_data
 from gpt2project.utils.benchmark_eval_funcs import (
     KeywordEval,
     MultipleTargetEval,

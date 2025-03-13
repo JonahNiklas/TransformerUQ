@@ -7,7 +7,7 @@ from gpt2project.data_processing.load_lambada import get_lambada_dataloader
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
-from gpt2project.uq.general_plotter import plot_ret_curve
+from utils.general_plotter import plot_ret_curve
 from gpt2project.uq.gpt_aq_funcs import BALD, AcquisitionFunctionGPT, BLEUVar, BeamScore
 from gpt2project.uq.calc_plot_data import calc_retention_curve
 from gpt2project.utils.benchmark_eval_funcs import F1Eval, TargetUsageEval
