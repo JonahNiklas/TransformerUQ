@@ -59,6 +59,7 @@ def eval_lambada(
             tokenizer,
             encoding_tensors,
             topk_sampling_gpt,
+            enable_mcdo=False,
             break_on_newline=True,
             aq_funcs=aq_funcs,
             max_tokens=20,
