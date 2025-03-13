@@ -44,9 +44,7 @@ def collate_fn(
     input_texts, concepts_list, target_texts = zip(*batch)
     tokenizer = tiktoken.get_encoding("gpt2")
     # Tokenize each input text
-    encodings = [
-        tokenizer.encode(text) for text in input_texts
-    ]
+    encodings = [tokenizer.encode(text) for text in input_texts]
     return (
         list(input_texts),
         list(concepts_list),
