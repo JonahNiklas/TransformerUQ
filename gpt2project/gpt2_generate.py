@@ -29,11 +29,14 @@ def generate_autoregressivly_gpt2(
     tgt_tokens: torch.Tensor,
     search_method: GPT_search_method,
     break_on_newline: bool,
+    only_first_word: bool = False,
     max_tokens: int = 32,
 ) -> AutoregressiveInferenceResultsGPT:
     tgt_tokens = tgt_tokens.to(hyperparameters.device)
     vocab_size = tokenizer.n_vocab
-    output = search_method(model, tgt_tokens, vocab_size, max_tokens, break_on_newline)
+    output = search_method(
+        model, tgt_tokens, vocab_size, max_tokens, break_on_newline, only_first_word
+    )
     return output
 
 
@@ -45,6 +48,7 @@ def generate_autoregressivly_gpt2_with_uq(
     enable_mcdo: bool,
     break_on_newline: bool,
     aq_funcs: List[AcquisitionFunctionGPT],
+    only_first_word: bool = False,
     max_tokens: int = 32,
 ) -> Tuple[List[List[str]], torch.Tensor]:
     if enable_mcdo:
@@ -60,7 +64,7 @@ def generate_autoregressivly_gpt2_with_uq(
 
     for n in range(hyperparameters.uq.num_inferences):
         output = search_method(
-            model, tgt_tokens, vocab_size, max_tokens, break_on_newline
+            model, tgt_tokens, vocab_size, max_tokens, break_on_newline, only_first_word
         )
         assert output.token_ids.shape == (batch_size, max_tokens)
 
@@ -75,7 +79,9 @@ def generate_autoregressivly_gpt2_with_uq(
         uq = aq_func(hypothesis, inference_results)
         uqs[:, i] = uq
         if aq_func.multiple_inference:
-            hyp = BLEU_mean_output_batch(hypothesis)
+            hyp = BLEU_mean_output_batch(
+                hypothesis, use_effective_order=only_first_word
+            )
         else:
             hyp = [hypothesis[b][0] for b in range(batch_size)]
         output_hypothesis.append(hyp)

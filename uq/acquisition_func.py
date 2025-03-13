@@ -243,7 +243,9 @@ class BLEUVar(AcquisitionFunction):
         return bleu_distances / self.num_inferences
 
 
-def BLEU_mean_output_batch(outputs: List[List[str]]) -> List[str]:
+def BLEU_mean_output_batch(
+    outputs: List[List[str]], use_effective_order: bool = False
+) -> List[str]:
     """
     Given a batch of outputs, find the output with the least BLEU distance to the rest for each batch element
     """
@@ -263,14 +265,18 @@ def BLEU_mean_output_batch(outputs: List[List[str]]) -> List[str]:
                     bleu_distance_sum += (
                         1
                         - sacrebleu.corpus_bleu(
-                            [batch_outputs[i]], [[batch_outputs[j]]]
+                            [batch_outputs[i]],
+                            [[batch_outputs[j]]],
+                            use_effective_order=use_effective_order,
                         ).score
                         / 100
                     )
                     bleu_distance_sum += (
                         1
                         - sacrebleu.corpus_bleu(
-                            [batch_outputs[j]], [[batch_outputs[i]]]
+                            [batch_outputs[j]],
+                            [[batch_outputs[i]]],
+                            use_effective_order=use_effective_order,
                         ).score
                         / 100
                     )

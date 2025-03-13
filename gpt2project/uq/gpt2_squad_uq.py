@@ -23,13 +23,12 @@ logger = logging.getLogger(__name__)
 def eval_squad(
     model: GPT,
     tokenizer: tiktoken.Encoding,
-    batch_size: int,
     n_batch_to_validate: int,
     aq_funcs: List[AcquisitionFunctionGPT],
     shuffle: bool,
     run_name: str,
 ) -> Tuple[List[List[str]], List[List[str]], torch.Tensor]:
-    filename = f"local/gpt-results/squad/squad_outputs_{run_name}_b{batch_size}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
+    filename = f"local/gpt-results/squad/squad_outputs_{run_name}_b{1}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
     if os.path.exists(filename):
         all_output_texts, all_targets, all_uqs = torch.load(filename)
         logger.info("Loaded inference results from file.")
@@ -40,7 +39,7 @@ def eval_squad(
     all_targets = []
     all_uqs = torch.empty((0, len(aq_funcs))).to(hyperparameters.device)
 
-    dataloader = get_squad_dataloader(batch_size, shuffle=shuffle)
+    dataloader = get_squad_dataloader(shuffle=shuffle)
     for i, (context, question, targets) in tqdm(
         enumerate(dataloader),
         desc="Running squad validation",
@@ -71,7 +70,7 @@ def eval_squad(
 
 
 if __name__ == "__main__":
-    # Load the GPT-2 model and tokenizer
+    # Load the GPT-2 moloadel and tokenizer
     model_name = "gpt2"
     run_name = "gpt2-pre-1000"
     tokenizer = tiktoken.get_encoding(model_name)
@@ -79,14 +78,12 @@ if __name__ == "__main__":
     model.eval()
 
     n_batch_to_validate = 1000
-    batch_size = 1
     aq_funcs = [BeamScore(), BLEUVar()]
     squad_eval_function = TargetUsageEval()
 
     all_outputs, all_targets, all_uqs = eval_squad(
         model,
         tokenizer,
-        batch_size,
         n_batch_to_validate,
         aq_funcs,
         shuffle=False,
@@ -104,5 +101,5 @@ if __name__ == "__main__":
         benchmark_name="squad",
         model_name=model_name,
         folder="local/gpt-results/squad",
-        filename=f"plot_data_{run_name}_{squad_eval_function.__class__.__name__}_b{batch_size}_n{n_batch_to_validate}_step{stepsize}.pt",
+        filename=f"plot_data_{run_name}_{squad_eval_function.__class__.__name__}_b{1}_n{n_batch_to_validate}_step{stepsize}.pt",
     )

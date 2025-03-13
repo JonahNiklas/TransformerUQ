@@ -8,7 +8,13 @@ from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 from utils.general_plotter import plot_ret_curve
-from gpt2project.uq.gpt_aq_funcs import BALD, AcquisitionFunctionGPT, BLEUVar, BeamScore
+from gpt2project.uq.gpt_aq_funcs import (
+    BALD,
+    AcquisitionFunctionGPT,
+    BLEUVar,
+    BeamScore,
+    mpnet_cosine,
+)
 from gpt2project.uq.calc_plot_data import calc_retention_curve
 from gpt2project.utils.benchmark_eval_funcs import F1Eval, TargetUsageEval
 from hyperparameters import hyperparameters
@@ -16,15 +22,6 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-def break_on_space_or_punctuation(text: str) -> str:
-    text = text.lstrip(".,;!? ")
-
-    for i, char in enumerate(text):
-        if char in [" ", ".", ",", ";", "!", "?"]:
-            return text[:i]
-    return text
 
 
 def eval_lambada(
@@ -48,7 +45,7 @@ def eval_lambada(
 
     logger.info("Generating inference results...")
 
-    dataloader = get_lambada_dataloader(batch_size, shuffle=shuffle)
+    dataloader = get_lambada_dataloader(shuffle=shuffle)
     for i, (input_texts, targets, encoding_tensors) in tqdm(
         enumerate(dataloader),
         desc="Running lambada validation",
@@ -62,12 +59,11 @@ def eval_lambada(
             enable_mcdo=False,
             break_on_newline=True,
             aq_funcs=aq_funcs,
+            only_first_word=True,
             max_tokens=20,
         )
         for aq in range(len(aq_funcs)):
-            all_outputs[aq].extend(
-                [break_on_space_or_punctuation(text) for text in output_texts[aq]]
-            )
+            all_outputs[aq].extend(output_texts[aq])
         all_targets.extend([targets])
         all_uqs = torch.cat((all_uqs, uq), dim=0)
         if i == n_batch_to_validate:
@@ -87,13 +83,13 @@ if __name__ == "__main__":
     model.to(hyperparameters.device)
     model.eval()
 
-    run_name = "gpt2-testf1"
+    run_name = "gpt2-first-inf"
 
     n_batch_to_validate = -1
     batch_size = 1
 
-    aq_funcs = [BeamScore(), BLEUVar(), BALD()]
-    eval_function_lambada = F1Eval()  # TODO: change to F1Eval()
+    aq_funcs = [BeamScore(), BALD(), mpnet_cosine()]
+    eval_function_lambada = F1Eval()
 
     all_outputs, all_targets, all_uqs = eval_lambada(
         model,
@@ -104,7 +100,7 @@ if __name__ == "__main__":
         shuffle=False,
         run_name=run_name,
     )
-    stepsize = 1
+    stepsize = 10
     calc_retention_curve(
         all_outputs,
         all_targets,

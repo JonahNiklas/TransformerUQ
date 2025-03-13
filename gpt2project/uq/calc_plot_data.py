@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, Any, Union
 import torch
 from utils.general_plotter import PlotData, cache_plot_data
@@ -8,12 +9,12 @@ from gpt2project.utils.benchmark_eval_funcs import (
 )
 
 
-def calc_retention_curve_cg(
+def calc_retention_curve_commongen(
     output_texts: List[List[str]],
     concepts: List[List[str]],
     targets: List[List[str]],
     uqs: torch.Tensor,
-    eval_function: Union[MultipleTargetEval, KeywordEval],
+    eval_function: MultipleTargetEval | KeywordEval,
     aq_func_names: List[str],
     stepsize: int,
     benchmark_name: str,
@@ -37,7 +38,7 @@ def calc_retention_curve_cg(
         sorted_targets = [targets[i] for i in sorted_indices]
         sorted_concepts = [concepts[i] for i in sorted_indices]
 
-        cutoffs = range(1, len(sorted_outputs) + 1, stepsize)
+        cutoffs = range(stepsize, len(sorted_outputs) + 1, stepsize)
 
         for cutoff in cutoffs:
             selected_outputs = sorted_outputs[:cutoff]
@@ -90,7 +91,7 @@ def calc_retention_curve(
         sorted_outputs = [o_text[i] for i in sorted_indices]
         sorted_targets = [targets[i] for i in sorted_indices]
 
-        cutoffs = range(1, len(sorted_outputs) + 1, stepsize)
+        cutoffs = range(stepsize, len(sorted_outputs) + 1, stepsize)
 
         for cutoff in cutoffs:
             selected_outputs = (

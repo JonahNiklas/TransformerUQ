@@ -9,7 +9,7 @@ from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 from utils.general_plotter import plot_ret_curve
 from gpt2project.uq.gpt_aq_funcs import BALD, AcquisitionFunctionGPT, BLEUVar, BeamScore
-from gpt2project.uq.calc_plot_data import calc_retention_curve_cg
+from gpt2project.uq.calc_plot_data import calc_retention_curve_commongen
 from gpt2project.utils.benchmark_eval_funcs import ConceptUsageEval
 from hyperparameters import hyperparameters
 
@@ -41,7 +41,7 @@ def eval_commongen(
 
     logger.info("Generating inference results...")
 
-    dataloader = get_common_gen_dataloader(batch_size, shuffle=shuffle)
+    dataloader = get_common_gen_dataloader(shuffle=shuffle)
     for i, (input_texts, concepts, targets, encoding_tensors) in tqdm(
         enumerate(dataloader),
         desc="Running commongen validation",
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     )
     stepsize = 25
 
-    calc_retention_curve_cg(
+    calc_retention_curve_commongen(
         all_outputs,
         all_concepts,
         all_targets,

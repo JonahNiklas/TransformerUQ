@@ -30,25 +30,23 @@ class TriviaQADataset(Dataset):
         return input_text, question, targets
 
 
-def collate_fn(batch: Any) -> Tuple[List[str], List[str], List[str], torch.Tensor]:
+def collate_fn(
+    batch: List[Tuple[str, str, List[str]]],
+) -> Tuple[List[str], List[str], List[str], torch.Tensor]:
     input_texts, questions, answers = zip(*batch)
     tokenizer = tiktoken.get_encoding("gpt2")
     # Tokenize each input text
-    encodings = [
-        torch.tensor(tokenizer.encode(text), dtype=torch.long) for text in input_texts
-    ]
-    # Pad sequences with a padding value (e.g., 0)
-    padded_encodings = pad_sequence(encodings, batch_first=True, padding_value=0)
+    encodings = [tokenizer.encode(text) for text in input_texts]
     return (
         list(input_texts),
         list(questions),
         list(answers),
-        padded_encodings,
+        torch.tensor(encodings),
     )
 
 
 def get_triviaqa_dataloader(
-    batch_size: int, shuffle: bool
+    shuffle: bool,
 ) -> DataLoader[Tuple[List[str], List[str], List[str], torch.Tensor]]:
     # Load the TriviaQA dataset
     dataset = load_dataset("mandarjoshi/trivia_qa", "rc", split="validation")
@@ -56,36 +54,31 @@ def get_triviaqa_dataloader(
     max_hits = 3
     dataset = dataset.select(range(subset))
 
-    processed_dataset = []
-
-    for example in dataset:
-        question = example["question"]
-        answers = example["answer"]["normalized_aliases"]
-        input_text = generate_input_text(
-            question, " ".join(example["search_results"]["description"][:max_hits])
-        )
-        processed_dataset.append(
-            {
-                "input": input_text,
-                "question": question,
-                "answer": answers,
-            }
-        )
+    processed_dataset = [
+        {
+            "input": generate_input_text(
+                example["question"],
+                " ".join(example["search_results"]["description"][:max_hits]),
+            ),
+            "question": example["question"],
+            "answer": example["answer"]["normalized_aliases"],
+        }
+        for example in dataset
+    ]
 
     print("Rows in processed dataset:", len(processed_dataset))
 
     # Create a dataset object
     triviaqa_dataset = TriviaQADataset(processed_dataset)
 
-    # Create a DataLoader object with batching
     dataloader = DataLoader(
-        triviaqa_dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
+        triviaqa_dataset, batch_size=1, shuffle=shuffle, collate_fn=collate_fn
     )
     return dataloader
 
 
 if __name__ == "__main__":
-    dataloader = get_triviaqa_dataloader(batch_size=8, shuffle=False)
+    dataloader = get_triviaqa_dataloader(shuffle=False)
     for batch in dataloader:
         input_texts, questions, answers, padded_encodings = batch
         print(input_texts)

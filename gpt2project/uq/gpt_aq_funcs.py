@@ -6,6 +6,7 @@ from gpt2project.search_methods_gpt import AutoregressiveInferenceResultsGPT
 from hyperparameters import hyperparameters
 from sentence_transformers import SentenceTransformer
 import logging
+from abc import abstractmethod
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class AcquisitionFunctionGPT:
         self.num_inferences = num_inferences
         self.name = None
 
+    @abstractmethod
     def __call__(
         self,
         hypothesis: List[List[str]],

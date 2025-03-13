@@ -1,13 +1,14 @@
 from dataclasses import dataclass
+from tracemalloc import stop
 import tiktoken
 import torch
 from torch import nn
-from typing import Callable, Tuple
+from typing import Callable, List, Tuple
 from gpt2project.constants import PADDING_TOKEN_ID
 from hyperparameters import hyperparameters
 
 GPT_search_method = Callable[
-    [nn.Module, torch.Tensor, int, int, bool], "AutoregressiveInferenceResultsGPT"
+    [nn.Module, torch.Tensor, int, int, bool, bool], "AutoregressiveInferenceResultsGPT"
 ]
 
 
@@ -17,6 +18,7 @@ def greedy_search_gpt(
     vocab_size: int,
     max_generated_len: int,
     break_on_newline: bool,
+    only_first_word: bool,
 ) -> "AutoregressiveInferenceResultsGPT":
     with torch.no_grad():
         prompt_len = tgt_tokens.size(1)
@@ -46,7 +48,7 @@ def greedy_search_gpt(
     assert tgt_tokens.shape == (batch_size, max_generated_len)
 
     tgt_tokens, softmax_probs = _clean_inference_results(
-        tgt_tokens, softmax_probs, break_on_newline
+        tgt_tokens, softmax_probs, break_on_newline, only_first_word
     )
 
     return AutoregressiveInferenceResultsGPT(tgt_tokens, softmax_probs)
@@ -58,6 +60,7 @@ def topk_sampling_gpt(
     vocab_size: int,
     max_generated_len: int,
     break_on_newline: bool,
+    only_first_word: bool,
     k: int = 10,
     temperature: float = 0.5,
 ) -> "AutoregressiveInferenceResultsGPT":
@@ -92,7 +95,7 @@ def topk_sampling_gpt(
     tgt_tokens = tgt_tokens[:, prompt_len:]
     assert tgt_tokens.shape == (batch_size, max_generated_len)
     tgt_tokens, softmax_probs = _clean_inference_results(
-        tgt_tokens, softmax_probs, break_on_newline
+        tgt_tokens, softmax_probs, break_on_newline, only_first_word
     )
 
     return AutoregressiveInferenceResultsGPT(tgt_tokens, softmax_probs)
@@ -105,11 +108,26 @@ def _clean_inference_results(
     tgt_tokens: torch.Tensor,
     softmax_probs: torch.Tensor,
     break_on_newline: bool,
+    only_first_word: bool,
     padding_token_id: int = PADDING_TOKEN_ID,
     eos_token_id: int = tokenizer.eot_token,
     newline_token_id: int = tokenizer.encode("\n")[0],
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    stop_token_ids = [eos_token_id] + ([newline_token_id] if break_on_newline else [])
+    stop_token_ids: List[int] = [eos_token_id] + (
+        [newline_token_id] if break_on_newline else []
+    )
+    if only_first_word:
+        stop_token_ids = stop_token_ids + tokenizer.encode(".")
+        for i in range(tgt_tokens.size(0)):
+            for j in range(1, tgt_tokens.size(1)):
+                current_token_id = tgt_tokens[i, j]
+                current_token = tokenizer.decode([int(current_token_id.item())])
+                if " " in current_token or current_token_id in stop_token_ids:
+                    tgt_tokens[i, j:] = padding_token_id
+                    softmax_probs[i, j:, padding_token_id] = 1.0
+                    break
+        return tgt_tokens, softmax_probs
+
     for i in range(tgt_tokens.size(0)):
         for j in range(1, tgt_tokens.size(1)):
             if tgt_tokens[i, j] in stop_token_ids:

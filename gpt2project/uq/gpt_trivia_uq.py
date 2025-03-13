@@ -41,7 +41,7 @@ def eval_triviaqa(
 
     logger.info("Generating inference results...")
 
-    dataloader = get_triviaqa_dataloader(batch_size, shuffle=shuffle)
+    dataloader = get_triviaqa_dataloader(shuffle=shuffle)
     for i, (input_texts, questions, targets, encoding_tensors) in tqdm(
         enumerate(dataloader),
         desc="Running triviaqa validation",

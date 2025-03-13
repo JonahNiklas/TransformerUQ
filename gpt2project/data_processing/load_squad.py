@@ -42,11 +42,11 @@ def collate_fn(
 
 
 def get_squad_dataloader(
-    batch_size: int, shuffle: bool = True
+    shuffle: bool = True,
 ) -> DataLoader[Tuple[List[str], List[str], List[List[str]]]]:
     dataset = SquadDataset()
     dataloader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
+        dataset, batch_size=1, shuffle=shuffle, collate_fn=collate_fn
     )
     return dataloader
 

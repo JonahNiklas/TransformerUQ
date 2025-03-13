@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, List, Tuple, Union
 import numpy as np
 import tiktoken
@@ -21,7 +22,6 @@ from gpt2project.utils.benchmark_eval_funcs import (
 from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from gpt2project.gpt2model import GPT
-
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -35,7 +35,7 @@ def evaluate_model_batch(
     encoding_tensors: torch.Tensor,
     concepts: List[List[str]],
     targets_texts: List[List[str]],
-    eval_function_commongen: Union[MultipleTargetEval, KeywordEval],
+    eval_function_commongen: MultipleTargetEval | KeywordEval,
 ) -> float:
     # Use the padded encoding tensor directly to generate responses
     outputs = generate_autoregressivly_gpt2(
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     tokenizer = tiktoken.get_encoding(model_name)
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
 
-    dataloader = get_common_gen_dataloader(batch_size=1, shuffle=False)
+    dataloader = get_common_gen_dataloader(shuffle=False)
     n_batch_to_validate = -1
 
     # Example of iterating through the DataLoader
