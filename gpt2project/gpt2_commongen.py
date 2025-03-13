@@ -13,7 +13,11 @@ from gpt2project.search_methods_gpt import (
     greedy_search_gpt,
     topk_sampling_gpt,
 )
-from gpt2project.utils.benchmark_eval_funcs import BLEU_eval, KeywordEval, MultipleTargetEval
+from gpt2project.utils.benchmark_eval_funcs import (
+    BLEU_eval,
+    KeywordEval,
+    MultipleTargetEval,
+)
 from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from gpt2project.gpt2model import GPT
@@ -47,7 +51,7 @@ def evaluate_model_batch(
     output_texts = decode_token_id_batch(token_ids, tokenizer)
     if isinstance(eval_function_commongen, KeywordEval):
         score = eval_function_commongen(output_texts, concepts)
-    else:    
+    else:
         score = eval_function_commongen(output_texts, targets_texts)
     if score == 0:
         logger.debug(f"Output texts: {output_texts}")

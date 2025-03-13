@@ -106,4 +106,3 @@ if __name__ == "__main__":
         folder="local/gpt-results/squad",
         filename=f"plot_data_{run_name}_{squad_eval_function.__class__.__name__}_b{batch_size}_n{n_batch_to_validate}_step{stepsize}.pt",
     )
-        

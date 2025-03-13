@@ -11,9 +11,14 @@ transformer_impl_str = transformer_impl_raw or "transformer"
 if transformer_impl_raw is None:
     logger.warning("TRANSFORMER_IMPL is not set, using default value: transformer")
 if transformer_impl_str not in ("transformer", "bayesformer"):
-    raise ValueError(f"Invalid TRANSFORMER_IMPL value: {transformer_impl_str}, must be one of: transformer, bayesformer")
+    raise ValueError(
+        f"Invalid TRANSFORMER_IMPL value: {transformer_impl_str}, must be one of: transformer, bayesformer"
+    )
 
-transformer_impl: Literal["transformer", "bayesformer"] = cast(Literal["transformer", "bayesformer"], transformer_impl_str)
+transformer_impl: Literal["transformer", "bayesformer"] = cast(
+    Literal["transformer", "bayesformer"], transformer_impl_str
+)
+
 
 class GPT2ModelConfig(BaseModel):
     """Configuration for the GPT2 model architecture."""

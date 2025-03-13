@@ -110,5 +110,3 @@ if __name__ == "__main__":
         folder="local/gpt-results/triviaqa",
         filename=f"plot_data_{run_name}_{eval_function_triviaqa.__class__.__name__}_b{batch_size}_n{n_batch_to_validate}_step{stepsize}.pt",
     )
-        
-

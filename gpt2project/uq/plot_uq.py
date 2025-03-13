@@ -76,7 +76,7 @@ def calc_retention_curve(
     filename: str,
 ) -> None:
     assert len(output_texts) == len(aq_func_names) == uqs.size(1)
-    retention_scores: List[List[float]]= [[] for _ in range(len(aq_func_names))]
+    retention_scores: List[List[float]] = [[] for _ in range(len(aq_func_names))]
 
     for aq, aq_func_name in enumerate(aq_func_names):
         # Sort the results based on UQ
