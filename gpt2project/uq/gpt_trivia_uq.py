@@ -9,7 +9,7 @@ from gpt2project.gpt2_generate import generate_autoregressivly_gpt2_with_uq
 from gpt2project.gpt2model import GPT
 from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 from gpt2project.uq.gpt_aq_funcs import AcquisitionFunctionGPT, BLEUVar, BeamScore
-from gpt2project.uq.plot_uq import calc_retention_curve
+from gpt2project.uq.calc_plot_data import calc_retention_curve
 from gpt2project.utils.benchmark_eval_funcs import TargetUsageEval
 from hyperparameters import hyperparameters
 
