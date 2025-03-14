@@ -1,4 +1,5 @@
-from typing import Any, List, Tuple
+from __future__ import annotations
+from typing import Any, List, Tuple, Union
 import numpy as np
 import tiktoken
 import torch
@@ -13,56 +14,19 @@ from gpt2project.search_methods_gpt import (
     greedy_search_gpt,
     topk_sampling_gpt,
 )
-from sacrebleu import corpus_bleu
+from gpt2project.utils.benchmark_eval_funcs import (
+    BLEU_eval,
+    KeywordEval,
+    MultipleTargetEval,
+)
 from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from gpt2project.gpt2model import GPT
-
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
 logger = logging.getLogger(__name__)
-
-
-class CommongenEval:
-    def __call__(
-        self,
-        output_text: List[str],
-        concepts: List[List[str]],
-        targets: List[List[str]],
-    ) -> float:
-        raise NotImplementedError("Evaluation function not implemented.")
-
-
-class BLEU_eval(CommongenEval):
-    def __call__(
-        self,
-        output_text: List[str],
-        concepts: List[List[str]],
-        targets: List[List[str]],
-    ) -> float:
-        # Calculate BLEU score
-        bleu = corpus_bleu(output_text, targets)
-        return bleu.score
-
-
-class ConceptUsageEval(CommongenEval):
-    def __call__(
-        self,
-        output_text: List[str],
-        concepts: List[List[str]],
-        targets: List[List[str]],
-    ) -> float:
-        scores = []
-        for b in range(len(output_text)):
-            score = 0
-            output_text[b] = output_text[b].lower()
-            for c in concepts[b]:
-                if c.lower() in output_text[b]:
-                    score += 1
-            scores.append(score / len(concepts[b]))
-        return np.mean(scores).item()
 
 
 def evaluate_model_batch(
@@ -71,7 +35,7 @@ def evaluate_model_batch(
     encoding_tensors: torch.Tensor,
     concepts: List[List[str]],
     targets_texts: List[List[str]],
-    eval_function_commongen: CommongenEval,
+    eval_function_commongen: MultipleTargetEval | KeywordEval,
 ) -> float:
     # Use the padded encoding tensor directly to generate responses
     outputs = generate_autoregressivly_gpt2(
@@ -85,7 +49,10 @@ def evaluate_model_batch(
     token_ids = outputs.token_ids
 
     output_texts = decode_token_id_batch(token_ids, tokenizer)
-    score = eval_function_commongen(output_texts, concepts, targets_texts)
+    if isinstance(eval_function_commongen, KeywordEval):
+        score = eval_function_commongen(output_texts, concepts)
+    else:
+        score = eval_function_commongen(output_texts, targets_texts)
     if score == 0:
         logger.debug(f"Output texts: {output_texts}")
         logger.debug(f"Concepts: {concepts}")
@@ -99,7 +66,7 @@ if __name__ == "__main__":
     tokenizer = tiktoken.get_encoding(model_name)
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
 
-    dataloader = get_common_gen_dataloader(batch_size=1, shuffle=False)
+    dataloader = get_common_gen_dataloader(shuffle=False)
     n_batch_to_validate = -1
 
     # Example of iterating through the DataLoader

@@ -38,25 +38,23 @@ class CommonGenDataset(Dataset):
         return input_text, concepts, target_text
 
 
-def collate_fn(batch: Any) -> Tuple[List[str], List[str], List[str], torch.Tensor]:
+def collate_fn(
+    batch: List[Tuple[str, List[str], str]],
+) -> Tuple[List[str], List[List[str]], List[str], torch.Tensor]:
     input_texts, concepts_list, target_texts = zip(*batch)
     tokenizer = tiktoken.get_encoding("gpt2")
     # Tokenize each input text
-    encodings = [
-        torch.tensor(tokenizer.encode(text), dtype=torch.long) for text in input_texts
-    ]
-    # Pad sequences with a padding value (e.g., 0)
-    padded_encodings = pad_sequence(encodings, batch_first=True, padding_value=0)
+    encodings = [tokenizer.encode(text) for text in input_texts]
     return (
         list(input_texts),
         list(concepts_list),
         list(target_texts),
-        padded_encodings,
+        torch.tensor(encodings),
     )
 
 
 def get_common_gen_dataloader(
-    batch_size: int, shuffle: bool
+    shuffle: bool,
 ) -> DataLoader[Tuple[List[str], List[List[str]], List[List[str]], torch.Tensor]]:
     # Load the CommonGen dataset
     dataset = load_dataset("common_gen", split="validation")
@@ -92,15 +90,14 @@ def get_common_gen_dataloader(
     # Create a dataset object
     commongen_dataset = CommonGenDataset(merged_dataset)
 
-    # Create a DataLoader object with batching
     dataloader = DataLoader(
-        commongen_dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
+        commongen_dataset, batch_size=1, shuffle=shuffle, collate_fn=collate_fn
     )
     return dataloader
 
 
 if __name__ == "__main__":
-    dataloader = get_common_gen_dataloader(batch_size=8, shuffle=False)
+    dataloader = get_common_gen_dataloader(shuffle=False)
     for batch in dataloader:
         input_texts, concepts_list, target_texts, padded_encodings = batch
         print(input_texts)

@@ -2,13 +2,12 @@ from typing import List
 import tiktoken
 import torch
 from gpt2project.data_processing.load_squad import (
-    SquadEval,
-    TargetUsageEval,
     create_squad_prompt,
     create_squad_prompt_batched,
     get_squad_dataloader,
 )
 from gpt2project.gpt2model import GPT
+from gpt2project.utils.benchmark_eval_funcs import MultipleTargetEval, TargetUsageEval
 from gpt2project.utils.decode import decode_token_id_batch
 from hyperparameters import hyperparameters
 from gpt2project.gpt2_generate import generate_autoregressivly_gpt2
@@ -20,7 +19,7 @@ def evaluate_model_batch(
     tokenizer: tiktoken.Encoding,
     encoding_tensors: torch.Tensor,
     targets: List[List[str]],
-    eval_function_squad: SquadEval,
+    eval_function_squad: MultipleTargetEval,
 ) -> float:
     # Use the padded encoding tensor directly to generate responses
     outputs = generate_autoregressivly_gpt2(
@@ -43,7 +42,7 @@ if __name__ == "__main__":
     tokenizer = tiktoken.get_encoding(model_name)
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
 
-    dataloader = get_squad_dataloader(1, shuffle=False)
+    dataloader = get_squad_dataloader(shuffle=False)
     print("Test examples:", len(dataloader))
     n_batch_to_validate = 10
     # Example of iterating through the DataLoader
