@@ -8,6 +8,8 @@ from regex import P
 
 class PlotData(BaseModel):
     eval_method: str
+    search_method: str
+    enable_mcdo: bool
     model_name: str
     benchmark: str
     uq_methods: List[str]
@@ -15,7 +17,8 @@ class PlotData(BaseModel):
     x_points: List[int]
 
 
-def cache_plot_data(plot_data: PlotData, folder: str, filename: str) -> None:
+def cache_plot_data(plot_data: PlotData, filename: str) -> None:
+    folder = f"local/gpt-results/{plot_data.benchmark}/{plot_data.model_name}/mcdo{plot_data.enable_mcdo}/{plot_data.search_method}"
     os.makedirs(folder, exist_ok=True)
     filepath = os.path.join(folder, filename)
     with open(filepath, "w") as f:
@@ -36,17 +39,21 @@ def plot_ret_curve(plot_data_paths: List[str], title: str, save_filepath: str) -
     assert all(
         plot_datum.benchmark == plot_data[0].benchmark for plot_datum in plot_data
     ), "All benchmarks must be the same"
+    assert all(
+        plot_datum.eval_method == plot_data[0].eval_method for plot_datum in plot_data
+    ), "All evaluation methods must be the same"
+
     plt.figure()
     for plot_datum in plot_data:
         for aq in range(len(plot_datum.uq_methods)):
             plt.plot(
                 plot_datum.x_points,
                 plot_datum.eval_scores[aq],
-                label=f"{plot_datum.model_name} {plot_datum.eval_method} {plot_datum.uq_methods[aq]}",
+                label=f"{plot_datum.model_name} {plot_datum.search_method} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.uq_methods[aq]}",
             )
     plt.xlabel("Number of Samples")
     plt.ylabel("Evaluation Score")
-    plt.title(title)
+    plt.title(title +"| "+ plot_data[0].eval_method)
     plt.legend()
     plt.savefig(save_filepath)
     plt.show()

@@ -37,7 +37,7 @@ def evaluate_model_batch(
 
 
 if __name__ == "__main__":
-    # Load the GPT-2 model and tokenizer
+    # Load the GPT-2 model and tokenizerg
     model_name = "gpt2"
     tokenizer = tiktoken.get_encoding(model_name)
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)

@@ -134,6 +134,17 @@
                 "USE_WANDB": "FALSE",
             }
         },
+        {
+            "name": "run_all_uq",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.uq.run_all_uq",
+            "env": {
+                "TORCH_COMPILE": "FALSE",
+                "USE_WANDB": "FALSE",
+            }
+        },
+
 
 
     ]

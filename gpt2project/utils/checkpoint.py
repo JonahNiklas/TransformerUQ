@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import wandb
 import os
 from typing import Tuple
 import torch
@@ -27,12 +28,19 @@ def save_checkpoint(
     torch.save(checkpoint, checkpoint_path)
 
 
-def load_checkpoint(
+def load_checkpoint_bayes(
     checkpoint_path: str,
-) -> Tuple[GPT | BayesformerGPT, int, torch.optim.Optimizer]:
+    remove_orig_prefix: bool,
+) -> Tuple[BayesformerGPT, int, torch.optim.Optimizer]:
     checkpoint = torch.load(checkpoint_path)
     model_config = GPT2ModelConfig.model_validate(checkpoint["model_config"])
-    model = GPT(model_config)
+    model = BayesformerGPT(model_config)
+
+    if remove_orig_prefix:
+        checkpoint["model"] = {
+            k.replace("_orig_mod.", ""): v
+            for k, v in checkpoint["model"].items()
+        }
     model.load_state_dict(checkpoint["model"])
     training_config: TrainingConfig = TrainingConfig.model_validate(
         checkpoint["training_config"]
@@ -44,3 +52,45 @@ def load_checkpoint(
     )
 
     return model, checkpoint["step"], optimizer
+
+
+def load_checkpoint(
+    checkpoint_path: str,
+    remove_orig_prefix: bool,
+) -> Tuple[GPT | BayesformerGPT, int, torch.optim.Optimizer]:
+    checkpoint = torch.load(checkpoint_path)
+    model_config = GPT2ModelConfig.model_validate(checkpoint["model_config"])
+    if model_config.transformer_impl == "bayesformer":
+        model = BayesformerGPT(model_config)
+    else:
+        model = GPT(model_config)
+
+    if remove_orig_prefix:
+        checkpoint["model"] = {
+            k.replace("_orig_mod.", ""): v
+            for k, v in checkpoint["model"].items()
+        }
+    model.load_state_dict(checkpoint["model"])
+    training_config: TrainingConfig = TrainingConfig.model_validate(
+        checkpoint["training_config"]
+    )
+    optimizer = model.configure_optimizers(
+        weight_decay=training_config.weight_decay,
+        learning_rate=training_config.max_lr,
+        device_type=device_type,
+    )
+
+    return model, checkpoint["step"], optimizer
+
+def get_model_from_wandb_checkpoint(wandb_artifact_path: str,checkpoint_name:str, remove_orig_prefix:bool) -> None:
+    """Loads a model from a wandb checkpoint"""
+    os.makedirs("local/gpt_checkpoints", exist_ok=True)
+    artifact_dir = "local/gpt_checkpoints"
+
+    if not os.path.exists(os.path.join(artifact_dir, checkpoint_name)):
+        api = wandb.Api()
+        artifact = api.artifact(wandb_artifact_path)
+        artifact.download(artifact_dir)
+    from gpt2project.utils.checkpoint import load_checkpoint
+    model, step, optimizer = load_checkpoint(artifact_dir+"/"+checkpoint_name, remove_orig_prefix)
+    return model
