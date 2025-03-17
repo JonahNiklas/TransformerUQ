@@ -27,33 +27,6 @@ def save_checkpoint(
     }
     torch.save(checkpoint, checkpoint_path)
 
-
-def load_checkpoint_bayes(
-    checkpoint_path: str,
-    remove_orig_prefix: bool,
-) -> Tuple[BayesformerGPT, int, torch.optim.Optimizer]:
-    checkpoint = torch.load(checkpoint_path)
-    model_config = GPT2ModelConfig.model_validate(checkpoint["model_config"])
-    model = BayesformerGPT(model_config)
-
-    if remove_orig_prefix:
-        checkpoint["model"] = {
-            k.replace("_orig_mod.", ""): v
-            for k, v in checkpoint["model"].items()
-        }
-    model.load_state_dict(checkpoint["model"])
-    training_config: TrainingConfig = TrainingConfig.model_validate(
-        checkpoint["training_config"]
-    )
-    optimizer = model.configure_optimizers(
-        weight_decay=training_config.weight_decay,
-        learning_rate=training_config.max_lr,
-        device_type=device_type,
-    )
-
-    return model, checkpoint["step"], optimizer
-
-
 def load_checkpoint(
     checkpoint_path: str,
     remove_orig_prefix: bool,

@@ -22,7 +22,7 @@ from gpt2project.uq.gpt_aq_funcs import (
     mpnet_cosine,
 )
 from gpt2project.uq.calc_plot_data import calc_retention_curve
-from gpt2project.utils.benchmark_eval_funcs import F1Eval, TargetUsageEval
+from gpt2project.utils.benchmark_eval_funcs import F1Eval, MultipleTargetEval, TargetUsageEval
 from hyperparameters import hyperparameters
 import logging
 
@@ -42,7 +42,7 @@ def eval_lambada(
     enable_mcdo: bool,
     search_method: GPT_search_method,
 ) -> Tuple[List[List[str]], List[List[str]], torch.Tensor]:
-    folder = f"local/gpt-cache/{benchmark_name}/{model_name}/mcdo{enable_mcdo}"
+    folder = f"local/gpt-cache/{benchmark_name}/{model_name}/mcdo{enable_mcdo}/{search_method.__name__}"
     os.makedirs(folder, exist_ok=True)
     filename = (
         folder
@@ -94,13 +94,13 @@ def get_lambada_run(
     run_name: str,
     enable_mcdo: bool,
     search_method: GPT_search_method,
+    eval_function: MultipleTargetEval,
     n_batch_to_validate: int = -1,
 ):
     benchmark_name = "lambada"
     model_name = "GPT" if model.config.transformer_impl == "transformer" else "BayesGPT"
 
     aq_funcs = [BeamScore(), BALD(), mpnet_cosine()]
-    eval_function_lambada = F1Eval()
 
     all_outputs, all_targets, all_uqs = eval_lambada(
         model,
@@ -119,14 +119,14 @@ def get_lambada_run(
         all_outputs,
         all_targets,
         all_uqs,
-        eval_function_lambada,
+        eval_function,
         aq_func_names=[aq_func.__class__.__name__ for aq_func in aq_funcs],
         stepsize=stepsize,
         benchmark_name=benchmark_name,
         model_name=model_name,
         enable_mcdo=enable_mcdo,
         search_method=search_method.__name__,
-        filename=f"plot_data_{run_name}_{eval_function_lambada.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
+        filename=f"plot_data_{run_name}_{eval_function.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
     )
 
 

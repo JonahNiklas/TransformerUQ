@@ -15,7 +15,7 @@ from gpt2project.search_methods_gpt import (
 )
 from gpt2project.uq.gpt_aq_funcs import AcquisitionFunctionGPT, BLEUVar, BeamScore
 from gpt2project.uq.calc_plot_data import calc_retention_curve
-from gpt2project.utils.benchmark_eval_funcs import TargetUsageEval
+from gpt2project.utils.benchmark_eval_funcs import MultipleTargetEval, TargetUsageEval
 from hyperparameters import hyperparameters
 
 import logging
@@ -36,7 +36,7 @@ def eval_triviaqa(
     enable_mcdo: bool,
     search_method: GPT_search_method,
 ) -> Tuple[List[List[str]], List[List[str]], List[List[str]], torch.Tensor]:
-    folder = f"local/gpt-cache/{benchmark_name}/{model_name}/mcdo{enable_mcdo}"
+    folder = f"local/gpt-cache/{benchmark_name}/{model_name}/mcdo{enable_mcdo}/{search_method.__name__}"
     os.makedirs(folder, exist_ok=True)
     filename = (
         folder
@@ -89,15 +89,13 @@ def get_triviaqa_run(
     run_name: str,
     enable_mcdo: bool,
     search_method: GPT_search_method,
+    eval_function: MultipleTargetEval,
     n_batch_to_validate: int = -1,
 ):
     benchmark_name = "triviaqa"
     model_name = "GPT" if model.config.transformer_impl == "transformer" else "BayesGPT"
 
-    n_batch_to_validate = -1
-
     aq_funcs = [BeamScore(), BLEUVar()]
-    eval_function_triviaqa = TargetUsageEval()
 
     all_outputs, all_questions, all_targets, all_uqs = eval_triviaqa(
         model,
@@ -117,14 +115,14 @@ def get_triviaqa_run(
         all_outputs,
         all_targets,
         all_uqs,
-        eval_function=eval_function_triviaqa,
+        eval_function=eval_function,
         aq_func_names=[aq_func.__class__.__name__ for aq_func in aq_funcs],
         stepsize=stepsize,
         benchmark_name=benchmark_name,
         model_name=model_name,
         enable_mcdo=enable_mcdo,
         search_method=search_method.__name__,
-        filename=f"plot_data_{run_name}_{eval_function_triviaqa.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
+        filename=f"plot_data_{run_name}_{eval_function.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
     )
 
 

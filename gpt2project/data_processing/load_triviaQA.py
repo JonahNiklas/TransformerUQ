@@ -7,11 +7,9 @@ from torch.nn.utils.rnn import pad_sequence
 
 
 def generate_input_text(question: str, context: str) -> str:
-    template = f"""Task: Answer the following question.
-
-Question: {question}
-Context: {context}
-Answer:"""
+    template = f"""Context: {context}
+Q: {question}
+A:"""
     return template
 
 

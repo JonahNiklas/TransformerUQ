@@ -229,14 +229,6 @@ class GPT(nn.Module):
 
         return model
 
-    def from_wandb_checkpoint(self, checkpoint_path: str) -> None:
-        """Loads a model from a wandb checkpoint"""
-        import wandb
-
-        run = wandb.restore(checkpoint_path, run_path=".")
-        checkpoint = torch.load(run.name)
-        self.load_state_dict(checkpoint["model_state_dict"])
-
     def configure_optimizers(
         self, weight_decay: float, learning_rate: float, device_type: str
     ) -> AdamW:

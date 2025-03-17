@@ -43,7 +43,7 @@ def eval_squad(
     enable_mcdo: bool,
     search_method: GPT_search_method,
 ) -> Tuple[List[List[str]], List[List[str]], torch.Tensor]:
-    folder = f"local/gpt-cache/{benchmark_name}/{model_name}/mcdo{enable_mcdo}"
+    folder = f"local/gpt-cache/{benchmark_name}/{model_name}/mcdo{enable_mcdo}/{search_method.__name__}"
     os.makedirs(folder, exist_ok=True)
     filename = (
         folder
