@@ -133,7 +133,7 @@ _vocab_en = None
 _vocab_de = None
 
 
-def output_to_text(output: List[int], lang: str="en") -> str:
+def output_to_text(output: List[int], lang: str = "en") -> str:
     global _vocab_en, _vocab_de
     if lang == "de" and _vocab_de is None:
         logger.debug("Loading vocab")

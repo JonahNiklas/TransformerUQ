@@ -33,7 +33,6 @@ class FilePaths(BaseModel):
     bpe_test_ood_nl: str = "local/data/test_ood/bpe_test_ood.nl"
     bpe_dev_en: str = "local/iwslt/dev/bpe_dev.en"
     bpe_dev_de: str = "local/iwslt/dev/bpe_dev.de"
-    
 
 
 class Constants(BaseModel):

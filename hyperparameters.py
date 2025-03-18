@@ -15,7 +15,9 @@ class TransformerHyperparameters(BaseModel):
     encoder_ffn_embed_dim: int = 1024  # found in transformer_iwslt_de_en
     num_heads: int = 4  # found in transformer_iwslt_de_en
     num_hidden_layers: int = 6  # found in transformer_iwslt_de_en
-    dropout: float = 0.1  # 0.1 in attention  # 0.2found in t2t, transformer_base_v1(), 0.1 used by bayesformer (fairseq)
+    dropout: float = (
+        0.1  # 0.1 in attention  # 0.2found in t2t, transformer_base_v1(), 0.1 used by bayesformer (fairseq)
+    )
     dropout_mlp_input: float = 0.05  # found in bayesformer?
     dropout_pre_embedding: float = 0.05  # found in bayesformer?
     transformer_implementation: Literal["pytorch", "own", "bayesformer"] = "own"
@@ -40,7 +42,6 @@ class TrainingHyperparameters(BaseModel):
 class VocabHyperparameters(BaseModel):
     token_min_freq: int = 1
     bpe_num_symbols: int = 10000
-
 
 
 class UncertaintyQuantificationHyperparameters(BaseModel):

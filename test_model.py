@@ -54,11 +54,11 @@ def main() -> None:
 
     # Load the checkpoint
     load_checkpoint(
-        model, 
-        optimizer, 
+        model,
+        optimizer,
         checkpoint_path,
         # remove_orig_prefix=not torch.cuda.is_available()
-        remove_orig_prefix=True
+        remove_orig_prefix=True,
     )
 
     # Set up the test data loader with the shared vocabulary
@@ -67,7 +67,7 @@ def main() -> None:
         tgt_file=constants.file_paths.bpe_test_en,
         src_vocab=src_vocab,
         tgt_vocab=tgt_vocab,
-        batch_size=32, # Needs to be low due to beam search
+        batch_size=32,  # Needs to be low due to beam search
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
