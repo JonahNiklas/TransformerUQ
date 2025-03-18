@@ -24,20 +24,17 @@ class TransformerModel(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.d_model = d_model
-        self.embedding = (
-            nn.Embedding(vocab_size, d_model, padding_idx=0)
-            if hyperparameters.transformer.transformer_implementation != "bayesformer"
-            else DropoutEmbedding(vocab_size, d_model, dropout)
-        )
         self.dropout = nn.Dropout(dropout)
-        self.pos_encoder = (
-            LearnedPositionalEncoding(
-                d_model=d_model,
-                max_len=max_len,
-                dropout=hyperparameters.transformer.dropout_pre_embedding,
-            )
+        positional_dropout = (
+            hyperparameters.transformer.dropout_pre_embedding
             if hyperparameters.transformer.transformer_implementation == "bayesformer"
-            else nn.Embedding(max_len, d_model)
+            else 0
+        )
+        self.embedding = DropoutEmbedding(
+            vocab_size, d_model, padding_idx=0, dropout=positional_dropout
+        )
+        self.pos_encoder = LearnedPositionalEncoding(
+            d_model, max_len=max_len, dropout=positional_dropout
         )
         self.transformer: torch.nn.Module
         if hyperparameters.transformer.transformer_implementation == "pytorch":
