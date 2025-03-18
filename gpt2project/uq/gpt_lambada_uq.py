@@ -14,7 +14,7 @@ from gpt2project.search_methods_gpt import (
     topk_sampling_gpt,
 )
 from gpt2project.utils.checkpoint import get_model_from_wandb_checkpoint
-from utils.general_plotter import plot_ret_curve
+from utils.general_plotter import get_gpt_cache_filename, plot_ret_curve
 from gpt2project.uq.gpt_aq_funcs import (
     BALD,
     AcquisitionFunctionGPT,
@@ -129,7 +129,12 @@ def get_lambada_run(
         model_name=model_name,
         enable_mcdo=enable_mcdo,
         search_method_type=search_method.__name__,
-        filename=f"plot_data_{run_name}_{eval_function.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
+        filename=get_gpt_cache_filename(
+            run_name,
+            eval_function.__class__.__name__,
+            n_batch_to_validate,
+            stepsize,
+        ),
     )
 
 

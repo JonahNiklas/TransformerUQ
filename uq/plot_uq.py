@@ -5,10 +5,73 @@ from sacrebleu import corpus_bleu
 from sklearn.metrics import roc_curve, auc
 
 from uq.validate_uq import ValidationResult
+from utils.general_plotter import PlotData, cache_plot_data, cache_plot_data_wmt
 
 label_fontsize = 12
 plot_figsize = (6.4 * 0.75, 4.8 * 0.75)
 
+
+def calc_ret_curve_plot_data(
+    validationResults: List[ValidationResult],
+    uq_methods: List[str],
+    model_name: str,
+    eval_method:str,
+    enable_mcdo: bool,
+    search_method_type: str,
+    benchmark_name: str,
+    save_path: str,
+    run_name: str,
+) -> None:
+    # Sort the hypothesis-UQ pairs by UQ value
+    bleu_scores: List[List[float]] = [[] for _ in range(len(validationResults))]
+    interval = 0.025
+    for idx, val_result in enumerate(validationResults):
+
+        hyp_ref_uq_pair = [
+            (
+                val_result.hypothesis[i],
+                val_result.reference[i],
+                val_result.uncertainty[i].item(),
+            )
+            for i in range(len(val_result.hypothesis))
+        ]
+
+        hyp_ref_uq_pair.sort(key=lambda x: abs(x[2]))
+
+        for i in range(
+            0, len(hyp_ref_uq_pair), max(int(interval * len(hyp_ref_uq_pair)), 1)
+        ):
+            interval_pairs = hyp_ref_uq_pair[
+                : i + max(int(interval * len(hyp_ref_uq_pair)), 1)
+            ]
+            hypothesis_in_interval = [pair[0] for pair in interval_pairs]
+            reference_in_interval = [pair[1] for pair in interval_pairs]
+            interval_bleu_scores = corpus_bleu(
+                hypothesis_in_interval, [reference_in_interval]
+            ).score
+            bleu_scores[idx].append(interval_bleu_scores)
+
+    # Calculate the area under the retention curves
+    uq_methods_and_auc = uq_methods
+    for idx,scores in enumerate(bleu_scores):
+        x = [i * interval for i in range(len(scores))]
+        auc_score = auc(x, scores)
+        uq_methods_and_auc[idx] = f"{uq_methods[idx]} (AUC = {auc_score:.2f})"
+        
+
+    cache_plot_data_wmt(
+        PlotData(
+            eval_method=eval_method,
+            search_method_type=search_method_type,
+            enable_mcdo=enable_mcdo,
+            model_name=model_name,
+            benchmark=benchmark_name,
+            uq_methods=uq_methods_and_auc,
+            eval_scores=bleu_scores,
+            x_points=[i * interval for i in range(len(bleu_scores[0]))],
+        ),
+        save_path,
+    )
 
 def plot_data_retained_curve(
     validationResults: List[ValidationResult],

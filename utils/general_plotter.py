@@ -14,13 +14,63 @@ class PlotData(BaseModel):
     benchmark: str
     uq_methods: List[str]
     eval_scores: List[List[float]]
-    x_points: List[int]
+    x_points: List[float]
+
+
+def get_gpt_cache_folder(
+    benchmark_name: str, model_name: str, enable_mcdo: bool, search_method: str
+) -> str:
+    return f"local/gpt-results/{benchmark_name.lower()}/{model_name}/mcdo{enable_mcdo}/{search_method}"
+
+
+def get_gpt_cache_filename(
+    run_name: str,
+    eval_function_name: str,
+    n_batch_to_validate: int,
+    stepsize: int,
+) -> str:
+    return f"plot_data_{run_name}_{eval_function_name}_n{n_batch_to_validate}_step{stepsize}.pt"
+
+
+def get_gpt_cache_path(
+    benchmark_name: str,
+    model_name: str,
+    enable_mcdo: bool,
+    search_method: str,
+    run_name: str,
+    eval_function_name: str,
+    n_batch_to_validate: int,
+    stepsize: int,
+) -> str:
+    folder = get_gpt_cache_folder(
+        benchmark_name,
+        model_name,
+        enable_mcdo,
+        search_method,
+    )
+    filename = get_gpt_cache_filename(
+        run_name,
+        eval_function_name,
+        n_batch_to_validate,
+        stepsize,
+    )
+    return os.path.join(folder, filename)
 
 
 def cache_plot_data(plot_data: PlotData, filename: str) -> None:
-    folder = f"local/gpt-results/{plot_data.benchmark}/{plot_data.model_name}/mcdo{plot_data.enable_mcdo}/{plot_data.search_method_type}"
+    folder = get_gpt_cache_folder(
+        plot_data.benchmark,
+        plot_data.model_name,
+        plot_data.enable_mcdo,
+        plot_data.search_method_type,
+    )
     os.makedirs(folder, exist_ok=True)
     filepath = os.path.join(folder, filename)
+    with open(filepath, "w") as f:
+        f.write(plot_data.model_dump_json())
+
+
+def cache_plot_data_wmt(plot_data: PlotData, filepath: str) -> None:
     with open(filepath, "w") as f:
         f.write(plot_data.model_dump_json())
 

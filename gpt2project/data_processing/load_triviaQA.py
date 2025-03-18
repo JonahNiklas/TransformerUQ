@@ -43,9 +43,9 @@ def collate_fn(
     )
 
 
-def get_triviaqa_dataloader(
-    shuffle: bool = False,
-) -> DataLoader[Tuple[List[str], List[str], List[str], torch.Tensor]]:
+def get_triviaqa_dataloader() -> (
+    DataLoader[Tuple[List[str], List[str], List[str], torch.Tensor]]
+):
     # Load the TriviaQA dataset
     dataset = load_dataset("mandarjoshi/trivia_qa", "rc", split="validation")
     subset = 1000
@@ -70,13 +70,13 @@ def get_triviaqa_dataloader(
     triviaqa_dataset = TriviaQADataset(processed_dataset)
 
     dataloader = DataLoader(
-        triviaqa_dataset, batch_size=1, shuffle=shuffle, collate_fn=collate_fn
+        triviaqa_dataset, batch_size=1, shuffle=False, collate_fn=collate_fn
     )
     return dataloader
 
 
 if __name__ == "__main__":
-    dataloader = get_triviaqa_dataloader(shuffle=False)
+    dataloader = get_triviaqa_dataloader()
     for batch in dataloader:
         input_texts, questions, answers, padded_encodings = batch
         print(input_texts)

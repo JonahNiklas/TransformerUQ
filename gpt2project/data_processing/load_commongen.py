@@ -53,9 +53,9 @@ def collate_fn(
     )
 
 
-def get_common_gen_dataloader(
-    shuffle: bool = False,
-) -> DataLoader[Tuple[List[str], List[List[str]], List[List[str]], torch.Tensor]]:
+def get_common_gen_dataloader() -> (
+    DataLoader[Tuple[List[str], List[List[str]], List[List[str]], torch.Tensor]]
+):
     # Load the CommonGen dataset
     dataset = load_dataset("common_gen", split="validation")
     merged_dataset = []
@@ -91,13 +91,13 @@ def get_common_gen_dataloader(
     commongen_dataset = CommonGenDataset(merged_dataset)
 
     dataloader = DataLoader(
-        commongen_dataset, batch_size=1, shuffle=shuffle, collate_fn=collate_fn
+        commongen_dataset, batch_size=1, shuffle=False, collate_fn=collate_fn
     )
     return dataloader
 
 
 if __name__ == "__main__":
-    dataloader = get_common_gen_dataloader(shuffle=False)
+    dataloader = get_common_gen_dataloader()
     for batch in dataloader:
         input_texts, concepts_list, target_texts, padded_encodings = batch
         print(input_texts)

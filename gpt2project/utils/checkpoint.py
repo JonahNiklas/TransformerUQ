@@ -29,7 +29,6 @@ def save_checkpoint(
 
 def load_checkpoint(
     checkpoint_path: str,
-    remove_orig_prefix: bool,
 ) -> Tuple[GPT | BayesformerGPT, int, torch.optim.Optimizer]:
     checkpoint = torch.load(checkpoint_path)
     model_config = GPT2ModelConfig.model_validate(checkpoint["model_config"])
@@ -39,11 +38,14 @@ def load_checkpoint(
     else:
         model = GPT(model_config)
 
-    if remove_orig_prefix:
+    try:
+        model.load_state_dict(checkpoint["model"])
+    except RuntimeError:
         checkpoint["model"] = {
             k.replace("_orig_mod.", ""): v for k, v in checkpoint["model"].items()
         }
-    model.load_state_dict(checkpoint["model"])
+        model.load_state_dict(checkpoint["model"])
+
     training_config: TrainingConfig = TrainingConfig.model_validate(
         checkpoint["training_config"]
     )
@@ -69,7 +71,5 @@ def get_model_from_wandb_checkpoint(
         artifact.download(artifact_dir)
     from gpt2project.utils.checkpoint import load_checkpoint
 
-    model, step, optimizer = load_checkpoint(
-        artifact_dir + "/" + checkpoint_name, remove_orig_prefix
-    )
+    model, step, optimizer = load_checkpoint(artifact_dir + "/" + checkpoint_name)
     return model

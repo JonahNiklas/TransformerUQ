@@ -41,13 +41,9 @@ def collate_fn(
     return list(contexts), list(questions), list(answers)
 
 
-def get_squad_dataloader(
-    shuffle: bool = False,
-) -> DataLoader[Tuple[List[str], List[str], List[List[str]]]]:
+def get_squad_dataloader() -> DataLoader[Tuple[List[str], List[str], List[List[str]]]]:
     dataset = SquadDataset()
-    dataloader = DataLoader(
-        dataset, batch_size=1, shuffle=shuffle, collate_fn=collate_fn
-    )
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=False, collate_fn=collate_fn)
     return dataloader
 
 

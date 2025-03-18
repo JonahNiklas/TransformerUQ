@@ -1,9 +1,7 @@
 from __future__ import annotations
-from ast import Call
-from regex import B
-from sympy import plot
 import tiktoken
-from gpt2project.search_methods_gpt import greedy_search_gpt
+from gpt2project.gpt2model import GPT
+from gpt2project.search_methods_gpt import GPT_search_method, greedy_search_gpt
 from gpt2project.uq.gpt2_squad_uq import get_squad_run
 from gpt2project.uq.gpt_commongen_uq import get_commongen_run
 from gpt2project.uq.gpt_lambada_uq import get_lambada_run
@@ -16,11 +14,16 @@ from gpt2project.utils.benchmark_eval_funcs import (
     MultipleTargetEval,
     TargetUsageEval,
 )
+from torch import nn
 from hyperparameters import hyperparameters
 from gpt2project.utils.checkpoint import get_model_from_wandb_checkpoint
-from utils.general_plotter import plot_ret_curve
+from utils.general_plotter import (
+    get_gpt_cache_folder,
+    get_gpt_cache_path,
+    plot_ret_curve,
+)
 import logging
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Tuple
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -32,16 +35,19 @@ def run_evaluation(
     get_run_func: Callable,
     eval_functions: List[MultipleTargetEval | KeywordEval],
     n_to_validate: int,
-    model_BayesGPT: object,
-    model_GPT: object,
-    tokenizer: object,
+    model_GPT: nn.Module,
+    gpt_model_name: str,
+    model_BayesGPT: nn.Module,
+    bayesgpt_model_name: str,
+    tokenizer: tiktoken.Encoding,
     run_name: str,
     enable_mcdo: bool,
-    search_method: Callable,
+    search_method: GPT_search_method,
+    stepsize: int,
 ) -> None:
     logger.info(benchmark_name)
-    for model in [model_BayesGPT, model_GPT]:
-        for eval_function in eval_functions:
+    for eval_function in eval_functions:
+        for model in [model_GPT, model_BayesGPT]:
             get_run_func(
                 model,
                 tokenizer,
@@ -51,14 +57,38 @@ def run_evaluation(
                 eval_function=eval_function,
                 n_batch_to_validate=n_to_validate,
             )
-            plot_ret_curve(
-                plot_data_paths=[
-                    f"local/gpt-results/{benchmark_name.lower()}/GPT/mcdo{enable_mcdo}/{search_method.__name__}/plot_data_run1_{eval_function.__class__.__name__}_n{n_to_validate}_step25.pt",
-                    f"local/gpt-results/{benchmark_name.lower()}/BayesGPT/mcdo{enable_mcdo}/{search_method.__name__}/plot_data_run1_{eval_function.__class__.__name__}_n{n_to_validate}_step25.pt",
-                ],
-                title=benchmark_name,
-                save_filepath=f"local/gpt-results/{benchmark_name.lower()}/GPT/mcdo{enable_mcdo}/{search_method.__name__}/{benchmark_name.lower()}_combined_retcurve_{run_name}_{eval_function.__class__.__name__}_n{n_to_validate}_step25.svg",
+        plot_ret_curve(
+            plot_data_paths=[
+                get_gpt_cache_path(
+                    benchmark_name=benchmark_name,
+                    model_name=gpt_model_name,
+                    enable_mcdo=enable_mcdo,
+                    search_method=search_method.__name__,
+                    run_name=run_name,
+                    eval_function_name=eval_function.__class__.__name__,
+                    n_batch_to_validate=n_to_validate,
+                    stepsize=stepsize,
+                ),
+                get_gpt_cache_path(
+                    benchmark_name=benchmark_name,
+                    model_name=bayesgpt_model_name,
+                    enable_mcdo=enable_mcdo,
+                    search_method=search_method.__name__,
+                    run_name=run_name,
+                    eval_function_name=eval_function.__class__.__name__,
+                    n_batch_to_validate=n_to_validate,
+                    stepsize=stepsize,
+                ),
+            ],
+            title=benchmark_name,
+            save_filepath=get_gpt_cache_folder(
+                benchmark_name,
+                gpt_model_name,
+                enable_mcdo,
+                search_method.__name__,
             )
+            + f"/{benchmark_name.lower()}_combined_retcurve_{run_name}_{eval_function.__class__.__name__}_n{n_to_validate}_step{stepsize}.svg",
+        )
 
 
 if __name__ == "__main__":
@@ -81,8 +111,11 @@ if __name__ == "__main__":
     model_GPT.eval()
 
     run_name = "sbatch_r1"
+    gpt_model_name = "GPT"
+    bayesgpt_model_name = "BayesGPT"
     enable_mcdo = True
     search_method = greedy_search_gpt
+    step_size = 25
 
     tasks: List[
         Tuple[str, Callable, List[int], List[MultipleTargetEval | KeywordEval]]
@@ -100,10 +133,13 @@ if __name__ == "__main__":
                 get_run_func,
                 eval_functions,
                 n_to_validate,
-                model_BayesGPT,
                 model_GPT,
+                gpt_model_name,
+                model_BayesGPT,
+                bayesgpt_model_name,
                 tokenizer,
                 run_name,
                 enable_mcdo,
                 search_method,
+                step_size,
             )

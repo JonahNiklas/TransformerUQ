@@ -28,6 +28,8 @@ from gpt2project.search_methods_gpt import (
 )
 import logging
 
+from utils.general_plotter import get_gpt_cache_filename
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -127,7 +129,12 @@ def get_squad_run(
         search_method_type=search_method.__name__,
         benchmark_name=benchmark_name,
         model_name=model_name,
-        filename=f"plot_data_{run_name}_{eval_function.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
+        filename=get_gpt_cache_filename(
+            run_name,
+            eval_function.__class__.__name__,
+            n_batch_to_validate,
+            stepsize,
+        ),
     )
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 from typing import List, Tuple
 from regex import F
+from requests import get
 import tiktoken
 import torch
 from tqdm import tqdm
@@ -17,9 +18,12 @@ from gpt2project.search_methods_gpt import (
 from gpt2project.uq.gpt_aq_funcs import AcquisitionFunctionGPT, BLEUVar, BeamScore
 from gpt2project.uq.calc_plot_data import calc_retention_curve
 from gpt2project.utils.benchmark_eval_funcs import MultipleTargetEval, TargetUsageEval
+from gpt2project.utils.checkpoint import get_model_from_wandb_checkpoint
 from hyperparameters import hyperparameters
 
 import logging
+
+from utils.general_plotter import get_gpt_cache_filename, get_gpt_cache_path, plot_ret_curve
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -121,7 +125,12 @@ def get_triviaqa_run(
         model_name=model_name,
         enable_mcdo=enable_mcdo,
         search_method_type=search_method.__name__,
-        filename=f"plot_data_{run_name}_{eval_function.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
+        filename=get_gpt_cache_filename(
+            run_name,
+            eval_function.__class__.__name__,
+            n_batch_to_validate,
+            stepsize,
+        ),
     )
 
 
@@ -130,13 +139,17 @@ if __name__ == "__main__":
     os.makedirs("local/gpt-results/triviaqa", exist_ok=True)
     model_name = "gpt2"
     tokenizer = tiktoken.get_encoding(model_name)
-    model = GPT.from_pretrained(model_name)
+    model = get_model_from_wandb_checkpoint(
+        wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v1",
+        checkpoint_name="model_transformer_76291.pt",
+        remove_orig_prefix=True,
+    )
     model.to(hyperparameters.device)
     model.eval()
     enable_mcdo = True
     search_method = greedy_search_gpt
 
-    run_name = "BayesGPT"
+    run_name = "delete_me"
 
     get_triviaqa_run(
         model,
@@ -145,4 +158,22 @@ if __name__ == "__main__":
         enable_mcdo=enable_mcdo,
         search_method=search_method,
         eval_function=TargetUsageEval(),
+        n_batch_to_validate=200,
+    )
+
+    plot_ret_curve(
+        plot_data_paths=[
+            get_gpt_cache_path(
+                benchmark_name="triviaqa",
+                model_name="GPT",
+                enable_mcdo=enable_mcdo,
+                search_method=search_method.__name__,
+                run_name=run_name,
+                eval_function_name=TargetUsageEval().__class__.__name__,
+                n_batch_to_validate=200,
+                stepsize=25,
+            ),
+        ],
+        title="triviaqa",
+        save_filepath=f"local/gpt-results/triviaqa/{run_name}_combined_retcurve_TargetUsageEval_n200_step25.svg",
     )
