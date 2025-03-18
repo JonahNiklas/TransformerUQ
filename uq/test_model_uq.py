@@ -30,8 +30,8 @@ def main() -> None:
     checkpoint = "local/checkpoints/iwslt/iwslt-transformer-checkpoint-500000.pth"
     transformer_impl: Literal["bayesformer", "pytorch", "own"] = "own"
     hyperparameters.transformer.transformer_implementation = transformer_impl
-    run_id="7sy5cau3"
-    run_name="Bayesformer"
+    run_id = "7sy5cau3"
+    run_name = "Bayesformer"
     # wandb.restore(checkpoint, run_path=f"sondresorbye-magson/TransformerUQ/{run_id}")  # type: ignore
     src_vocab = load_vocab(constants.file_paths.src_vocab)
     tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
@@ -70,7 +70,7 @@ def main() -> None:
         tgt_file="local/data/test/bpe_test.en",
         src_vocab=src_vocab,
         tgt_vocab=tgt_vocab,
-        batch_size=hyperparameters.training.batch_size,# // hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size,  # // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
@@ -81,7 +81,7 @@ def main() -> None:
         tgt_file="local/data/test_ood/bpe_test_ood.en",
         src_vocab=src_vocab,
         tgt_vocab=tgt_vocab,
-        batch_size=hyperparameters.training.batch_size,# // hyperparameters.beam_search.beam_size,
+        batch_size=hyperparameters.training.batch_size,  # // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,

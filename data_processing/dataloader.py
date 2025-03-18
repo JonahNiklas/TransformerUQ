@@ -10,7 +10,7 @@ from constants import constants
 def get_data_loader(
     src_file: str,
     tgt_file: str,
-    src_vocab: Vocabulary, 
+    src_vocab: Vocabulary,
     tgt_vocab: Vocabulary,
     batch_size: int,
     add_bos_eos: bool,
@@ -37,4 +37,3 @@ def get_data_loader(
         pin_memory=True,
     )
     return loader
-
