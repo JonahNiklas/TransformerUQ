@@ -44,7 +44,7 @@ def generate_autoregressivly_with_uq(
     aq_funcs: List[AcquisitionFunction],
     enable_dropout: bool,
 ) -> List[BatchedValidationResult]:
-    vocab = load_vocab(constants.file_paths.vocab)
+    tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
     model.eval()
     if enable_dropout:
         _enable_test_time_dropout(model)
@@ -72,7 +72,7 @@ def generate_autoregressivly_with_uq(
         inference_result: AutoregressiveInferenceResults = beam_search_function(
             model,
             src_tokens,
-            vocab,
+            tgt_vocab,
         )
         token_ids[:, n, :] = inference_result.token_ids
         softmax_probs[:, n, :] = inference_result.get_softmax_probs_for_selected_token()

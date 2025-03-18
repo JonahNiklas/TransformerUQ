@@ -10,12 +10,14 @@ from validate import validate
 
 
 def main() -> None:
-    vocab = load_vocab(constants.file_paths.vocab)
+    src_vocab = load_vocab(constants.file_paths.src_vocab)
+    tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
 
     test_ood_loader = get_data_loader(
         src_file="local/data/test_ood/bpe_test_ood.nl",
         tgt_file="local/data/test_ood/bpe_test_ood.en",
-        vocab=vocab,
+        src_vocab=src_vocab,
+        tgt_vocab=tgt_vocab,
         batch_size=hyperparameters.training.batch_size,
         add_bos_eos=True,
         shuffle=False,
@@ -25,7 +27,8 @@ def main() -> None:
     # Load model model weights from checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model: nn.Module = TransformerModel(
-        vocab_size=len(vocab),
+        src_vocab_size=len(src_vocab),
+        tgt_vocab_size=len(tgt_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
