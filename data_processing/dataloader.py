@@ -6,8 +6,9 @@ from data_processing.vocab import PAD_TOKEN, Vocabulary, load_vocab, output_to_t
 from torch.utils.data import DataLoader
 from constants import constants
 
+
 def get_data_loader(
-    src_file: str, 
+    src_file: str,
     tgt_file: str,
     src_vocab: Vocabulary, 
     tgt_vocab: Vocabulary,
@@ -23,7 +24,7 @@ def get_data_loader(
         tgt_vocab=tgt_vocab,
         add_bos_eos=add_bos_eos,
         max_len=max_len,
-        store_offsets=True
+        store_offsets=True,
     )
 
     loader = DataLoader(

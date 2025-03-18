@@ -20,6 +20,7 @@ class TransformerHyperparameters(BaseModel):
     dropout_pre_embedding: float = 0.05  # found in bayesformer?
     transformer_implementation: Literal["pytorch", "own", "bayesformer"] = "own"
 
+
 class TrainingHyperparameters(BaseModel):
     max_steps: int = 500_000  # found in bayesformer
     validate_every: int = 5000

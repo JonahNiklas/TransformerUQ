@@ -21,6 +21,7 @@ torch.set_float32_matmul_precision("high")
 torch_compile = os.getenv("TORCH_COMPILE", "TRUE") != "FALSE"
 use_wandb = os.getenv("USE_WANDB", "TRUE") != "FALSE"
 
+
 def main() -> None:
     logger.info("Tokenize data")
     tokenizer = ParallelCorpusTokenizer()
@@ -169,8 +170,8 @@ def main() -> None:
     def get_lr(step: int) -> float:
         d_model = hyperparameters.transformer.hidden_size
         warmup_steps = hyperparameters.training.learning_rate_warm_up_steps
-        step = max(1, step) # Avoid division by zero
-        out: float = (d_model ** -0.5) * min(step ** -0.5, step * (warmup_steps ** -1.5))
+        step = max(1, step)  # Avoid division by zero
+        out: float = (d_model**-0.5) * min(step**-0.5, step * (warmup_steps**-1.5))
         return out
 
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, get_lr)

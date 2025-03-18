@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class FilePaths(BaseModel):
     src_vocab: str = "local/iwslt/vocab_de.pkl"
     tgt_vocab: str = "local/iwslt/vocab_en.pkl"
@@ -37,5 +38,6 @@ class FilePaths(BaseModel):
 
 class Constants(BaseModel):
     file_paths: FilePaths = FilePaths()
+
 
 constants = Constants()

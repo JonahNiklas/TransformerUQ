@@ -46,7 +46,7 @@ class Vocabulary:
                 idx += 1
 
         # Build id2token
-        self.id2token = [None] * len(self.token2id) # type: ignore
+        self.id2token = [None] * len(self.token2id)  # type: ignore
         for t, i in self.token2id.items():
             self.id2token[i] = t
 

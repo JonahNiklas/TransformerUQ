@@ -244,8 +244,12 @@ with open(test_ood_nl_file_path, "w", encoding="utf-8") as test_ood_nl_f:
     test_ood_nl_f.writelines(test_ood_nl_lines_short)
 
 # Write the old test_ood files as test_ood_long.en and test_ood_long.nl
-test_ood_long_en_file_path = os.path.join(data_directory, "test_ood", "test_ood_long.en")
-test_ood_long_nl_file_path = os.path.join(data_directory, "test_ood", "test_ood_long.nl")
+test_ood_long_en_file_path = os.path.join(
+    data_directory, "test_ood", "test_ood_long.en"
+)
+test_ood_long_nl_file_path = os.path.join(
+    data_directory, "test_ood", "test_ood_long.nl"
+)
 
 with open(test_ood_long_en_file_path, "w", encoding="utf-8") as test_ood_long_en_f:
     test_ood_long_en_f.writelines(test_ood_en_lines)

@@ -16,14 +16,20 @@ subword-nmt = "^0.3.8"
 requests = "^2.32.3"
 bs4 = "^0.0.2"
 sacrebleu = "^2.5.1"
-wandb = "^0.19.4"
+wandb = "^0.19.8"
 types-requests = "^2.32.0.20241016"
 matplotlib = "^3.10.0"
 scikit-learn = "^1.6.1"
+pytest = "^8.3.4"
 sentence-transformers = "^3.4.1"
+transformers = "^4.49.0"
+tiktoken = "^0.9.0"
+ipywidgets = "^8.1.5"
+datasets = "^3.3.2"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.14.1"
+black = "^24.4.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -39,3 +45,6 @@ check_untyped_defs = true
 warn_unused_ignores = true
 warn_return_any = true
 warn_unreachable = true
+
+[tool.black]
+exclude = "venv/"

@@ -11,7 +11,6 @@ from data_processing.vocab import load_vocab, output_to_text
 from hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
 from utils.checkpoints import load_checkpoint
-from uq.acquisition_func import BeamScore, BLEUVariance
 from validate import validate
 
 logging.basicConfig(level=logging.DEBUG)
@@ -21,6 +20,7 @@ logger = logging.getLogger(__name__)
 # - embedding_fix:
 #    - Greedy BLEU: 22.24
 #    - Beam BLEU: 22.42
+
 
 def main() -> None:
     checkpoint_path = "local/checkpoints/iwslt/iwslt-transformer-checkpoint-500000.pth"
@@ -76,6 +76,7 @@ def main() -> None:
     # Validate the model and calculate BLEU score
     bleu = validate(model, test_loader)
     print(f"BLEU Score on test_set: {bleu}")
+
 
 if __name__ == "__main__":
     main()
