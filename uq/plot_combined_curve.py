@@ -24,7 +24,7 @@ if __name__ == "__main__":
     trans_run_id = "xn8evvcd"
     trans_run_name = "Transformer"
 
-    bayes_run_id = "7sy5cau3"  
+    bayes_run_id = "7sy5cau3"
     bayes_run_name = "Bayesformer"
     for spec in val_spec:
         search_method: str = str(spec["search_method"])
@@ -36,5 +36,5 @@ if __name__ == "__main__":
                 f"local/results/{bayes_run_id}/{search_method}/dropout{dropout}/{bayes_run_name}_{search_method}_drop{dropout}_retcurve_ood_data.pt",
             ],
             title="Transformer vs Bayesformer",
-            save_filepath= f"local/results/{trans_run_id}/{search_method}/dropout{dropout}/ret_curve_comparison_{search_method}_drop{dropout}.svg",
+            save_filepath=f"local/results/{trans_run_id}/{search_method}/dropout{dropout}/ret_curve_comparison_{search_method}_drop{dropout}.svg",
         )

@@ -15,7 +15,7 @@ def calc_ret_curve_plot_data(
     validationResults: List[ValidationResult],
     uq_methods: List[str],
     model_name: str,
-    eval_method:str,
+    eval_method: str,
     enable_mcdo: bool,
     search_method_type: str,
     benchmark_name: str,
@@ -53,11 +53,10 @@ def calc_ret_curve_plot_data(
 
     # Calculate the area under the retention curves
     uq_methods_and_auc = uq_methods
-    for idx,scores in enumerate(bleu_scores):
+    for idx, scores in enumerate(bleu_scores):
         x = [i * interval for i in range(len(scores))]
         auc_score = auc(x, scores)
         uq_methods_and_auc[idx] = f"{uq_methods[idx]} (AUC = {auc_score:.2f})"
-        
 
     cache_plot_data_wmt(
         PlotData(
@@ -72,6 +71,7 @@ def calc_ret_curve_plot_data(
         ),
         save_path,
     )
+
 
 def plot_data_retained_curve(
     validationResults: List[ValidationResult],
