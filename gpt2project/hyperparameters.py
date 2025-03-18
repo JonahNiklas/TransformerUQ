@@ -31,12 +31,12 @@ class GPT2ModelConfig(BaseModel):
     n_layer: int = Field(default=12, description="Number of transformer layers")
     n_head: int = Field(default=12, description="Number of attention heads")
     n_embd: int = Field(default=768, description="Embedding dimension")
-    dropout: float = Field(default=0.1, description="Dropout rate")
+    dropout: float = Field(default=0.073, description="Dropout rate")
     dropout_mlp_input: float = Field(
-        default=0.05, description="Dropout rate for MLP input"
+        default=0.073 / 2, description="Dropout rate for MLP input"
     )
     dropout_pre_embedding: float = Field(
-        default=0.05, description="Dropout rate for pre-embedding"
+        default=0.073 / 2, description="Dropout rate for pre-embedding"
     )
     transformer_impl: Literal["transformer", "bayesformer"] = Field(
         default=transformer_impl, description="Transformer implementation"
