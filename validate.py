@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+
 import torch
 import torch.nn as nn
 import torch.utils.data as data
@@ -9,17 +10,17 @@ from tqdm import tqdm
 
 from beam_search import beam_search_batched, beam_search_unbatched, greedy_search
 from constants import constants
-from generate import generate_autoregressivly
 from data_processing.vocab import load_vocab, output_to_text
-from uq.acquisition_func import AcquisitionFunction, BLEUVariance
+from generate import generate_autoregressivly
 from hyperparameters import hyperparameters
+from uq.acquisition_func import AcquisitionFunction, BLEUVariance
 
 logger = logging.getLogger(__name__)
 
 
 def validate(
     model: nn.Module,
-    test_data: data.DataLoader,
+    test_data: data.DataLoader[tuple[torch.Tensor, torch.Tensor]],
     save_hypotheses_to_file: bool = False,
     num_batches_to_validate_on: int | None = None,
 ) -> float:

@@ -1,5 +1,5 @@
 import os
-from typing import List, Tuple
+from typing import List, Literal, Tuple
 import torch
 from torch import nn
 
@@ -18,9 +18,11 @@ import wandb
 
 def main() -> None:
     # Load shared vocabulary
+    checkpoint = "local/checkpoints/iwslt/iwslt-transformer-checkpoint-500000.pth"
+    transformer_impl: Literal["bayesformer", "pytorch", "own"] = "own"
+    hyperparameters.transformer.transformer_implementation = transformer_impl
     run_id="7sy5cau3"
     run_name="Bayesformer"
-    checkpoint = "checkpoints/checkpoint-300000b.pth"
     # wandb.restore(checkpoint, run_path=f"sondresorbye-magson/TransformerUQ/{run_id}")  # type: ignore
     src_vocab = load_vocab(constants.file_paths.src_vocab)
     tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
