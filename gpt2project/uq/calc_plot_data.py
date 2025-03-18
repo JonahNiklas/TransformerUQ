@@ -15,11 +15,12 @@ def calc_retention_curve_commongen(
     targets: List[List[str]],
     uqs: torch.Tensor,
     eval_function: MultipleTargetEval | KeywordEval,
+    search_method_type: str,
+    enable_mcdo: bool,
     aq_func_names: List[str],
     stepsize: int,
     benchmark_name: str,
     model_name: str,
-    folder: str,
     filename: str,
 ) -> None:
     assert len(output_texts) == len(aq_func_names) == uqs.size(1)
@@ -53,13 +54,14 @@ def calc_retention_curve_commongen(
     cache_plot_data(
         PlotData(
             eval_method=eval_function.__class__.__name__,
+            search_method_type=search_method_type,
+            enable_mcdo=enable_mcdo,
             model_name=model_name,
             benchmark=benchmark_name,
             uq_methods=aq_func_names,
             eval_scores=retention_scores,
             x_points=list(cutoffs),
         ),
-        folder,
         filename,
     )
 
@@ -69,11 +71,12 @@ def calc_retention_curve(
     targets: List[List[str]],
     uqs: torch.Tensor,
     eval_function: MultipleTargetEval,
+    search_method_type: str,
+    enable_mcdo: bool,
     aq_func_names: List[str],
     stepsize: int,
     benchmark_name: str,
     model_name: str,
-    folder: str,
     filename: str,
 ) -> None:
     assert len(output_texts) == len(aq_func_names) == uqs.size(1)
@@ -105,12 +108,13 @@ def calc_retention_curve(
     cache_plot_data(
         PlotData(
             eval_method=eval_function.__class__.__name__,
+            search_method_type=search_method_type,
+            enable_mcdo=enable_mcdo,
             model_name=model_name,
             benchmark=benchmark_name,
             uq_methods=aq_func_names,
             eval_scores=retention_scores,
             x_points=list(cutoffs),
         ),
-        folder,
         filename,
     )

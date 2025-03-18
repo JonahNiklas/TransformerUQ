@@ -66,7 +66,7 @@ if __name__ == "__main__":
     tokenizer = tiktoken.get_encoding(model_name)
     model = GPT.from_pretrained(model_name).to(hyperparameters.device)
 
-    dataloader = get_common_gen_dataloader(shuffle=False)
+    dataloader = get_common_gen_dataloader()
     n_batch_to_validate = -1
 
     # Example of iterating through the DataLoader

@@ -22,7 +22,7 @@ class TargetUsageEval(MultipleTargetEval):
         for i in range(len(output_text)):
             assert isinstance(targets[i], list), f"targets[{i}] is not a list"
             for t in targets[i]:
-                if t in output_text[i]:
+                if t.lower() in output_text[i].lower():
                     scores[i] = 1.0
                     break
         return sum(scores) / len(scores)

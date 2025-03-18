@@ -1,3 +1,4 @@
+from gc import enable
 import os
 from typing import List
 import torch
@@ -15,6 +16,7 @@ from data_processing.dataloader import get_data_loader
 from hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
 from uq.plot_uq import (
+    calc_ret_curve_plot_data,
     plot_combined_roc_curve,
     plot_data_retained_curve,
     plot_uq_histogram_and_roc,
@@ -23,12 +25,13 @@ from utils.checkpoints import load_checkpoint
 from uq.validate_uq import ValidationResult, validate_uq
 from data_processing.vocab import load_vocab, output_to_text
 from constants import constants
+from utils.general_plotter import plot_ret_curve
 
 
 def main() -> None:
     # Load shared vocabulary
     run_id = "7sy5cau3"
-    run_name = "Bayes"
+    run_name = "Bayesformer"
     checkpoint = "checkpoints/checkpoint-300000b.pth"
     # wandb.restore(checkpoint, run_path=f"sondresorbye-magson/TransformerUQ/{run_id}")  # type: ignore
     shared_vocab = load_vocab(constants.file_paths.vocab)
@@ -154,6 +157,30 @@ def main() -> None:
             validation_results_ood,
             methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
             save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood.svg",
+            run_name=run_name,
+        )
+
+        calc_ret_curve_plot_data(
+            validation_results_id,
+            uq_methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+            model_name=hyperparameters.transformer.transformer_implementation,
+            eval_method="BLEU",
+            enable_mcdo=dropout,
+            search_method_type=search_method,
+            benchmark_name="german_wmt",
+            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id_data.pt",
+            run_name=run_name,
+        )
+
+        calc_ret_curve_plot_data(
+            validation_results_ood,
+            uq_methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+            model_name=hyperparameters.transformer.transformer_implementation,
+            eval_method="BLEU",
+            enable_mcdo=dropout,
+            search_method_type=search_method,
+            benchmark_name="dutch_wmt",
+            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood_data.pt",
             run_name=run_name,
         )
 

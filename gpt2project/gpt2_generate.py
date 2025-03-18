@@ -1,11 +1,13 @@
+from __future__ import annotations
 import torch
 import tiktoken
 import numpy as np
 from tqdm import tqdm
 from torch import nn
 from typing import List, Tuple
-
+from gpt2project.bayesformer_gpt import BayesformerGPT
 from gpt2project.gpt2model import GPT
+from gpt2project.hyperparameters import GPT2Hyperparameters, GPT2ModelConfig
 from gpt2project.search_methods_gpt import (
     AutoregressiveInferenceResultsGPT,
     GPT_search_method,
@@ -41,7 +43,7 @@ def generate_autoregressivly_gpt2(
 
 
 def generate_autoregressivly_gpt2_with_uq(
-    model: GPT,
+    model: GPT | BayesformerGPT,
     tokenizer: tiktoken.Encoding,
     tgt_tokens: torch.Tensor,
     search_method: GPT_search_method,
@@ -54,7 +56,7 @@ def generate_autoregressivly_gpt2_with_uq(
     if enable_mcdo:
         _enable_test_time_dropout(model)
     tgt_tokens = tgt_tokens.to(hyperparameters.device)
-    vocab_size = tokenizer.n_vocab
+    vocab_size = model.config.vocab_size
     batch_size = tgt_tokens.size(0)
 
     hypothesis: List[List[str]] = [[] for _ in range(batch_size)]

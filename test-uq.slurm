@@ -1,8 +1,8 @@
 #! /bin/sh
-#SBATCH --job-name="test-uq_plots"
+#SBATCH --job-name="gpt_uq_eval"
 #SBATCH --partition=GPUQ
 #SBATCH --account=share-ie-idi
-#SBATCH --time=0-10:00:00
+#SBATCH --time=0-2:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16     # 2 CPU cores
@@ -13,4 +13,4 @@
 module load Python/3.12.3-GCCcore-13.3.0
 source venv/bin/activate
 poetry install
-python -m uq.test_model_uq
+python -m gpt2project.uq.run_all_uq

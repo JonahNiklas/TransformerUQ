@@ -8,16 +8,69 @@ from regex import P
 
 class PlotData(BaseModel):
     eval_method: str
+    search_method_type: str
+    enable_mcdo: bool
     model_name: str
     benchmark: str
     uq_methods: List[str]
     eval_scores: List[List[float]]
-    x_points: List[int]
+    x_points: List[float]
 
 
-def cache_plot_data(plot_data: PlotData, folder: str, filename: str) -> None:
+def get_gpt_cache_folder(
+    benchmark_name: str, model_name: str, enable_mcdo: bool, search_method: str
+) -> str:
+    return f"local/gpt-results/{benchmark_name.lower()}/{model_name}/mcdo{enable_mcdo}/{search_method}"
+
+
+def get_gpt_cache_filename(
+    run_name: str,
+    eval_function_name: str,
+    n_batch_to_validate: int,
+    stepsize: int,
+) -> str:
+    return f"plot_data_{run_name}_{eval_function_name}_n{n_batch_to_validate}_step{stepsize}.pt"
+
+
+def get_gpt_cache_path(
+    benchmark_name: str,
+    model_name: str,
+    enable_mcdo: bool,
+    search_method: str,
+    run_name: str,
+    eval_function_name: str,
+    n_batch_to_validate: int,
+    stepsize: int,
+) -> str:
+    folder = get_gpt_cache_folder(
+        benchmark_name,
+        model_name,
+        enable_mcdo,
+        search_method,
+    )
+    filename = get_gpt_cache_filename(
+        run_name,
+        eval_function_name,
+        n_batch_to_validate,
+        stepsize,
+    )
+    return os.path.join(folder, filename)
+
+
+def cache_plot_data(plot_data: PlotData, filename: str) -> None:
+    folder = get_gpt_cache_folder(
+        plot_data.benchmark,
+        plot_data.model_name,
+        plot_data.enable_mcdo,
+        plot_data.search_method_type,
+    )
     os.makedirs(folder, exist_ok=True)
     filepath = os.path.join(folder, filename)
+    with open(filepath, "w") as f:
+        f.write(plot_data.model_dump_json())
+
+
+def cache_plot_data_wmt(plot_data: PlotData, filepath: str) -> None:
     with open(filepath, "w") as f:
         f.write(plot_data.model_dump_json())
 
@@ -36,17 +89,21 @@ def plot_ret_curve(plot_data_paths: List[str], title: str, save_filepath: str) -
     assert all(
         plot_datum.benchmark == plot_data[0].benchmark for plot_datum in plot_data
     ), "All benchmarks must be the same"
+    assert all(
+        plot_datum.eval_method == plot_data[0].eval_method for plot_datum in plot_data
+    ), "All evaluation methods must be the same"
+
     plt.figure()
     for plot_datum in plot_data:
         for aq in range(len(plot_datum.uq_methods)):
             plt.plot(
                 plot_datum.x_points,
                 plot_datum.eval_scores[aq],
-                label=f"{plot_datum.model_name} {plot_datum.eval_method} {plot_datum.uq_methods[aq]}",
+                label=f"{plot_datum.model_name} {plot_datum.search_method_type} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.uq_methods[aq]}",
             )
     plt.xlabel("Number of Samples")
     plt.ylabel("Evaluation Score")
-    plt.title(title)
+    plt.title(title + "| " + plot_data[0].eval_method)
     plt.legend()
     plt.savefig(save_filepath)
     plt.show()
