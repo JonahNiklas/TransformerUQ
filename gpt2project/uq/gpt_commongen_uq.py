@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from typing import List, Tuple
 import tiktoken
@@ -12,6 +13,7 @@ from gpt2project.search_methods_gpt import (
     greedy_search_gpt,
     topk_sampling_gpt,
 )
+from gpt2project.utils.checkpoint import get_model_from_wandb_checkpoint
 from utils.general_plotter import plot_ret_curve
 from gpt2project.uq.gpt_aq_funcs import (
     BALD,
@@ -24,6 +26,7 @@ from gpt2project.uq.calc_plot_data import calc_retention_curve_commongen
 from gpt2project.utils.benchmark_eval_funcs import (
     BLEU_eval,
     ConceptUsageEval,
+    KeywordEval,
     MultipleTargetEval,
 )
 from hyperparameters import hyperparameters
@@ -41,7 +44,6 @@ def eval_commongen(
     tokenizer: tiktoken.Encoding,
     n_batch_to_validate: int,
     aq_funcs: List[AcquisitionFunctionGPT],
-    shuffle: bool,
     run_name: str,
     enable_mcdo: bool,
     search_method: GPT_search_method,
@@ -50,7 +52,7 @@ def eval_commongen(
     os.makedirs(folder, exist_ok=True)
     filename = (
         folder
-        + f"/{benchmark_name}_outputs_{model_name}_{run_name}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
+        + f"/{benchmark_name}_outputs_{model_name}_{run_name}_n{n_batch_to_validate}.pt"
     )
 
     all_outputs: List[List[str]] = [[] for _ in range(len(aq_funcs))]
@@ -65,7 +67,7 @@ def eval_commongen(
 
     logger.info("Generating inference results...")
 
-    dataloader = get_common_gen_dataloader(shuffle=shuffle)
+    dataloader = get_common_gen_dataloader()
     for i, (input_texts, concepts, targets, encoding_tensors) in tqdm(
         enumerate(dataloader),
         desc="Running commongen validation",
@@ -100,9 +102,9 @@ def get_commongen_run(
     run_name: str,
     enable_mcdo: bool,
     search_method: GPT_search_method,
-    eval_function: MultipleTargetEval,
+    eval_function: MultipleTargetEval | KeywordEval,
     n_batch_to_validate: int = -1,
-):
+) -> None:
     benchmark_name = "commongen"
     model_name = "GPT" if model.config.transformer_impl == "transformer" else "BayesGPT"
 
@@ -115,7 +117,6 @@ def get_commongen_run(
         tokenizer,
         n_batch_to_validate,
         aq_funcs,
-        shuffle=False,
         run_name=run_name,
         enable_mcdo=enable_mcdo,
         search_method=search_method,
@@ -131,7 +132,7 @@ def get_commongen_run(
         aq_func_names=[aq_func.__class__.__name__ for aq_func in aq_funcs],
         model_name=model_name,
         enable_mcdo=enable_mcdo,
-        search_method=search_method.__name__,
+        search_method_type=search_method.__name__,
         benchmark_name=benchmark_name,
         stepsize=stepsize,
         filename=f"plot_data_{run_name}_{eval_function.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
@@ -143,7 +144,7 @@ if __name__ == "__main__":
     os.makedirs("local/gpt-results/commongen", exist_ok=True)
     model_name = "gpt2"
     tokenizer = tiktoken.get_encoding(model_name)
-    model = BayesformerGPT.from_wandb_checkpoint(
+    model = get_model_from_wandb_checkpoint(
         wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v1",
         checkpoint_name="model_transformer_76291.pt",
         remove_orig_prefix=True,
@@ -161,4 +162,5 @@ if __name__ == "__main__":
         run_name="run1",
         enable_mcdo=True,
         search_method=greedy_search_gpt,
+        eval_function=ConceptUsageEval(),
     )

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from typing import List, Tuple
 import tiktoken
@@ -38,7 +39,6 @@ def eval_squad(
     tokenizer: tiktoken.Encoding,
     n_batch_to_validate: int,
     aq_funcs: List[AcquisitionFunctionGPT],
-    shuffle: bool,
     run_name: str,
     enable_mcdo: bool,
     search_method: GPT_search_method,
@@ -47,7 +47,7 @@ def eval_squad(
     os.makedirs(folder, exist_ok=True)
     filename = (
         folder
-        + f"/{benchmark_name}_outputs_{model_name}_{run_name}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
+        + f"/{benchmark_name}_outputs_{model_name}_{run_name}_n{n_batch_to_validate}.pt"
     )
     if os.path.exists(filename):
         all_output_texts, all_targets, all_uqs = torch.load(filename)
@@ -59,7 +59,7 @@ def eval_squad(
     all_targets = []
     all_uqs = torch.empty((0, len(aq_funcs))).to(hyperparameters.device)
 
-    dataloader = get_squad_dataloader(shuffle=shuffle)
+    dataloader = get_squad_dataloader()
     for i, (context, question, targets) in tqdm(
         enumerate(dataloader),
         desc="Running squad validation",
@@ -100,8 +100,6 @@ def get_squad_run(
 ) -> None:
     benchmark_name = "squad"
     model_name = "GPT" if model.config.transformer_impl == "transformer" else "BayesGPT"
-    enable_mcdo = True
-    search_method = greedy_search_gpt
 
     aq_funcs = [BeamScore(), BLEUVar(), mpnet_cosine()]
 
@@ -112,7 +110,6 @@ def get_squad_run(
         tokenizer,
         n_batch_to_validate,
         aq_funcs,
-        shuffle=False,
         run_name=run_name,
         enable_mcdo=enable_mcdo,
         search_method=search_method,
@@ -127,7 +124,7 @@ def get_squad_run(
         aq_func_names=[aq_func.__class__.__name__ for aq_func in aq_funcs],
         stepsize=stepsize,
         enable_mcdo=enable_mcdo,
-        search_method=search_method.__name__,
+        search_method_type=search_method.__name__,
         benchmark_name=benchmark_name,
         model_name=model_name,
         filename=f"plot_data_{run_name}_{eval_function.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
@@ -154,5 +151,6 @@ if __name__ == "__main__":
         run_name,
         enable_mcdo=True,
         search_method=greedy_search_gpt,
+        eval_function=TargetUsageEval(),
         n_batch_to_validate=1000,
     )

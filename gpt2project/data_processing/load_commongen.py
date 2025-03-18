@@ -54,7 +54,7 @@ def collate_fn(
 
 
 def get_common_gen_dataloader(
-    shuffle: bool,
+    shuffle: bool = False,
 ) -> DataLoader[Tuple[List[str], List[List[str]], List[List[str]], torch.Tensor]]:
     # Load the CommonGen dataset
     dataset = load_dataset("common_gen", split="validation")

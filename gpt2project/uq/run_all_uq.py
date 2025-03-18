@@ -1,3 +1,5 @@
+from __future__ import annotations
+from ast import Call
 from regex import B
 from sympy import plot
 import tiktoken
@@ -10,13 +12,15 @@ from gpt2project.utils.benchmark_eval_funcs import (
     BLEU_eval,
     ConceptUsageEval,
     F1Eval,
+    KeywordEval,
+    MultipleTargetEval,
     TargetUsageEval,
 )
 from hyperparameters import hyperparameters
 from gpt2project.utils.checkpoint import get_model_from_wandb_checkpoint
 from utils.general_plotter import plot_ret_curve
 import logging
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -26,7 +30,7 @@ logger = logging.getLogger(__name__)
 def run_evaluation(
     benchmark_name: str,
     get_run_func: Callable,
-    eval_functions: List[Callable],
+    eval_functions: List[MultipleTargetEval | KeywordEval],
     n_to_validate: int,
     model_BayesGPT: object,
     model_GPT: object,
@@ -80,7 +84,7 @@ if __name__ == "__main__":
     enable_mcdo = True
     search_method = greedy_search_gpt
 
-    tasks = [
+    tasks : List[Tuple[str,Callable,List[int],List[MultipleTargetEval | KeywordEval]]]= [
         ("LAMBADA", get_lambada_run, [-1], [F1Eval()]),
         ("TriviaQA", get_triviaqa_run, [-1], [TargetUsageEval()]),
         ("CommonGen", get_commongen_run, [-1], [BLEU_eval(), ConceptUsageEval()]),

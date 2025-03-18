@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from typing import List, Tuple
 from regex import F
@@ -31,7 +32,6 @@ def eval_triviaqa(
     tokenizer: tiktoken.Encoding,
     n_batch_to_validate: int,
     aq_funcs: List[AcquisitionFunctionGPT],
-    shuffle: bool,
     run_name: str,
     enable_mcdo: bool,
     search_method: GPT_search_method,
@@ -40,7 +40,7 @@ def eval_triviaqa(
     os.makedirs(folder, exist_ok=True)
     filename = (
         folder
-        + f"/{benchmark_name}_outputs_{model_name}_{run_name}_n{n_batch_to_validate}_shuffle-{shuffle}.pt"
+        + f"/{benchmark_name}_outputs_{model_name}_{run_name}_n{n_batch_to_validate}.pt"
     )
     all_outputs: List[List[str]] = [[] for _ in range(len(aq_funcs))]
     all_questions: List[List[str]] = []
@@ -54,7 +54,7 @@ def eval_triviaqa(
 
     logger.info("Generating inference results...")
 
-    dataloader = get_triviaqa_dataloader(shuffle=shuffle)
+    dataloader = get_triviaqa_dataloader()
     for i, (input_texts, questions, targets, encoding_tensors) in tqdm(
         enumerate(dataloader),
         desc="Running triviaqa validation",
@@ -91,7 +91,7 @@ def get_triviaqa_run(
     search_method: GPT_search_method,
     eval_function: MultipleTargetEval,
     n_batch_to_validate: int = -1,
-):
+) -> None:
     benchmark_name = "triviaqa"
     model_name = "GPT" if model.config.transformer_impl == "transformer" else "BayesGPT"
 
@@ -104,7 +104,6 @@ def get_triviaqa_run(
         tokenizer,
         n_batch_to_validate,
         aq_funcs,
-        shuffle=False,
         run_name=run_name,
         enable_mcdo=enable_mcdo,
         search_method=search_method,
@@ -121,7 +120,7 @@ def get_triviaqa_run(
         benchmark_name=benchmark_name,
         model_name=model_name,
         enable_mcdo=enable_mcdo,
-        search_method=search_method.__name__,
+        search_method_type=search_method.__name__,
         filename=f"plot_data_{run_name}_{eval_function.__class__.__name__}_n{n_batch_to_validate}_step{stepsize}.pt",
     )
 
@@ -145,4 +144,5 @@ if __name__ == "__main__":
         run_name=run_name,
         enable_mcdo=enable_mcdo,
         search_method=search_method,
+        eval_function=TargetUsageEval(),
     )

@@ -35,7 +35,7 @@ def collate_fn(
 
 
 def get_lambada_dataloader(
-    shuffle: bool,
+    shuffle: bool = False,
 ) -> DataLoader[Tuple[List[str], List[str], List[str], torch.Tensor]]:
     # Load the LAMBADA dataset
     dataset = load_dataset("cimec/lambada", split="validation")

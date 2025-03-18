@@ -1,10 +1,10 @@
+from __future__ import annotations
 import torch
 import tiktoken
 import numpy as np
 from tqdm import tqdm
 from torch import nn
 from typing import List, Tuple
-
 from gpt2project.bayesformer_gpt import BayesformerGPT
 from gpt2project.gpt2model import GPT
 from gpt2project.hyperparameters import GPT2Hyperparameters, GPT2ModelConfig

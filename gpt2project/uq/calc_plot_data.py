@@ -15,7 +15,7 @@ def calc_retention_curve_commongen(
     targets: List[List[str]],
     uqs: torch.Tensor,
     eval_function: MultipleTargetEval | KeywordEval,
-    search_method: str,
+    search_method_type: str,
     enable_mcdo: bool,
     aq_func_names: List[str],
     stepsize: int,
@@ -54,7 +54,7 @@ def calc_retention_curve_commongen(
     cache_plot_data(
         PlotData(
             eval_method=eval_function.__class__.__name__,
-            search_method=search_method,
+            search_method_type=search_method_type,
             enable_mcdo=enable_mcdo,
             model_name=model_name,
             benchmark=benchmark_name,
@@ -71,7 +71,7 @@ def calc_retention_curve(
     targets: List[List[str]],
     uqs: torch.Tensor,
     eval_function: MultipleTargetEval,
-    search_method: str,
+    search_method_type: str,
     enable_mcdo: bool,
     aq_func_names: List[str],
     stepsize: int,
@@ -108,7 +108,7 @@ def calc_retention_curve(
     cache_plot_data(
         PlotData(
             eval_method=eval_function.__class__.__name__,
-            search_method=search_method,
+            search_method_type=search_method_type,
             enable_mcdo=enable_mcdo,
             model_name=model_name,
             benchmark=benchmark_name,

@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import wandb
 import os
 from typing import Tuple
@@ -33,6 +32,7 @@ def load_checkpoint(
 ) -> Tuple[GPT | BayesformerGPT, int, torch.optim.Optimizer]:
     checkpoint = torch.load(checkpoint_path)
     model_config = GPT2ModelConfig.model_validate(checkpoint["model_config"])
+    model: GPT | BayesformerGPT
     if model_config.transformer_impl == "bayesformer":
         model = BayesformerGPT(model_config)
     else:
@@ -55,7 +55,7 @@ def load_checkpoint(
 
     return model, checkpoint["step"], optimizer
 
-def get_model_from_wandb_checkpoint(wandb_artifact_path: str,checkpoint_name:str, remove_orig_prefix:bool) -> None:
+def get_model_from_wandb_checkpoint(wandb_artifact_path: str,checkpoint_name:str, remove_orig_prefix:bool) -> GPT | BayesformerGPT:
     """Loads a model from a wandb checkpoint"""
     os.makedirs("local/gpt_checkpoints", exist_ok=True)
     artifact_dir = "local/gpt_checkpoints"

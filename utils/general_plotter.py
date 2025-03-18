@@ -8,7 +8,7 @@ from regex import P
 
 class PlotData(BaseModel):
     eval_method: str
-    search_method: str
+    search_method_type: str
     enable_mcdo: bool
     model_name: str
     benchmark: str
@@ -18,7 +18,7 @@ class PlotData(BaseModel):
 
 
 def cache_plot_data(plot_data: PlotData, filename: str) -> None:
-    folder = f"local/gpt-results/{plot_data.benchmark}/{plot_data.model_name}/mcdo{plot_data.enable_mcdo}/{plot_data.search_method}"
+    folder = f"local/gpt-results/{plot_data.benchmark}/{plot_data.model_name}/mcdo{plot_data.enable_mcdo}/{plot_data.search_method_type}"
     os.makedirs(folder, exist_ok=True)
     filepath = os.path.join(folder, filename)
     with open(filepath, "w") as f:
@@ -49,7 +49,7 @@ def plot_ret_curve(plot_data_paths: List[str], title: str, save_filepath: str) -
             plt.plot(
                 plot_datum.x_points,
                 plot_datum.eval_scores[aq],
-                label=f"{plot_datum.model_name} {plot_datum.search_method} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.uq_methods[aq]}",
+                label=f"{plot_datum.model_name} {plot_datum.search_method_type} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.uq_methods[aq]}",
             )
     plt.xlabel("Number of Samples")
     plt.ylabel("Evaluation Score")
