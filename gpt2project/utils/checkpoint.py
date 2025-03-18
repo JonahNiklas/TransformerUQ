@@ -59,7 +59,7 @@ def load_checkpoint(
 
 
 def get_model_from_wandb_checkpoint(
-    wandb_artifact_path: str, checkpoint_name: str, remove_orig_prefix: bool
+    wandb_artifact_path: str, checkpoint_name: str
 ) -> GPT | BayesformerGPT:
     """Loads a model from a wandb checkpoint"""
     os.makedirs("local/gpt_checkpoints", exist_ok=True)

@@ -146,7 +146,6 @@ if __name__ == "__main__":
     model = get_model_from_wandb_checkpoint(
         wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v2",
         checkpoint_name="model_bayesformer_76291.pt",
-        remove_orig_prefix=True,
     )
     model.to(hyperparameters.device)
     model.eval()
