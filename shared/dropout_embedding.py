@@ -1,3 +1,4 @@
+from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,6 +10,7 @@ class DropoutEmbedding(nn.Module):
         num_embeddings: int,
         embedding_dim: int,
         dropout: float,
+        padding_idx: Optional[int] = None,
     ) -> None:
         """
         Applies dropout to entire rows of the embedding matrix.
@@ -21,7 +23,7 @@ class DropoutEmbedding(nn.Module):
         """
         super().__init__()
         self.dropout = dropout
-        self.embedding = nn.Embedding(num_embeddings, embedding_dim)
+        self.embedding = nn.Embedding(num_embeddings, embedding_dim, padding_idx=padding_idx)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         # When training, apply dropout to the embedding weights.

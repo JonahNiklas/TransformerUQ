@@ -17,7 +17,7 @@ from gpt2project.ddp import (
     ddp_local_rank,
 )
 from transformers import GPT2LMHeadModel
-from gpt2project.dropout_embedding import DropoutEmbedding
+from shared.dropout_embedding import DropoutEmbedding
 from gpt2project.hyperparameters import GPT2ModelConfig
 
 
