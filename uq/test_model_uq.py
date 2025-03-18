@@ -35,7 +35,8 @@ def main() -> None:
     # wandb.restore(checkpoint, run_path=f"sondresorbye-magson/TransformerUQ/{run_id}")  # type: ignore
     src_vocab = load_vocab(constants.file_paths.src_vocab)
     tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
-    print(f"Shared vocab size: {len(src_vocab)}")
+    print(f"Source vocab size: {len(src_vocab)}")
+    print(f"Target vocab size: {len(tgt_vocab)}")
     device = hyperparameters.device
     print(f"Device: {device}")
 
