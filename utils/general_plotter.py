@@ -53,7 +53,7 @@ def plot_ret_curve(plot_data_paths: List[str], title: str, save_filepath: str) -
             )
     plt.xlabel("Number of Samples")
     plt.ylabel("Evaluation Score")
-    plt.title(title +"| "+ plot_data[0].eval_method)
+    plt.title(title + "| " + plot_data[0].eval_method)
     plt.legend()
     plt.savefig(save_filepath)
     plt.show()

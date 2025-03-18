@@ -84,7 +84,9 @@ if __name__ == "__main__":
     enable_mcdo = True
     search_method = greedy_search_gpt
 
-    tasks : List[Tuple[str,Callable,List[int],List[MultipleTargetEval | KeywordEval]]]= [
+    tasks: List[
+        Tuple[str, Callable, List[int], List[MultipleTargetEval | KeywordEval]]
+    ] = [
         ("LAMBADA", get_lambada_run, [-1], [F1Eval()]),
         ("TriviaQA", get_triviaqa_run, [-1], [TargetUsageEval()]),
         ("CommonGen", get_commongen_run, [-1], [BLEU_eval(), ConceptUsageEval()]),

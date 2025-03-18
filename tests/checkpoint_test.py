@@ -34,7 +34,9 @@ def test_save_load_checkpoint() -> None:
         test_model, test_step, test_val_loss, test_checkpoint_path, test_optimizer
     )
 
-    loaded_model, loaded_step, loaded_optimizer = load_checkpoint(test_checkpoint_path, remove_orig_prefix=False)
+    loaded_model, loaded_step, loaded_optimizer = load_checkpoint(
+        test_checkpoint_path, remove_orig_prefix=False
+    )
 
     assert loaded_model.config == test_config
     assert loaded_step == test_step

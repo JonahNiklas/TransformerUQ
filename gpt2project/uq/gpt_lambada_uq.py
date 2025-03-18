@@ -23,7 +23,11 @@ from gpt2project.uq.gpt_aq_funcs import (
     mpnet_cosine,
 )
 from gpt2project.uq.calc_plot_data import calc_retention_curve
-from gpt2project.utils.benchmark_eval_funcs import F1Eval, MultipleTargetEval, TargetUsageEval
+from gpt2project.utils.benchmark_eval_funcs import (
+    F1Eval,
+    MultipleTargetEval,
+    TargetUsageEval,
+)
 from hyperparameters import hyperparameters
 import logging
 

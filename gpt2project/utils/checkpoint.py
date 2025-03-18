@@ -26,6 +26,7 @@ def save_checkpoint(
     }
     torch.save(checkpoint, checkpoint_path)
 
+
 def load_checkpoint(
     checkpoint_path: str,
     remove_orig_prefix: bool,
@@ -40,8 +41,7 @@ def load_checkpoint(
 
     if remove_orig_prefix:
         checkpoint["model"] = {
-            k.replace("_orig_mod.", ""): v
-            for k, v in checkpoint["model"].items()
+            k.replace("_orig_mod.", ""): v for k, v in checkpoint["model"].items()
         }
     model.load_state_dict(checkpoint["model"])
     training_config: TrainingConfig = TrainingConfig.model_validate(
@@ -55,7 +55,10 @@ def load_checkpoint(
 
     return model, checkpoint["step"], optimizer
 
-def get_model_from_wandb_checkpoint(wandb_artifact_path: str,checkpoint_name:str, remove_orig_prefix:bool) -> GPT | BayesformerGPT:
+
+def get_model_from_wandb_checkpoint(
+    wandb_artifact_path: str, checkpoint_name: str, remove_orig_prefix: bool
+) -> GPT | BayesformerGPT:
     """Loads a model from a wandb checkpoint"""
     os.makedirs("local/gpt_checkpoints", exist_ok=True)
     artifact_dir = "local/gpt_checkpoints"
@@ -65,5 +68,8 @@ def get_model_from_wandb_checkpoint(wandb_artifact_path: str,checkpoint_name:str
         artifact = api.artifact(wandb_artifact_path)
         artifact.download(artifact_dir)
     from gpt2project.utils.checkpoint import load_checkpoint
-    model, step, optimizer = load_checkpoint(artifact_dir+"/"+checkpoint_name, remove_orig_prefix)
+
+    model, step, optimizer = load_checkpoint(
+        artifact_dir + "/" + checkpoint_name, remove_orig_prefix
+    )
     return model
