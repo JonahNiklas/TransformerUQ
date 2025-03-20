@@ -25,6 +25,7 @@ def get_gpt_evaluation_path(
     filename = _get_gpt_evaluation_cache_filename(evaluation_run_config)
     return os.path.join(folder, filename)
 
+
 def _get_gpt_evaluation_cache_folder(
     evaluation_run_config: EvaluationRunConfig,
 ) -> str:
@@ -42,9 +43,7 @@ def get_gpt_plot_data_path(
 ) -> str:
     folder = _get_gpt_plot_data_folder(evaluation_run_config)
     os.makedirs(folder, exist_ok=True)
-    filename = _get_gpt_plot_data_filename(
-        evaluation_run_config
-    )
+    filename = _get_gpt_plot_data_filename(evaluation_run_config)
     return os.path.join(folder, filename)
 
 

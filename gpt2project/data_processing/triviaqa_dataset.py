@@ -44,8 +44,8 @@ def _get_triviaqa_data() -> List[DatasetExample]:
     ]
     return processed_dataset
 
+
 if __name__ == "__main__":
     dataset = TriviaQADataset()
     print(len(dataset))
     print(dataset[0])
-

@@ -120,6 +120,7 @@ def main() -> None:
                     + f"/{task_name.lower()}_combined_retcurve_{run_name}_{eval_function.__class__.__name__}_n{n_to_validate}_step{step_size}.svg",
                 )
 
+
 def _evaluate_model_on_benchmark(evaluation_run_config: EvaluationRunConfig) -> None:
     all_outputs, all_uqs = generate_with_uq_for_entire_dataset(evaluation_run_config)
     calc_retention_curve(all_outputs, all_uqs, evaluation_run_config)

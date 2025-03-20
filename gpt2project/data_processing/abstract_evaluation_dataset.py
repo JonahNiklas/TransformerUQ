@@ -4,14 +4,17 @@ from dataclasses import dataclass
 from typing import Iterator, List
 from torch.utils.data import Dataset
 
+
 @dataclass
-class DatasetExample():
+class DatasetExample:
     prompt: str
     targets: List[str]
+
 
 @dataclass
 class DatasetExampleWithConcepts(DatasetExample):
     concepts: List[str]
+
 
 class AbstractEvaluationDataset(Dataset):
     @abstractmethod
@@ -28,4 +31,3 @@ class AbstractEvaluationDataset(Dataset):
 
     def get_all_examples(self) -> List[DatasetExample]:
         return [self[i] for i in range(len(self))]
-

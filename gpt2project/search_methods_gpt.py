@@ -144,6 +144,7 @@ _all_search_methods: List[GPT_search_method] = [
     topk_sampling_gpt,
 ]
 
+
 @dataclass
 class AutoregressiveInferenceResultsGPT:
     """

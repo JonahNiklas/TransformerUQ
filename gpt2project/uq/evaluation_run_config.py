@@ -12,6 +12,7 @@ from gpt2project.search_methods_gpt import GPT_search_method
 from gpt2project.uq.gpt_aq_funcs import AcquisitionFunctionGPT
 from gpt2project.utils.benchmark_eval_funcs import AbstractEval, ConceptUsageEval
 
+
 @dataclass
 class EvaluationRunConfig:
     model: GPT | BayesformerGPT

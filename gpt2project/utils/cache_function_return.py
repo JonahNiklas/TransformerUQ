@@ -31,13 +31,15 @@ def cache_evaluation_run_return() -> Callable[[Callable[..., T]], Callable[..., 
                 if isinstance(arg, EvaluationRunConfig):
                     evaluation_run_config = arg
                     break
-                        
+
             if evaluation_run_config is None:
-                raise ValueError("Function must be called with an EvaluationRunConfig parameter")
-            
+                raise ValueError(
+                    "Function must be called with an EvaluationRunConfig parameter"
+                )
+
             # Get cache path from the evaluation_run_config
             cache_path = get_gpt_evaluation_path(evaluation_run_config)
-            
+
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)
             assert cache_path.endswith(".pt"), "Cache path must end with .pt"
             if os.path.exists(cache_path):

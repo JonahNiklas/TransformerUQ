@@ -17,7 +17,7 @@ class LambadaDataset(AbstractEvaluationDataset):
 
     def __getitem__(self, idx: int) -> DatasetExample:
         return self.dataset[idx]
-    
+
 
 def _get_lambada_data() -> List[DatasetExample]:
     dataset: Any = load_dataset("cimec/lambada", split="validation")

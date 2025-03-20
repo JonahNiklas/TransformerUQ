@@ -4,6 +4,7 @@ import torch
 from gpt2project.uq.evaluation_run_config import EvaluationRunConfig
 from utils.general_plotter import PlotData, cache_plot_data, get_gpt_plot_data_path
 
+
 def calc_retention_curve(
     output_texts: List[List[str]],
     uqs: torch.Tensor,
@@ -49,7 +50,7 @@ def calc_retention_curve(
 
     aq_func_names = [
         aq_func.__class__.__name__ for aq_func in evaluation_run_config.aq_funcs
-    ]        
+    ]
     cache_plot_data(
         PlotData(
             eval_method=evaluation_run_config.eval_function.__class__.__name__,

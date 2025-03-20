@@ -36,7 +36,9 @@ def generate_for_entire_dataset(
     max_tokens: int,
 ) -> List[str]:
     generated_texts: List[str] = []
-    for example in tqdm(dataset, desc=f"Doing inference on {dataset.__class__.__name__}"):
+    for example in tqdm(
+        dataset, desc=f"Doing inference on {dataset.__class__.__name__}"
+    ):
         prompt = example.prompt
         tokens = (
             torch.tensor(tokenizer.encode(prompt))
