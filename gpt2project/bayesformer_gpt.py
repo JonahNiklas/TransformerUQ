@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim.adamw import AdamW
 from gpt2project.ddp import master_process
-from gpt2project.dropout_embedding import DropoutEmbedding
+from shared.dropout_embedding import DropoutEmbedding
 from gpt2project.hyperparameters import GPT2ModelConfig
 
 
