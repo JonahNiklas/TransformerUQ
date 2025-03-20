@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List
 import matplotlib.pyplot as plt
@@ -5,6 +6,8 @@ from pydantic import BaseModel
 
 from gpt2project.uq.evaluation_run_config import EvaluationRunConfig
 
+
+logger = logging.getLogger(__name__)
 
 class PlotData(BaseModel):
     eval_method: str
@@ -109,4 +112,5 @@ def plot_ret_curve(plot_data_paths: List[str], title: str, save_filepath: str) -
     plt.title(title + "| " + plot_data[0].eval_method)
     plt.legend()
     plt.savefig(save_filepath)
+    logger.info(f"Saved plot to {save_filepath}")
     plt.show()

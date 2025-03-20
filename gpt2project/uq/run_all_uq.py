@@ -105,9 +105,9 @@ def main() -> None:
                     )
                     for model in [model_GPT, model_BayesGPT]
                 )
-                logger.info(f"Running {task_name}, config: {gpt_run_config}")
+                logger.info(f"Running GPT on {task_name} with {eval_function.__class__.__name__}")
                 _evaluate_model_on_benchmark(gpt_run_config)
-                logger.info(f"Running {task_name}, config: {bayesgpt_run_config}")
+                logger.info(f"Running BayesGPT on {task_name} with {eval_function.__class__.__name__}")
                 _evaluate_model_on_benchmark(bayesgpt_run_config)
 
                 plot_ret_curve(
