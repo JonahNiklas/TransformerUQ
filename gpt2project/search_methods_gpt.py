@@ -138,6 +138,12 @@ def _clean_inference_results(
     return tgt_tokens, softmax_probs
 
 
+# used for type checking
+_all_search_methods: List[GPT_search_method] = [
+    greedy_search_gpt,
+    topk_sampling_gpt,
+]
+
 @dataclass
 class AutoregressiveInferenceResultsGPT:
     """

@@ -1,9 +1,9 @@
 import os
 from typing import List
 import matplotlib.pyplot as plt
-from dataclasses import dataclass
 from pydantic import BaseModel
-from regex import P
+
+from gpt2project.uq.evaluation_run_config import EvaluationRunConfig
 
 
 class PlotData(BaseModel):
@@ -17,55 +17,59 @@ class PlotData(BaseModel):
     x_points: List[float]
 
 
-def get_gpt_cache_folder(
-    benchmark_name: str, model_name: str, enable_mcdo: bool, search_method: str
+def get_gpt_evaluation_path(
+    evaluation_run_config: EvaluationRunConfig,
 ) -> str:
-    return f"local/gpt-results/{benchmark_name.lower()}/{model_name}/mcdo{enable_mcdo}/{search_method}"
+    folder = _get_gpt_evaluation_cache_folder(evaluation_run_config)
+    os.makedirs(folder, exist_ok=True)
+    filename = _get_gpt_evaluation_cache_filename(evaluation_run_config)
+    return os.path.join(folder, filename)
 
-
-def get_gpt_cache_filename(
-    run_name: str,
-    eval_function_name: str,
-    n_batch_to_validate: int,
-    stepsize: int,
+def _get_gpt_evaluation_cache_folder(
+    evaluation_run_config: EvaluationRunConfig,
 ) -> str:
-    return f"plot_data_{run_name}_{eval_function_name}_n{n_batch_to_validate}_step{stepsize}.pt"
+    return f"local/gpt-cache/{evaluation_run_config.benchmark_name}/{evaluation_run_config.model.__class__.__name__}/mcdo{evaluation_run_config.enable_mcdo}/{evaluation_run_config.search_method.__name__}"
 
 
-def get_gpt_cache_path(
-    benchmark_name: str,
-    model_name: str,
-    enable_mcdo: bool,
-    search_method: str,
-    run_name: str,
-    eval_function_name: str,
-    n_batch_to_validate: int,
-    stepsize: int,
+def _get_gpt_evaluation_cache_filename(
+    evaluation_run_config: EvaluationRunConfig,
 ) -> str:
-    folder = get_gpt_cache_folder(
-        benchmark_name,
-        model_name,
-        enable_mcdo,
-        search_method,
-    )
-    filename = get_gpt_cache_filename(
-        run_name,
-        eval_function_name,
-        n_batch_to_validate,
-        stepsize,
+    return f"{evaluation_run_config.benchmark_name}_outputs_{evaluation_run_config.model.__class__.__name__}_{evaluation_run_config.run_name}_n{evaluation_run_config.n_batches_to_validate}.pt"
+
+
+def get_gpt_plot_data_path(
+    evaluation_run_config: EvaluationRunConfig,
+) -> str:
+    folder = _get_gpt_plot_data_folder(evaluation_run_config)
+    os.makedirs(folder, exist_ok=True)
+    filename = _get_gpt_plot_data_filename(
+        evaluation_run_config
     )
     return os.path.join(folder, filename)
 
 
-def cache_plot_data(plot_data: PlotData, filename: str) -> None:
-    folder = get_gpt_cache_folder(
-        plot_data.benchmark,
-        plot_data.model_name,
-        plot_data.enable_mcdo,
-        plot_data.search_method_type,
-    )
+def _get_gpt_plot_data_folder(
+    evaluation_run_config: EvaluationRunConfig,
+) -> str:
+    return f"local/gpt-results/{evaluation_run_config.benchmark_name.lower()}/{evaluation_run_config.model.__class__.__name__}/mcdo{evaluation_run_config.enable_mcdo}/{evaluation_run_config.search_method.__name__}"
+
+
+def _get_gpt_plot_data_filename(
+    evaluation_run_config: EvaluationRunConfig,
+) -> str:
+    return f"plot_data_{evaluation_run_config.run_name}_{evaluation_run_config.eval_function.__class__.__name__}_n{evaluation_run_config.n_batches_to_validate}_step{evaluation_run_config.stepsize}.pt"
+
+
+def get_gpt_plot_data_wmt_path(
+    evaluation_run_config: EvaluationRunConfig,
+) -> str:
+    folder = _get_gpt_plot_data_folder(evaluation_run_config)
     os.makedirs(folder, exist_ok=True)
-    filepath = os.path.join(folder, filename)
+    filename = _get_gpt_plot_data_filename(evaluation_run_config)
+    return os.path.join(folder, filename)
+
+
+def cache_plot_data(plot_data: PlotData, filepath: str) -> None:
     with open(filepath, "w") as f:
         f.write(plot_data.model_dump_json())
 
