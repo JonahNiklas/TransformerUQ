@@ -8,6 +8,19 @@ from gpt2project.data_processing.abstract_evaluation_dataset import (
 
 
 class TriviaQADataset(AbstractEvaluationDataset):
+
+    @property
+    def only_first_word(self) -> bool:
+        return False
+
+    @property
+    def break_on_newline(self) -> bool:
+        return True
+
+    @property
+    def max_tokens(self) -> int:
+        return 20
+
     def __init__(self) -> None:
         self.dataset = _get_triviaqa_data()
 
@@ -34,11 +47,11 @@ def _get_triviaqa_data() -> List[DatasetExample]:
 
     processed_dataset: List[DatasetExample] = [
         DatasetExample(
-            _generate_prompt(
+            prompt=_generate_prompt(
                 example["question"],
                 " ".join(example["search_results"]["description"][:max_hits]),
             ),
-            example["answer"]["normalized_aliases"],
+            targets=example["answer"]["normalized_aliases"],
         )
         for example in dataset
     ]

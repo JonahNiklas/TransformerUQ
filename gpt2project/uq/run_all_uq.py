@@ -70,19 +70,19 @@ def main() -> None:
         ]
     ] = [
         ("LAMBADA", LambadaDataset(), [-1], [F1Eval()]),
-        ("TriviaQA", TriviaQADataset(), [-1], [TargetUsageEval()]),
-        (
-            "CommonGen",
-            CommonGenDataset(),
-            [-1],
-            [BLEU_eval(), ConceptUsageEval()],
-        ),
-        (
-            "SQuAD",
-            SquadDataset(),
-            [1000],
-            [TargetUsageEval(), BLEU_eval()],
-        ),
+        # ("TriviaQA", TriviaQADataset(), [-1], [TargetUsageEval()]),
+        # (
+        #     "CommonGen",
+        #     CommonGenDataset(),
+        #     [-1],
+        #     [BLEU_eval(), ConceptUsageEval()],
+        # ),
+        # (
+        #     "SQuAD",
+        #     SquadDataset(),
+        #     [1000],
+        #     [TargetUsageEval(), BLEU_eval()],
+        # ),
         # ("HellaSwag", get_hellaswag_run, [-1], [MultipleChoiceEval()]),
     ]
 

@@ -1,22 +1,40 @@
 from __future__ import annotations
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterator, List
+from typing import ClassVar, Iterator, List
+from pydantic import BaseModel
 from torch.utils.data import Dataset
 
 
-@dataclass
-class DatasetExample:
+class DatasetExample(BaseModel):
     prompt: str
     targets: List[str]
 
 
-@dataclass
 class DatasetExampleWithConcepts(DatasetExample):
     concepts: List[str]
 
 
-class AbstractEvaluationDataset(Dataset):
+class AbstractEvaluationDataset(Dataset, ABC):
+
+    @property
+    @abstractmethod
+    def only_first_word(self) -> bool:
+        """Whether to only predict the first word."""
+        pass
+
+    @property
+    @abstractmethod
+    def break_on_newline(self) -> bool:
+        """Whether to break prompts on newlines."""
+        pass
+    
+    @property
+    @abstractmethod
+    def max_tokens(self) -> int:
+        """Maximum number of tokens to predict."""
+        pass
+
     @abstractmethod
     def __getitem__(self, idx: int) -> DatasetExample:
         pass

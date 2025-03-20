@@ -31,9 +31,6 @@ def generate_for_entire_dataset(
     dataset: AbstractEvaluationDataset,
     tokenizer: tiktoken.Encoding,
     search_method: GPT_search_method,
-    break_on_newline: bool,
-    only_first_word: bool,
-    max_tokens: int,
 ) -> List[str]:
     generated_texts: List[str] = []
     for example in tqdm(
@@ -50,9 +47,9 @@ def generate_for_entire_dataset(
             tokenizer,
             tokens,
             search_method=search_method,
-            break_on_newline=break_on_newline,
-            only_first_word=only_first_word,
-            max_tokens=max_tokens,
+            break_on_newline=dataset.break_on_newline,
+            only_first_word=dataset.only_first_word,
+            max_tokens=dataset.max_tokens,
         )
         generated_texts.append(
             decode_token_list(generated_token_ids.token_ids[0].tolist(), tokenizer)
@@ -113,7 +110,9 @@ def generate_with_uq_for_entire_dataset(
             prompt_token_ids,
             evaluation_run_config.search_method,
             evaluation_run_config.enable_mcdo,
-            break_on_newline=False,
+            break_on_newline=dataset.break_on_newline,
+            only_first_word=dataset.only_first_word,
+            max_tokens=dataset.max_tokens,
             aq_funcs=evaluation_run_config.aq_funcs,
         )
         for aq in range(len(evaluation_run_config.aq_funcs)):
@@ -131,10 +130,10 @@ def generate_autoregressivly_gpt2_with_uq(
     tgt_tokens: torch.Tensor,
     search_method: GPT_search_method,
     enable_mcdo: bool,
-    break_on_newline: bool,
     aq_funcs: List[AcquisitionFunctionGPT],
-    only_first_word: bool = False,
-    max_tokens: int = 32,
+    break_on_newline: bool,
+    only_first_word: bool,
+    max_tokens: int,
 ) -> Tuple[List[List[str]], torch.Tensor]:
     if enable_mcdo:
         _enable_test_time_dropout(model)

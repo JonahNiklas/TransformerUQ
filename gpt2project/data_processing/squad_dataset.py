@@ -10,6 +10,19 @@ from gpt2project.data_processing.abstract_evaluation_dataset import (
 
 
 class SquadDataset(AbstractEvaluationDataset):
+
+    @property
+    def only_first_word(self) -> bool:
+        return False
+
+    @property
+    def break_on_newline(self) -> bool:
+        return True
+
+    @property
+    def max_tokens(self) -> int:
+        return 20
+
     def __init__(self) -> None:
         self.dataset = _get_squad_data()
 
@@ -39,8 +52,8 @@ def _get_squad_data() -> List[DatasetExample]:
 
     processed_dataset: List[DatasetExample] = [
         DatasetExample(
-            _create_squad_prompt(context, question),
-            answer,
+            prompt=_create_squad_prompt(context, question),
+            targets=answer,
         )
         for context, question, answer in zip(contexts, questions, answers)
     ]
@@ -51,3 +64,9 @@ def _get_squad_data() -> List[DatasetExample]:
 def _create_squad_prompt(context: str, question: str) -> str:
     prompt = f"Context: {context}\nQuestion: {question}\nAnswer:"
     return prompt
+
+
+if __name__ == "__main__":
+    dataset = SquadDataset()
+    print(len(dataset))
+    print(dataset[0])
