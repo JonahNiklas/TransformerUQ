@@ -28,7 +28,7 @@ class AbstractEvaluationDataset(Dataset, ABC):
     def break_on_newline(self) -> bool:
         """Whether to break prompts on newlines."""
         pass
-    
+
     @property
     @abstractmethod
     def max_tokens(self) -> int:

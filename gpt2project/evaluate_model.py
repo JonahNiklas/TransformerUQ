@@ -38,7 +38,9 @@ def main() -> None:
     search_method: GPT_search_method = greedy_search_gpt
     model = GPT.from_pretrained("gpt2").to(hyperparameters.device)
     # ###########################
-    logger.info(f"Evaluating {model.__class__.__name__} on {dataset.__class__.__name__} using {eval_function.__class__.__name__}")
+    logger.info(
+        f"Evaluating {model.__class__.__name__} on {dataset.__class__.__name__} using {eval_function.__class__.__name__}"
+    )
 
     tokenizer = tiktoken.get_encoding("gpt2")
 
@@ -61,12 +63,17 @@ def main() -> None:
     # Commongen average score 04.03: 8.412
 
 
-def _print_some_generated_texts(generated_texts: List[str], dataset_examples: List[DatasetExample], num_examples: int = 25) -> None:
+def _print_some_generated_texts(
+    generated_texts: List[str],
+    dataset_examples: List[DatasetExample],
+    num_examples: int = 25,
+) -> None:
     for i in range(num_examples):
         logger.info(f"EXAMPLE {i+1}:")
         print(f"{dataset_examples[i].prompt}\033[94m{generated_texts[i]}\033[0m")
         print(f"Targets: {dataset_examples[i].targets}")
         logger.info("#" * 30)
+
 
 if __name__ == "__main__":
     main()
