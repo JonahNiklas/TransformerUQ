@@ -9,6 +9,7 @@ from gpt2project.uq.evaluation_run_config import EvaluationRunConfig
 
 logger = logging.getLogger(__name__)
 
+
 class PlotData(BaseModel):
     eval_method: str
     search_method_type: str
