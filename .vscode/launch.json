@@ -19,20 +19,12 @@
             "type": "debugpy",
             "request": "launch",
             "module": "test_model",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
         },
         {
             "name": "test_model_uq",
             "type": "debugpy",
             "request": "launch",
             "module": "uq.test_model_uq",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
         },
         {
             "name": "gpt2_train",
@@ -45,107 +37,22 @@
             }
         },
         {
-            "name": "gpt2_hellaswag",
+            "name": "gpt2_evaluate_model",
             "type": "debugpy",
             "request": "launch",
-            "module": "gpt2project.gpt2_hellaswag",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
-        },
-        {
-            "name": "gpt2_commongen",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gpt2project.gpt2_commongen",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
-        },
-        {
-            "name": "gpt_commongen_uq",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gpt2project.uq.gpt_commongen_uq",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
-        },
-        {
-            "name": "data_processing.load_squad",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gpt2project.data_processing.load_squad",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
-        },
-        {
-            "name": "gpt2_squad",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gpt2project.gpt2_squad",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
-        },
-        {
-            "name": "gpt2_squad_uq",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gpt2project.uq.gpt2_squad_uq",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
-        },
-        {
-            "name": "gpt_trivia_uq",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gpt2project.uq.gpt_trivia_uq",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
-        },
-        {
-            "name": "gpt_lambada_uq",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gpt2project.uq.gpt_lambada_uq",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
+            "module": "gpt2project.evaluate_model",
         },
         {
             "name": "plot_test",
             "type": "debugpy",
             "request": "launch",
             "module": "gpt2project.uq.plot_test",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
         },
         {
             "name": "run_all_uq",
             "type": "debugpy",
             "request": "launch",
             "module": "gpt2project.uq.run_all_uq",
-            "env": {
-                "TORCH_COMPILE": "FALSE",
-                "USE_WANDB": "FALSE"
-            }
         },
-
-
-
     ]
 }
