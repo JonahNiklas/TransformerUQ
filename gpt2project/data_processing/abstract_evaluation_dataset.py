@@ -1,7 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import ClassVar, Iterator, List
+from typing import Iterator, List
 from pydantic import BaseModel
 from torch.utils.data import Dataset
 

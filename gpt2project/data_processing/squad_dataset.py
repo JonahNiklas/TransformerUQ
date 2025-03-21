@@ -40,11 +40,10 @@ def _extract_answers(answer_dict: Any) -> List[str]:
 
 
 def _get_squad_data() -> List[DatasetExample]:
-    data = load_dataset(
+    data: Any = load_dataset(
         "christti/squad-augmented-v2",
         split="validation",
     )
-    assert isinstance(data, Dataset)
 
     contexts = [str(context) for context in data["context"]]
     questions = [str(question) for question in data["question"]]
