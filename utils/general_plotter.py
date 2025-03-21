@@ -3,6 +3,7 @@ import os
 from typing import List
 import matplotlib.pyplot as plt
 from pydantic import BaseModel
+import wandb
 
 from gpt2project.uq.evaluation_run_config import EvaluationRunConfig
 
@@ -115,3 +116,41 @@ def plot_ret_curve(plot_data_paths: List[str], title: str, save_filepath: str) -
     plt.savefig(save_filepath)
     logger.info(f"Saved plot to {save_filepath}")
     plt.show()
+
+
+def plot_ret_curve_wandb(plot_data_paths: List[str], title: str, run_id: str) -> None:
+    plot_data = load_plot_data(plot_data_paths)
+    assert all(
+        plot_datum.benchmark == plot_data[0].benchmark for plot_datum in plot_data
+    ), "All benchmarks must be the same"
+    assert all(
+        plot_datum.eval_method == plot_data[0].eval_method for plot_datum in plot_data
+    ), "All evaluation methods must be the same"
+
+    _attach_to_previous_wandb_run(run_id)
+
+    wandb.define_metric(
+        "retention"
+    )
+
+    for plot_datum in plot_data:
+        for aq in range(len(plot_datum.uq_methods)):
+            label = f"eval/{plot_datum.model_name} {plot_datum.search_method_type} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.uq_methods[aq]}"
+            wandb.log(
+                {
+                    label: plot_datum.eval_scores[aq],
+                },
+                step=plot_datum.x_points,  # type: ignore
+            )
+
+    logger.info(f"Logged benchmark plot for {title} to wandb")
+    wandb.finish()
+
+
+def _attach_to_previous_wandb_run(run_id: str) -> None:
+    use_wandb = os.environ["USE_WANDB"] != "FALSE"
+    wandb.init(
+        id=run_id,
+        resume="must",
+        mode="disabled" if not use_wandb else None,
+    )
