@@ -68,7 +68,7 @@ def generate_autoregressivly_with_uq(
         hyperparameters.transformer.max_len,
     ).to(hyperparameters.device)
 
-    for n in tqdm(range(hyperparameters.uq.num_inferences)):
+    for n in range(hyperparameters.uq.num_inferences):
         inference_result: AutoregressiveInferenceResults = beam_search_function(
             model,
             src_tokens,

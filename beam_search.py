@@ -349,7 +349,7 @@ def beam_search_unbatched(
         ]
 
         final_sequences: List[torch.Tensor | None] = [None] * batch_size
-        for _ in tqdm(range(max_len - 1), desc="Generating tokens"):
+        for _ in range(max_len - 1):
             # Expand each beam, compute log probs for each possible next token
             new_beams: List[List[Tuple[float, torch.Tensor]]] = [
                 [] for _ in range(batch_size)

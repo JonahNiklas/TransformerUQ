@@ -51,17 +51,17 @@ def main() -> None:
     search_method = greedy_search_gpt
     step_size = 25
 
-    wandb.init(project="GPT2Project", name=run_name, job_type="inference")
+    # wandb.init(project="GPT2Project", name=run_name, job_type="inference")
 
     tokenizer = tiktoken.get_encoding("gpt2")
-    model_BayesGPT, bayesgpt_run = get_model_from_wandb_checkpoint(
+    model_BayesGPT = get_model_from_wandb_checkpoint(
         wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v2",
         checkpoint_name="model_bayesformer_76291.pt",
     )
     model_BayesGPT.to(hyperparameters.device)
     model_BayesGPT.eval()
 
-    model_GPT, gpt_run = get_model_from_wandb_checkpoint(
+    model_GPT= get_model_from_wandb_checkpoint(
         wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v1",
         checkpoint_name="model_transformer_76291.pt",
     )

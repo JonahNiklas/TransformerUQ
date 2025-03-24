@@ -40,7 +40,7 @@ def _get_gpt_evaluation_cache_folder(
 def _get_gpt_evaluation_cache_filename(
     evaluation_run_config: EvaluationRunConfig,
 ) -> str:
-    return f"{evaluation_run_config.dataset.__class__.__name__}/{evaluation_run_config.model.__class__.__name__}/mcdo{evaluation_run_config.enable_mcdo}/{evaluation_run_config.search_method.__name__}/{evaluation_run_config.eval_function.__class__.__name__}.pt"
+    return f"{evaluation_run_config.dataset.__class__.__name__}_{evaluation_run_config.model.__class__.__name__}_mcdo{evaluation_run_config.enable_mcdo}_{evaluation_run_config.search_method.__name__}_{evaluation_run_config.eval_function.__class__.__name__}.pt"
 
 
 def get_gpt_plot_data_path(
@@ -61,7 +61,7 @@ def _get_gpt_plot_data_folder(
 def _get_gpt_plot_data_filename(
     evaluation_run_config: EvaluationRunConfig,
 ) -> str:
-    return f"{evaluation_run_config.dataset.__class__.__name__}/{evaluation_run_config.model.__class__.__name__}/mcdo{evaluation_run_config.enable_mcdo}/{evaluation_run_config.search_method.__name__}/{evaluation_run_config.eval_function.__class__.__name__}.json"
+    return f"{evaluation_run_config.dataset.__class__.__name__}_{evaluation_run_config.model.__class__.__name__}_mcdo{evaluation_run_config.enable_mcdo}_{evaluation_run_config.search_method.__name__}_{evaluation_run_config.eval_function.__class__.__name__}.json"
 
 
 def get_gpt_plot_data_wmt_path(

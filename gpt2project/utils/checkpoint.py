@@ -61,7 +61,7 @@ def load_checkpoint(
 
 def get_model_from_wandb_checkpoint(
     wandb_artifact_path: str, checkpoint_name: str
-) -> Tuple[GPT | BayesformerGPT, Run]:
+) -> GPT | BayesformerGPT:
     """Loads a model from a wandb checkpoint"""
     os.makedirs("local/gpt_checkpoints", exist_ok=True)
     artifact_dir = "local/gpt_checkpoints"
@@ -70,9 +70,8 @@ def get_model_from_wandb_checkpoint(
         api = wandb.Api()
         artifact = api.artifact(wandb_artifact_path)
         artifact.download(artifact_dir)
-        logged_by_run: Run | None = artifact.logged_by()
+
     from gpt2project.utils.checkpoint import load_checkpoint
 
-    assert logged_by_run is not None, "Logged by run is None"
     model, step, optimizer = load_checkpoint(artifact_dir + "/" + checkpoint_name)
-    return model, logged_by_run
+    return model
