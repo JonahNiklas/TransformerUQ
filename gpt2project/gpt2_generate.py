@@ -88,7 +88,11 @@ def generate_with_uq_for_entire_dataset(
         hyperparameters.device
     )
 
-    for i, dataset_example in enumerate(dataset):
+    for i, dataset_example in tqdm(
+        enumerate(dataset),
+        desc="Doing inference with UQ",
+        total=dataset_size,
+    ):
         prompt = dataset_example.prompt
         assert isinstance(prompt, str)
         prompt_token_ids = (

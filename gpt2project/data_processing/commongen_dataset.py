@@ -83,4 +83,3 @@ def _get_common_gen_data() -> List[DatasetExampleWithConcepts]:
 if __name__ == "__main__":
     dataset = CommonGen()
     print(len(dataset))
-    print(dataset[0])
