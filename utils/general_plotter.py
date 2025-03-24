@@ -92,7 +92,9 @@ def load_plot_data(plot_data_paths: List[str]) -> List[PlotData]:
     return plot_data_list
 
 
-def plot_ret_curve(plot_data: PlotData | List[PlotData], title: str, save_filepath: str) -> None:
+def plot_ret_curve(
+    plot_data: PlotData | List[PlotData], title: str, save_filepath: str
+) -> None:
     if isinstance(plot_data, PlotData):
         plot_data = [plot_data]
 

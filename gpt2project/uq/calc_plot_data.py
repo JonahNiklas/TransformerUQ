@@ -65,5 +65,3 @@ def calc_retention_curve(
         get_gpt_plot_data_path(evaluation_run_config),
     )
     return plot_data
-
-
