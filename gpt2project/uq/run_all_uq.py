@@ -61,13 +61,12 @@ def main() -> None:
     model_BayesGPT.to(hyperparameters.device)
     model_BayesGPT.eval()
 
-    model_GPT= get_model_from_wandb_checkpoint(
+    model_GPT = get_model_from_wandb_checkpoint(
         wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v1",
         checkpoint_name="model_transformer_76291.pt",
     )
     model_GPT.to(hyperparameters.device)
     model_GPT.eval()
-
 
     tasks: List[
         Tuple[
