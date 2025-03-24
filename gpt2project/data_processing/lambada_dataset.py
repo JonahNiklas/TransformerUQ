@@ -8,7 +8,7 @@ from gpt2project.data_processing.abstract_evaluation_dataset import (
 )
 
 
-class LambadaDataset(AbstractEvaluationDataset):
+class Lambada(AbstractEvaluationDataset):
     @property
     def only_first_word(self) -> bool:
         return True
@@ -47,6 +47,7 @@ def _get_lambada_data() -> List[DatasetExample]:
 
 
 if __name__ == "__main__":
-    dataset = LambadaDataset()
+    dataset = Lambada()
+    print(f"Dataset name: {dataset.__class__.__name__}")
     print(len(dataset))
     print(dataset[0])

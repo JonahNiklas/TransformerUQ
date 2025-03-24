@@ -5,8 +5,8 @@ from gpt2project.data_processing.abstract_evaluation_dataset import (
     AbstractEvaluationDataset,
     DatasetExample,
 )
-from gpt2project.data_processing.commongen_dataset import CommonGenDataset
-from gpt2project.data_processing.lambada_dataset import LambadaDataset
+from gpt2project.data_processing.commongen_dataset import CommonGen
+from gpt2project.data_processing.lambada_dataset import Lambada
 from gpt2project.gpt2_generate import (
     generate_for_entire_dataset,
 )
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     # ##### CONFIGURATIONS #####
     dataset: AbstractEvaluationDataset = (
-        LambadaDataset()
+        Lambada()
     )  # or LambadaDataset() or TriviaQADataset() or SquadDataset()
     eval_function: AbstractEval = F1Eval()
     search_method: GPT_search_method = greedy_search_gpt

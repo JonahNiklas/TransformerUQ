@@ -9,7 +9,7 @@ from gpt2project.data_processing.abstract_evaluation_dataset import (
 )
 
 
-class SquadDataset(AbstractEvaluationDataset):
+class Squad(AbstractEvaluationDataset):
 
     @property
     def only_first_word(self) -> bool:
@@ -44,6 +44,8 @@ def _get_squad_data() -> List[DatasetExample]:
         "christti/squad-augmented-v2",
         split="validation",
     )
+    subset = 1000
+    data = data.select(range(subset))
 
     contexts = [str(context) for context in data["context"]]
     questions = [str(question) for question in data["question"]]
@@ -66,6 +68,6 @@ def _create_squad_prompt(context: str, question: str) -> str:
 
 
 if __name__ == "__main__":
-    dataset = SquadDataset()
+    dataset = Squad()
     print(len(dataset))
     print(dataset[0])

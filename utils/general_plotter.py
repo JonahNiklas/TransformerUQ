@@ -1,9 +1,9 @@
+from __future__ import annotations
 import logging
 import os
 from typing import List
 import matplotlib.pyplot as plt
 from pydantic import BaseModel
-import wandb
 
 from gpt2project.uq.evaluation_run_config import EvaluationRunConfig
 
@@ -34,13 +34,13 @@ def get_gpt_evaluation_path(
 def _get_gpt_evaluation_cache_folder(
     evaluation_run_config: EvaluationRunConfig,
 ) -> str:
-    return f"local/gpt-cache/{evaluation_run_config.benchmark_name}/{evaluation_run_config.model.__class__.__name__}/mcdo{evaluation_run_config.enable_mcdo}/{evaluation_run_config.search_method.__name__}"
+    return f"local/gpt-evaluation-cache/{evaluation_run_config.run_name}"
 
 
 def _get_gpt_evaluation_cache_filename(
     evaluation_run_config: EvaluationRunConfig,
 ) -> str:
-    return f"{evaluation_run_config.benchmark_name}_outputs_{evaluation_run_config.model.__class__.__name__}_{evaluation_run_config.run_name}_n{evaluation_run_config.n_batches_to_validate}.pt"
+    return f"{evaluation_run_config.dataset.__class__.__name__}/{evaluation_run_config.model.__class__.__name__}/mcdo{evaluation_run_config.enable_mcdo}/{evaluation_run_config.search_method.__name__}/{evaluation_run_config.eval_function.__class__.__name__}.pt"
 
 
 def get_gpt_plot_data_path(
@@ -55,13 +55,13 @@ def get_gpt_plot_data_path(
 def _get_gpt_plot_data_folder(
     evaluation_run_config: EvaluationRunConfig,
 ) -> str:
-    return f"local/gpt-results/{evaluation_run_config.benchmark_name.lower()}/{evaluation_run_config.model.__class__.__name__}/mcdo{evaluation_run_config.enable_mcdo}/{evaluation_run_config.search_method.__name__}"
+    return f"local/gpt-plot-data/{evaluation_run_config.run_name}"
 
 
 def _get_gpt_plot_data_filename(
     evaluation_run_config: EvaluationRunConfig,
 ) -> str:
-    return f"plot_data_{evaluation_run_config.run_name}_{evaluation_run_config.eval_function.__class__.__name__}_n{evaluation_run_config.n_batches_to_validate}_step{evaluation_run_config.stepsize}.pt"
+    return f"{evaluation_run_config.dataset.__class__.__name__}/{evaluation_run_config.model.__class__.__name__}/mcdo{evaluation_run_config.enable_mcdo}/{evaluation_run_config.search_method.__name__}/{evaluation_run_config.eval_function.__class__.__name__}.json"
 
 
 def get_gpt_plot_data_wmt_path(
@@ -92,8 +92,10 @@ def load_plot_data(plot_data_paths: List[str]) -> List[PlotData]:
     return plot_data_list
 
 
-def plot_ret_curve(plot_data_paths: List[str], title: str, save_filepath: str) -> None:
-    plot_data = load_plot_data(plot_data_paths)
+def plot_ret_curve(plot_data: PlotData | List[PlotData], title: str, save_filepath: str) -> None:
+    if isinstance(plot_data, PlotData):
+        plot_data = [plot_data]
+
     assert all(
         plot_datum.benchmark == plot_data[0].benchmark for plot_datum in plot_data
     ), "All benchmarks must be the same"
@@ -116,41 +118,3 @@ def plot_ret_curve(plot_data_paths: List[str], title: str, save_filepath: str) -
     plt.savefig(save_filepath)
     logger.info(f"Saved plot to {save_filepath}")
     plt.show()
-
-
-def plot_ret_curve_wandb(plot_data_paths: List[str], title: str, run_id: str) -> None:
-    plot_data = load_plot_data(plot_data_paths)
-    assert all(
-        plot_datum.benchmark == plot_data[0].benchmark for plot_datum in plot_data
-    ), "All benchmarks must be the same"
-    assert all(
-        plot_datum.eval_method == plot_data[0].eval_method for plot_datum in plot_data
-    ), "All evaluation methods must be the same"
-
-    _attach_to_previous_wandb_run(run_id)
-
-    wandb.define_metric(
-        "retention"
-    )
-
-    for plot_datum in plot_data:
-        for aq in range(len(plot_datum.uq_methods)):
-            label = f"eval/{plot_datum.model_name} {plot_datum.search_method_type} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.uq_methods[aq]}"
-            wandb.log(
-                {
-                    label: plot_datum.eval_scores[aq],
-                },
-                step=plot_datum.x_points,  # type: ignore
-            )
-
-    logger.info(f"Logged benchmark plot for {title} to wandb")
-    wandb.finish()
-
-
-def _attach_to_previous_wandb_run(run_id: str) -> None:
-    use_wandb = os.environ["USE_WANDB"] != "FALSE"
-    wandb.init(
-        id=run_id,
-        resume="must",
-        mode="disabled" if not use_wandb else None,
-    )
