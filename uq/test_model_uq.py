@@ -145,7 +145,6 @@ def main() -> None:
             run_id,
         )
 
-
         for validation_result, benchmark_name, save_path in [
             (
                 validation_results_id,
@@ -209,7 +208,6 @@ def get_run_curves_and_histograms(
             f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_hist_{aq_func.__class__.__name__}.svg",
             run_name,
         )
-
 
 
 def load_or_validate(
