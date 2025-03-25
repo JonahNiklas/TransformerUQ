@@ -9,7 +9,7 @@ def calc_retention_curve(
     output_texts: List[List[str]],
     uqs: torch.Tensor,
     evaluation_run_config: EvaluationRunConfig,
-) -> None:
+) -> PlotData:
     assert len(output_texts) == len(evaluation_run_config.aq_funcs) == uqs.size(1)
     assert len(output_texts[0]) == len(evaluation_run_config.dataset)
 
@@ -48,19 +48,20 @@ def calc_retention_curve(
             )
             retention_scores[aq_func_idx].append(score)
 
-    aq_func_names = [
-        aq_func.__class__.__name__ for aq_func in evaluation_run_config.aq_funcs
-    ]
+    plot_data = PlotData(
+        eval_method=evaluation_run_config.eval_function.__class__.__name__,
+        search_method_type=evaluation_run_config.search_method.__name__,
+        enable_mcdo=evaluation_run_config.enable_mcdo,
+        model_name=evaluation_run_config.model.__class__.__name__,
+        benchmark=evaluation_run_config.dataset.__class__.__name__,
+        uq_methods=[
+            aq_func.__class__.__name__ for aq_func in evaluation_run_config.aq_funcs
+        ],
+        eval_scores=retention_scores,
+        x_points=list(cutoffs),
+    )
     cache_plot_data(
-        PlotData(
-            eval_method=evaluation_run_config.eval_function.__class__.__name__,
-            search_method_type=evaluation_run_config.search_method.__name__,
-            enable_mcdo=evaluation_run_config.enable_mcdo,
-            model_name=evaluation_run_config.model.__class__.__name__,
-            benchmark=evaluation_run_config.benchmark_name,
-            uq_methods=aq_func_names,
-            eval_scores=retention_scores,
-            x_points=list(cutoffs),
-        ),
+        plot_data,
         get_gpt_plot_data_path(evaluation_run_config),
     )
+    return plot_data

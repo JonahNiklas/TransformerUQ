@@ -21,8 +21,6 @@ class EvaluationRunConfig:
     enable_mcdo: bool
     search_method: GPT_search_method
     eval_function: AbstractEval | ConceptUsageEval
-    n_batches_to_validate: int
-    benchmark_name: str
     dataset: AbstractEvaluationDataset
     stepsize: int
     aq_funcs: List[AcquisitionFunctionGPT]

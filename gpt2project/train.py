@@ -435,3 +435,4 @@ def generate_from_model(
 if __name__ == "__main__":
     print("Starting training...")
     main()
+    wandb.finish()

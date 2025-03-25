@@ -3,6 +3,7 @@ import wandb
 import os
 from typing import Tuple
 import torch
+from wandb.apis.public.runs import Run
 from gpt2project.hyperparameters import GPT2ModelConfig, TrainingConfig, hyperparameters
 from gpt2project.gpt2model import GPT
 from gpt2project.bayesformer_gpt import BayesformerGPT
@@ -69,6 +70,7 @@ def get_model_from_wandb_checkpoint(
         api = wandb.Api()
         artifact = api.artifact(wandb_artifact_path)
         artifact.download(artifact_dir)
+
     from gpt2project.utils.checkpoint import load_checkpoint
 
     model, step, optimizer = load_checkpoint(artifact_dir + "/" + checkpoint_name)

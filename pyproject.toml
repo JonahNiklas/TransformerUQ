@@ -30,6 +30,7 @@ datasets = "^3.3.2"
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.14.1"
 black = "^24.4.0"
+ipykernel = "^6.29.5"
 
 [build-system]
 requires = ["poetry-core"]

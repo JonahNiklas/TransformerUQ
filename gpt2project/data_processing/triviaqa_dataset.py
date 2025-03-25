@@ -7,7 +7,7 @@ from gpt2project.data_processing.abstract_evaluation_dataset import (
 )
 
 
-class TriviaQADataset(AbstractEvaluationDataset):
+class TriviaQA(AbstractEvaluationDataset):
 
     @property
     def only_first_word(self) -> bool:
@@ -59,6 +59,6 @@ def _get_triviaqa_data() -> List[DatasetExample]:
 
 
 if __name__ == "__main__":
-    dataset = TriviaQADataset()
+    dataset = TriviaQA()
     print(len(dataset))
     print(dataset[0])

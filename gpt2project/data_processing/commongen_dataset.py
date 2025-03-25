@@ -25,7 +25,7 @@ Sentence:"""
     return template
 
 
-class CommonGenDataset(AbstractEvaluationDataset):
+class CommonGen(AbstractEvaluationDataset):
 
     @property
     def only_first_word(self) -> bool:
@@ -81,6 +81,5 @@ def _get_common_gen_data() -> List[DatasetExampleWithConcepts]:
 
 
 if __name__ == "__main__":
-    dataset = CommonGenDataset()
+    dataset = CommonGen()
     print(len(dataset))
-    print(dataset[0])

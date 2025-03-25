@@ -91,11 +91,7 @@ def generate_with_uq_for_entire_dataset(
     for i, dataset_example in tqdm(
         enumerate(dataset),
         desc="Doing inference with UQ",
-        total=(
-            dataset_size
-            if evaluation_run_config.n_batches_to_validate == -1
-            else evaluation_run_config.n_batches_to_validate
-        ),
+        total=dataset_size,
     ):
         prompt = dataset_example.prompt
         assert isinstance(prompt, str)
@@ -118,8 +114,6 @@ def generate_with_uq_for_entire_dataset(
         for aq in range(len(evaluation_run_config.aq_funcs)):
             all_output_texts[aq].extend(output_texts[aq])
         all_uqs = torch.cat((all_uqs, uq), dim=0)
-        if i == evaluation_run_config.n_batches_to_validate:
-            break
 
     return all_output_texts, all_uqs
 
