@@ -32,12 +32,13 @@ from utils.general_plotter import plot_ret_curve
 def main() -> None:
     # run_id = "7sy5cau3"
     # checkpoint = "checkpoints/checkpoint-300000b.pth" # remember to change hyperparameters.training.transformer_implementation
-    # run_id = "xn8evvcd"
-    # checkpoint = "checkpoints/checkpoint-300000_trans.pth"
-    run_id = "5c8z0pxa"
-    checkpoint = "checkpoints/checkpoint-300000_bayes_pre_emb_drop.pth"
+    run_id = "xn8evvcd"
+    checkpoint = "local/checkpoints/checkpoint-300000_trans.pth"
+    hyperparameters.transformer.transformer_implementation = "own"
+    # run_id = "5c8z0pxa"
+    # checkpoint = "checkpoints/checkpoint-300000_bayes_pre_emb_drop.pth"
 
-    run_name = "bf_pre_emb_drop"
+    run_name = "translation_full_run_25032025"
     shared_vocab = load_vocab(constants.file_paths.vocab)
     print(f"Shared vocab size: {len(shared_vocab)}")
     device = hyperparameters.device
