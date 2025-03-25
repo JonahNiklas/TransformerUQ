@@ -5,16 +5,17 @@ from typing import List, Tuple
 
 import tiktoken
 from tqdm import tqdm
-import wandb
 
 from gpt2project.data_processing.abstract_evaluation_dataset import (
     AbstractEvaluationDataset,
 )
 from gpt2project.data_processing.commongen_dataset import CommonGen
 from gpt2project.data_processing.lambada_dataset import Lambada
+from gpt2project.data_processing.load_hellaswag import HellaSwag
 from gpt2project.data_processing.squad_dataset import Squad
 from gpt2project.data_processing.triviaqa_dataset import TriviaQA
 from gpt2project.gpt2_generate import generate_with_uq_for_entire_dataset
+from gpt2project.gpt_generate_hellaswag import eval_with_uq_for_entire_hellaswag_dataset
 from gpt2project.search_methods_gpt import greedy_search_gpt
 from gpt2project.uq.calc_plot_data import calc_retention_curve
 from gpt2project.uq.evaluation_run_config import EvaluationRunConfig
@@ -30,6 +31,7 @@ from gpt2project.utils.benchmark_eval_funcs import (
     BLEU_eval,
     ConceptUsageEval,
     F1Eval,
+    MultipleChoiceEval,
     TargetUsageEval,
 )
 from gpt2project.utils.checkpoint import get_model_from_wandb_checkpoint
@@ -91,7 +93,11 @@ def main() -> None:
             [TargetUsageEval(), BLEU_eval()],
             [BeamScore(), mpnet_cosine(), BLEUVar()],
         ),
-        # ("HellaSwag", get_hellaswag_run, [-1], [MultipleChoiceEval()]),
+        (
+            HellaSwag(),
+            [MultipleChoiceEval()],
+            [BeamScore()],
+        ),  # BeamScore here is just a arbitrary placeholder since UQ is hardcoded into the Hellaswag evaluation code
     ]
 
     run_configs = [
@@ -127,7 +133,11 @@ def main() -> None:
 def _evaluate_model_on_benchmark(
     evaluation_run_config: EvaluationRunConfig,
 ) -> PlotData:
-    all_outputs, all_uqs = generate_with_uq_for_entire_dataset(evaluation_run_config)
+    all_outputs, all_uqs = (
+        eval_with_uq_for_entire_hellaswag_dataset(evaluation_run_config)
+        if isinstance(evaluation_run_config.dataset, HellaSwag)
+        else generate_with_uq_for_entire_dataset(evaluation_run_config)
+    )
     plot_data = calc_retention_curve(
         all_outputs, all_uqs, evaluation_run_config=evaluation_run_config
     )
