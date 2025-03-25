@@ -58,8 +58,8 @@ def calc_ret_curve_plot_data_wmt(
         # the legends gets too noisy, so ommit some of the props
         PlotData(
             eval_method=eval_method,
-            search_method_type="", #ommit
-            enable_mcdo=False, #ommit
+            search_method_type="",  # ommit
+            enable_mcdo=False,  # ommit
             model_name=model_name,
             benchmark=benchmark_name,
             aq_func_name=aq_funcs_and_auc,
