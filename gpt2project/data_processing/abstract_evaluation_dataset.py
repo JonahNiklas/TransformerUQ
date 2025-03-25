@@ -14,6 +14,10 @@ class DatasetExampleWithConcepts(DatasetExample):
     concepts: List[str]
 
 
+class DatasetExampleMultipleChoice(DatasetExample):
+    choice_options: List[str]
+
+
 class AbstractEvaluationDataset(Dataset, ABC):
 
     @property

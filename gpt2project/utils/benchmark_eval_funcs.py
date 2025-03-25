@@ -39,6 +39,20 @@ class KeywordEval(AbstractEval):
         raise NotImplementedError("Evaluation function not implemented.")
 
 
+class MultipleChoiceEval(AbstractEval):
+    def __call__(
+        self,
+        output_text: List[str],
+        dataset_examples: List[DatasetExample | DatasetExampleWithConcepts],
+    ) -> float:
+        score = 0
+        assert len(output_text) == len(dataset_examples)
+        for i, example in enumerate(dataset_examples):
+            if example.targets[0].lower() == output_text[i].lower():
+                score += 1
+        return score / len(dataset_examples)
+
+
 class TargetUsageEval(MultipleTargetEval):
     # Evaluate the model based on the presence of the target in the output
     # score is 1 if any of the targets is present in the output
