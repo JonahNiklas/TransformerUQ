@@ -36,11 +36,7 @@ def eval_with_uq_for_entire_hellaswag_dataset(
     for i, dataset_example in tqdm(
         enumerate(dataset),
         desc="Doing inference with UQ",
-        total=(
-            dataset_size
-            if evaluation_run_config.n_batches_to_validate == -1
-            else evaluation_run_config.n_batches_to_validate
-        ),
+        total=(dataset_size),
     ):
         output_class, uqs = _eval_hellaswag_example(
             evaluation_run_config.model,
@@ -52,8 +48,6 @@ def eval_with_uq_for_entire_hellaswag_dataset(
         for aq in range(aq_method_count):
             all_output_texts[aq].extend(output_class[aq])
         all_uqs = torch.cat((all_uqs, uqs.unsqueeze(0)), dim=0)
-        if i == evaluation_run_config.n_batches_to_validate:
-            break
 
     return all_output_texts, all_uqs
 
