@@ -1,5 +1,7 @@
 from gc import enable
 import os
+from pdb import run
+from tabnanny import check
 from typing import List
 import torch
 
@@ -16,24 +18,27 @@ from data_processing.dataloader import get_data_loader
 from hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
 from uq.plot_uq import (
-    calc_ret_curve_plot_data,
+    calc_ret_curve_plot_data_wmt,
     plot_combined_roc_curve,
     plot_data_retained_curve,
     plot_uq_histogram_and_roc,
 )
 from utils.checkpoints import load_checkpoint
 from uq.validate_uq import ValidationResult, validate_uq
-from data_processing.vocab import load_vocab, output_to_text
+from data_processing.vocab import load_vocab
 from constants import constants
 from utils.general_plotter import plot_ret_curve
 
 
 def main() -> None:
-    # Load shared vocabulary
-    run_id = "7sy5cau3"
-    run_name = "Bayesformer"
-    checkpoint = "checkpoints/checkpoint-300000b.pth"
-    # wandb.restore(checkpoint, run_path=f"sondresorbye-magson/TransformerUQ/{run_id}")  # type: ignore
+    # run_id = "7sy5cau3"
+    # checkpoint = "checkpoints/checkpoint-300000b.pth" # remember to change hyperparameters.training.transformer_implementation
+    # run_id = "xn8evvcd"
+    # checkpoint = "checkpoints/checkpoint-300000_trans.pth"
+    run_id = "5c8z0pxa"
+    checkpoint = "checkpoints/checkpoint-300000_bayes_pre_emb_drop.pth"
+
+    run_name = "bf_pre_emb_drop"
     shared_vocab = load_vocab(constants.file_paths.vocab)
     print(f"Shared vocab size: {len(shared_vocab)}")
     device = hyperparameters.device
@@ -58,9 +63,7 @@ def main() -> None:
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
     # Load the checkpoint
-    load_checkpoint(
-        model, optimizer, checkpoint, remove_orig_prefix=not torch.cuda.is_available()
-    )
+    load_checkpoint(model, optimizer, checkpoint)
 
     # Set up the test data loader with the shared vocabulary
     test_loader = get_data_loader(
@@ -83,15 +86,15 @@ def main() -> None:
         max_len=hyperparameters.transformer.max_len,
     )
 
-    # Define the acquisition functions
+    # Define the acquisition functions used for validation
     aq_funcs: List[AcquisitionFunction] = [
         BeamScore(),
         BLEUVar(),
         mpnet_cosine(),
         mpnet_norm(),
-        mpnet_dot(),
     ]
 
+    # The different validation configs to run
     val_spec = [
         {
             "search_method": "greedy",
@@ -119,6 +122,8 @@ def main() -> None:
             f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True
         )
         print(f"Validating model with {search_method} search, dropout={dropout}")
+
+        # run validate_uq or load cached results for in-distribution data
         validation_results_id = load_or_validate(
             model,
             test_loader,
@@ -129,14 +134,7 @@ def main() -> None:
             run_id,
         )
 
-        # for i, aq_func in enumerate(aq_funcs):
-        #     print(f"Searh method: {search_method}, Dropout: {dropout}")
-        #     aq_func_corp_bleu = corpus_bleu(
-        #     validation_results_id[i].hypothesis,
-        #     [validation_results_id[i].reference],
-        #     )
-        #     print(f"{aq_func.__class__.__name__} corpus BLEU: {aq_func_corp_bleu.score}")
-
+        # run validate_uq or load cached results for ood data
         validation_results_ood = load_or_validate(
             model,
             test_ood_loader,
@@ -146,62 +144,79 @@ def main() -> None:
             filename + "_ood",
             run_id,
         )
-        plot_data_retained_curve(
-            validation_results_id,
-            methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id.svg",
-            run_name=run_name,
-        )
 
-        plot_data_retained_curve(
-            validation_results_ood,
-            methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood.svg",
-            run_name=run_name,
-        )
-
-        calc_ret_curve_plot_data(
-            validation_results_id,
-            uq_methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-            model_name=hyperparameters.transformer.transformer_implementation,
-            eval_method="BLEU",
-            enable_mcdo=dropout,
-            search_method_type=search_method,
-            benchmark_name="german_wmt",
-            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id_data.pt",
-            run_name=run_name,
-        )
-
-        calc_ret_curve_plot_data(
-            validation_results_ood,
-            uq_methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-            model_name=hyperparameters.transformer.transformer_implementation,
-            eval_method="BLEU",
-            enable_mcdo=dropout,
-            search_method_type=search_method,
-            benchmark_name="dutch_wmt",
-            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood_data.pt",
-            run_name=run_name,
-        )
-
-        for i, aq_func in enumerate(aq_funcs):
-            plot_uq_histogram_and_roc(
-                validation_results_id[i],
-                validation_results_ood[i],
-                aq_func.__class__.__name__,
-                f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_hist_{aq_func.__class__.__name__}.svg",
-                run_name,
+        for validation_result, benchmark_name, save_path in [
+            (
+                validation_results_id,
+                "german_wmt",
+                f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id_data.pt",
+            ),
+            (
+                validation_results_ood,
+                "dutch_wmt",
+                f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood_data.pt",
+            ),
+        ]:
+            calc_ret_curve_plot_data_wmt(
+                validation_result,
+                aq_func_names=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+                model_name=hyperparameters.transformer.transformer_implementation,
+                eval_method="BLEU",
+                benchmark_name=benchmark_name,
+                save_path=save_path,
             )
 
-        plot_combined_roc_curve(
+        get_run_curves_and_histograms(
             validation_results_id,
             validation_results_ood,
-            methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-            save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_roc.svg",
+            aq_funcs,
+            run_id,
+            run_name,
+            search_method,
+            dropout,
         )
 
 
-# Validate the model and calculate BLEU score
+def get_run_curves_and_histograms(
+    validation_results_id: List[ValidationResult],
+    validation_results_ood: List[ValidationResult],
+    aq_funcs: List[AcquisitionFunction],
+    run_id: str,
+    run_name: str,
+    search_method: str,
+    dropout: bool,
+) -> None:
+    plot_data_retained_curve(
+        validation_results_id,
+        methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+        save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id.svg",
+        run_name=run_name,
+    )
+
+    plot_data_retained_curve(
+        validation_results_ood,
+        methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+        save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood.svg",
+        run_name=run_name,
+    )
+
+    for i, aq_func in enumerate(aq_funcs):
+        plot_uq_histogram_and_roc(
+            validation_results_id[i],
+            validation_results_ood[i],
+            aq_func.__class__.__name__,
+            f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_hist_{aq_func.__class__.__name__}.svg",
+            run_name,
+        )
+
+    plot_combined_roc_curve(
+        validation_results_id,
+        validation_results_ood,
+        methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+        save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_roc.svg",
+    )
+
+
 def load_or_validate(
     model: TransformerModel,
     loader: torch.utils.data.DataLoader,
