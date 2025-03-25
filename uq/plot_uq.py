@@ -5,28 +5,24 @@ from sacrebleu import corpus_bleu
 from sklearn.metrics import roc_curve, auc
 
 from uq.validate_uq import ValidationResult
-from utils.general_plotter import PlotData, cache_plot_data, cache_plot_data_wmt
+from utils.general_plotter import PlotData, cache_plot_data_wmt
 
 label_fontsize = 12
 plot_figsize = (6.4 * 0.75, 4.8 * 0.75)
 
 
-def calc_ret_curve_plot_data(
+def calc_ret_curve_plot_data_wmt(
     validationResults: List[ValidationResult],
-    uq_methods: List[str],
+    aq_func_names: List[str],
     model_name: str,
     eval_method: str,
-    enable_mcdo: bool,
-    search_method_type: str,
     benchmark_name: str,
     save_path: str,
-    run_name: str,
 ) -> None:
     # Sort the hypothesis-UQ pairs by UQ value
     bleu_scores: List[List[float]] = [[] for _ in range(len(validationResults))]
     interval = 0.025
     for idx, val_result in enumerate(validationResults):
-
         hyp_ref_uq_pair = [
             (
                 val_result.hypothesis[i],
@@ -52,20 +48,21 @@ def calc_ret_curve_plot_data(
             bleu_scores[idx].append(interval_bleu_scores)
 
     # Calculate the area under the retention curves
-    uq_methods_and_auc = uq_methods
+    aq_funcs_and_auc = aq_func_names
     for idx, scores in enumerate(bleu_scores):
         x = [i * interval for i in range(len(scores))]
         auc_score = auc(x, scores)
-        uq_methods_and_auc[idx] = f"{uq_methods[idx]} (AUC = {auc_score:.2f})"
+        aq_funcs_and_auc[idx] = f"{aq_funcs_and_auc[idx]} (AUC = {auc_score:.2f})"
 
     cache_plot_data_wmt(
+        # the legends gets too noisy, so ommit some of the props
         PlotData(
             eval_method=eval_method,
-            search_method_type=search_method_type,
-            enable_mcdo=enable_mcdo,
+            search_method_type="",  # ommit
+            enable_mcdo=False,  # ommit
             model_name=model_name,
             benchmark=benchmark_name,
-            uq_methods=uq_methods_and_auc,
+            aq_func_name=aq_funcs_and_auc,
             eval_scores=bleu_scores,
             x_points=[i * interval for i in range(len(bleu_scores[0]))],
         ),

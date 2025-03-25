@@ -17,7 +17,7 @@ class PlotData(BaseModel):
     enable_mcdo: bool
     model_name: str
     benchmark: str
-    uq_methods: List[str]
+    aq_func_name: List[str]
     eval_scores: List[List[float]]
     x_points: List[float]
 
@@ -107,11 +107,11 @@ def plot_ret_curve(
 
     plt.figure()
     for plot_datum in plot_data:
-        for aq in range(len(plot_datum.uq_methods)):
+        for aq in range(len(plot_datum.aq_func_name)):
             plt.plot(
                 plot_datum.x_points,
                 plot_datum.eval_scores[aq],
-                label=f"{plot_datum.model_name} {plot_datum.search_method_type} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.uq_methods[aq]}",
+                label=f"{plot_datum.model_name} {plot_datum.search_method_type} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.aq_func_name[aq]}",
             )
     plt.xlabel("Number of Samples")
     plt.ylabel("Evaluation Score")

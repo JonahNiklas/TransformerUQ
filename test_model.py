@@ -43,7 +43,6 @@ def main() -> None:
         model,
         optimizer,
         "checkpoints/checkpoint-175000.pth",
-        remove_orig_prefix=not torch.cuda.is_available(),
     )
 
     # Set up the test data loader with the shared vocabulary
