@@ -81,7 +81,7 @@ def _eval_hellaswag_example(
         class_prediction_strs.append(str(most_likely_row))
 
     uqs = torch.tensor([_hellaSwag_UQ(avg_scores)]).to(hyperparameters.device)
-    final_class_prediction_str = [majority_vote(class_prediction_strs)]
+    final_class_prediction_str = [_majority_vote(class_prediction_strs)]
 
     return final_class_prediction_str, uqs
 
@@ -151,7 +151,7 @@ def _get_most_likely_row(
     return int(most_likely_row), avg_loss
 
 
-def majority_vote(class_predictions: List[str]) -> str:
+def _majority_vote(class_predictions: List[str]) -> str:
     return Counter(class_predictions).most_common(1)[0][0]
 
 

@@ -1,3 +1,4 @@
+from ast import Not
 from typing import Any, List
 from typing_extensions import override
 from datasets import load_dataset
@@ -14,15 +15,15 @@ class HellaSwag(AbstractEvaluationDataset):
 
     @property
     def only_first_word(self) -> bool:
-        return False
+        raise NotImplementedError("HellaSwag only_first_word not implemented")
 
     @property
     def break_on_newline(self) -> bool:
-        return False
+        raise NotImplementedError("HellaSwag break_on_newline not implemented")
 
     @property
     def max_tokens(self) -> int:
-        return -1
+        raise NotImplementedError("HellaSwag max_tokens not implemented")
 
     def __init__(self) -> None:
         self.dataset = _get_hellaswag_data()

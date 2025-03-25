@@ -80,7 +80,7 @@ class mpnet_cosine(AcquisitionFunctionGPT):
             if len(hypothesis[b]) < self.num_inferences:
                 continue
             embeddings = self.model.encode(
-                hypothesis[b], convert_to_tensor=True, normalize_embeddings=True
+                hypothesis[b], convert_to_tensor=True, normalize_embeddings=True, show_progress_bar=False
             ).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
@@ -114,7 +114,7 @@ class roberta_cosine(AcquisitionFunctionGPT):
             if len(hypothesis[b]) < self.num_inferences:
                 continue
             embeddings = self.model.encode(
-                hypothesis[b], convert_to_tensor=True, normalize_embeddings=True
+                hypothesis[b], convert_to_tensor=True, normalize_embeddings=True, show_progress_bar=False
             ).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
@@ -148,7 +148,7 @@ class mpnet_norm(AcquisitionFunctionGPT):
             if len(hypothesis[b]) < self.num_inferences:
                 continue
             embeddings = self.model.encode(
-                hypothesis[b], convert_to_tensor=True, normalize_embeddings=True
+                hypothesis[b], convert_to_tensor=True, normalize_embeddings=True, show_progress_bar=False
             ).to(hyperparameters.device)
             for i in range(self.num_inferences):
                 for j in range(i + 1, self.num_inferences):
