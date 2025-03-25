@@ -19,7 +19,6 @@ from hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
 from uq.plot_uq import (
     calc_ret_curve_plot_data_wmt,
-    plot_combined_roc_curve,
     plot_data_retained_curve,
     plot_uq_histogram_and_roc,
 )
@@ -145,16 +144,17 @@ def main() -> None:
             run_id,
         )
 
+
         for validation_result, benchmark_name, save_path in [
             (
                 validation_results_id,
-                "german_wmt",
-                f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_id_data.pt",
+                "german_wmt_id",
+                f"local/translation-results/{run_name}/german_wmt_id_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
             ),
             (
                 validation_results_ood,
-                "dutch_wmt",
-                f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_retcurve_ood_data.pt",
+                "dutch_wmt_ood",
+                f"local/translation-results/{run_name}/dutch_wmt_ood_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
             ),
         ]:
             calc_ret_curve_plot_data_wmt(
@@ -209,12 +209,6 @@ def get_run_curves_and_histograms(
             run_name,
         )
 
-    plot_combined_roc_curve(
-        validation_results_id,
-        validation_results_ood,
-        methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
-        save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_roc.svg",
-    )
 
 
 def load_or_validate(

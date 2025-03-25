@@ -17,7 +17,7 @@ class PlotData(BaseModel):
     enable_mcdo: bool
     model_name: str
     benchmark: str
-    aq_func_name: List[str]
+    aq_func_names: List[str]
     eval_scores: List[List[float]]
     x_points: List[float]
 
@@ -45,10 +45,11 @@ def _get_gpt_evaluation_cache_filename(
 
 def get_gpt_plot_data_path(
     evaluation_run_config: EvaluationRunConfig,
+    file_extension: str = ".json",
 ) -> str:
     folder = _get_gpt_plot_data_folder(evaluation_run_config)
     os.makedirs(folder, exist_ok=True)
-    filename = _get_gpt_plot_data_filename(evaluation_run_config)
+    filename = _get_gpt_plot_data_filename(evaluation_run_config, file_extension)
     return os.path.join(folder, filename)
 
 
@@ -60,17 +61,9 @@ def _get_gpt_plot_data_folder(
 
 def _get_gpt_plot_data_filename(
     evaluation_run_config: EvaluationRunConfig,
+    file_extension: str,
 ) -> str:
-    return f"{evaluation_run_config.dataset.__class__.__name__}_{evaluation_run_config.model.__class__.__name__}_mcdo{evaluation_run_config.enable_mcdo}_{evaluation_run_config.search_method.__name__}_{evaluation_run_config.eval_function.__class__.__name__}.json"
-
-
-def get_gpt_plot_data_wmt_path(
-    evaluation_run_config: EvaluationRunConfig,
-) -> str:
-    folder = _get_gpt_plot_data_folder(evaluation_run_config)
-    os.makedirs(folder, exist_ok=True)
-    filename = _get_gpt_plot_data_filename(evaluation_run_config)
-    return os.path.join(folder, filename)
+    return f"{evaluation_run_config.dataset.__class__.__name__}_{evaluation_run_config.model.__class__.__name__}_mcdo{evaluation_run_config.enable_mcdo}_{evaluation_run_config.search_method.__name__}_{evaluation_run_config.eval_function.__class__.__name__}{file_extension}"
 
 
 def cache_plot_data(plot_data: PlotData, filepath: str) -> None:
@@ -107,11 +100,11 @@ def plot_ret_curve(
 
     plt.figure()
     for plot_datum in plot_data:
-        for aq in range(len(plot_datum.aq_func_name)):
+        for aq in range(len(plot_datum.aq_func_names)):
             plt.plot(
                 plot_datum.x_points,
                 plot_datum.eval_scores[aq],
-                label=f"{plot_datum.model_name} {plot_datum.search_method_type} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.aq_func_name[aq]}",
+                label=f"{plot_datum.model_name} {plot_datum.search_method_type} {"MCDO" if plot_datum.enable_mcdo else ""} {plot_datum.aq_func_names[aq]}",
             )
     plt.xlabel("Number of Samples")
     plt.ylabel("Evaluation Score")
