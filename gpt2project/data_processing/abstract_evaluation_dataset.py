@@ -54,7 +54,9 @@ class AbstractEvaluationDataset(Dataset, ABC):
         return [self[i] for i in range(len(self))]
 
     @staticmethod
-    def get_all_targets_transposed(examples: List[DatasetExampleWithConcepts]) -> List[List[str]]:
+    def get_all_targets_transposed(
+        examples: List[DatasetExampleWithConcepts],
+    ) -> List[List[str]]:
         """
         Returns all targets in a transposed manner to be directly used by sacrebleu.corpus_bleu.
         The first dimension corresponds to one set of targets for the entire dataset.
