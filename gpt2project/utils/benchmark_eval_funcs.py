@@ -6,6 +6,7 @@ import numpy as np
 from sacrebleu import corpus_bleu
 
 from gpt2project.data_processing.abstract_evaluation_dataset import (
+    AbstractEvaluationDataset,
     DatasetExample,
     DatasetExampleWithConcepts,
 )
@@ -121,8 +122,10 @@ class BLEU_eval(MultipleTargetEval):
         dataset_examples: List[DatasetExample | DatasetExampleWithConcepts],
     ) -> float:
         # Calculate BLEU score
-        targets = [example.targets for example in dataset_examples]
-        bleu = corpus_bleu(output_text, targets)
+        targets_transposed = AbstractEvaluationDataset.get_all_targets_transposed(
+            assert_list_element_type(dataset_examples, DatasetExampleWithConcepts)
+        )
+        bleu = corpus_bleu(output_text, targets_transposed)
         return bleu.score
 
 

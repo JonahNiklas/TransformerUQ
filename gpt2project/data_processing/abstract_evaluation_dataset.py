@@ -52,3 +52,28 @@ class AbstractEvaluationDataset(Dataset, ABC):
 
     def get_all_examples(self) -> List[DatasetExample]:
         return [self[i] for i in range(len(self))]
+
+    @staticmethod
+    def get_all_targets_transposed(examples: List[DatasetExampleWithConcepts]) -> List[List[str]]:
+        """
+        Returns all targets in a transposed manner to be directly used by sacrebleu.corpus_bleu.
+        The first dimension corresponds to one set of targets for the entire dataset.
+        The second dimension corresponds to the targets for each example in the dataset.
+        For cases with variable numbers of targets per example, None is inserted.
+
+        For more information, see: https://github.com/mjpost/sacrebleu?tab=readme-ov-file#variable-number-of-references
+        """
+        targets = [example.targets for example in examples]
+        num_targets = max(len(target) for target in targets)
+        transposed_targets: List[List[str]] = [
+            [""] * len(targets) for _ in range(num_targets)
+        ]
+        for i, target in enumerate(targets):
+            for j, target_j in enumerate(target):
+                transposed_targets[j][i] = target_j
+
+        assert all(
+            len(targets) == len(transposed_targets[i]) for i in range(num_targets)
+        )
+
+        return transposed_targets
