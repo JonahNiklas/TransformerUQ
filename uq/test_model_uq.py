@@ -117,7 +117,7 @@ def main() -> None:
     for spec in val_spec:
         search_method: str = str(spec["search_method"])
         dropout: bool = bool(spec["dropout"])
-        filename = f"val_{search_method}_{dropout}"
+        filename = f"{run_name}_{search_method}_{dropout}"
         os.makedirs(
             f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True
         )
