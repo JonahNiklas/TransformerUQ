@@ -54,7 +54,7 @@ def calc_retention_curve(
         enable_mcdo=evaluation_run_config.enable_mcdo,
         model_name=evaluation_run_config.model.__class__.__name__,
         benchmark=evaluation_run_config.dataset.__class__.__name__,
-        aq_func_name=[
+        aq_func_names=[
             aq_func.__class__.__name__ for aq_func in evaluation_run_config.aq_funcs
         ],
         eval_scores=retention_scores,

@@ -62,7 +62,7 @@ def calc_ret_curve_plot_data_wmt(
             enable_mcdo=False,  # ommit
             model_name=model_name,
             benchmark=benchmark_name,
-            aq_func_name=aq_funcs_and_auc,
+            aq_func_names=aq_funcs_and_auc,
             eval_scores=bleu_scores,
             x_points=[i * interval for i in range(len(bleu_scores[0]))],
         ),
@@ -169,51 +169,3 @@ def plot_uq_histogram_and_roc(
     plt.savefig(save_path)
     plt.show()
     print("UQ histogram saved at: ", save_path)
-
-
-def plot_combined_roc_curve(
-    validation_result_id: List[ValidationResult],
-    validation_result_ood: List[ValidationResult],
-    methods: List[str],
-    save_path: str,
-) -> None:
-    """
-    Plot the all the ROC curves of the different uq_methods
-    Args:
-    validationResults: list of ValidationResults
-    """
-    plt.figure(figsize=plot_figsize)
-    assert len(validation_result_id) == len(validation_result_ood) == len(methods)
-    for val_id, val_ood, method in zip(
-        validation_result_id, validation_result_ood, methods
-    ):
-        if method == "mpnet_dot":
-            continue
-
-        test_uq_values_id = val_id.uncertainty.tolist()
-        test_uq_values_ood = val_ood.uncertainty.tolist()
-
-        min_length = min(len(test_uq_values_id), len(test_uq_values_ood))
-        test_uq_values_id = test_uq_values_id[:min_length]
-        test_uq_values_ood = test_uq_values_ood[:min_length]
-
-        assert len(test_uq_values_id) == len(test_uq_values_ood)
-
-        # Generate true labels (0 for in-distribution, 1 for out-of-distribution)
-        true_labels = [0] * len(test_uq_values_id) + [1] * len(test_uq_values_ood)
-        uq_values = test_uq_values_id + test_uq_values_ood
-
-        # Compute ROC curve and ROC area
-        fpr, tpr, _ = roc_curve(true_labels, uq_values)
-        roc_auc = auc(fpr, tpr)
-
-        plt.plot(fpr, tpr, label=f"{method} (area = {roc_auc:.2f})")
-
-    plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel("False Positive Rate", fontsize=label_fontsize)
-    plt.ylabel("True Positive Rate", fontsize=label_fontsize)
-    plt.legend()
-    plt.savefig(save_path)
-    plt.show()
