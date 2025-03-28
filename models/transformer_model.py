@@ -9,6 +9,7 @@ from torch.nn import functional as F
 from hyperparameters import hyperparameters
 from models.bayesformer import BayesTransformer
 from models.transformer import Transformer as TransformerOwn
+from shared.dropout_embedding import DropoutEmbedding
 
 
 class TransformerModel(nn.Module):
@@ -49,6 +50,7 @@ class TransformerModel(nn.Module):
         self.pos_encoder = LearnedPositionalEncoding(
             d_model, max_len=max_len, dropout=positional_dropout
         )
+
         self.transformer: torch.nn.Module
         if hyperparameters.transformer.transformer_implementation == "pytorch":
             self.transformer = nn.Transformer(
@@ -114,59 +116,6 @@ class TransformerModel(nn.Module):
         return result
 
 
-class DropoutEmbedding(nn.Module):
-    def __init__(
-        self,
-        num_embeddings: int,
-        embedding_dim: int,
-        dropout: float,
-        padding_idx: int | None,
-    ) -> None:
-        """
-        Applies dropout to entire rows of the embedding matrix.
-
-        Args:
-            num_embeddings (int): number of embeddings (vocabulary size).
-            embedding_dim (int): dimension of each embedding vector.
-            dropout (float): probability of dropping an entire embedding row.
-            padding_idx (int): index of the padding token (never dropped).
-        """
-        super().__init__()
-        self.dropout = dropout
-        self.embedding = nn.Embedding(
-            num_embeddings, embedding_dim, padding_idx=padding_idx
-        )
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        # When training, apply dropout to the embedding weights.
-        if self.training and self.dropout > 0:
-            weight = self.embedding.weight  # shape: [num_embeddings, embedding_dim]
-            # Create a dropout mask for rows: shape: [num_embeddings, 1]
-            mask = weight.new_empty((weight.size(0), 1)).bernoulli_(1 - self.dropout)
-            # Scale the surviving rows to maintain expected values
-            mask = mask / (1 - self.dropout)
-            # Make sure that the padding index is always kept.
-            if self.embedding.padding_idx is not None:
-                mask[self.embedding.padding_idx] = 1
-            # Apply the mask to zero out (drop) entire rows.
-            dropped_weight = weight * mask
-            # Use the masked weights for the embedding lookup.
-            return F.embedding(
-                input,
-                dropped_weight,
-                self.embedding.padding_idx,
-                self.embedding.max_norm,
-                self.embedding.norm_type,
-                self.embedding.scale_grad_by_freq,
-                self.embedding.sparse,
-            )
-        else:
-            # In evaluation mode (or if dropout == 0), use the regular embedding.
-            out = self.embedding(input)
-            assert isinstance(out, torch.Tensor)
-            return out
-
-
 class LearnedPositionalEncoding(nn.Module):
     def __init__(self, d_model: int, max_len: int, dropout: float) -> None:
         super().__init__()
@@ -187,4 +136,43 @@ class LearnedPositionalEncoding(nn.Module):
         )
         pos_embeddings = self.pos_embedding(positions)
         x = x + pos_embeddings
+        return x
+
+
+class PositionalEncoding(nn.Module):
+    """
+    If a dropout rate is provided, this module will apply row dropout (i.e., drop entire position vectors)
+    independently for each sample. This simulates dropping rows from the positional encoding matrix before
+    it is added to the token embeddings.
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        dropout: float,
+        max_len: int,
+    ) -> None:
+        super().__init__()
+        self.dropout_rate = dropout
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
+        )
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        self.register_buffer("pe", pe)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (batch_size, seq_len, d_model)
+        batch_size, seq_len, _ = x.size()
+        pe = (
+            self.pe[:seq_len, :].unsqueeze(0).expand(batch_size, -1, -1)
+        )  # (batch_size, seq_len, d_model)
+        if self.training and self.dropout_rate > 0:
+            mask = (
+                torch.rand(batch_size, seq_len, 1, device=x.device) > self.dropout_rate
+            ).float()  # (batch_size, seq_len, 1)
+            pe = pe * mask
+        x = x + pe
         return x

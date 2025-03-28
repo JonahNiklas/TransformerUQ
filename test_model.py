@@ -57,8 +57,6 @@ def main() -> None:
         model,
         optimizer,
         checkpoint_path,
-        # remove_orig_prefix=not torch.cuda.is_available()
-        remove_orig_prefix=True,
     )
 
     # Set up the test data loader with the shared vocabulary

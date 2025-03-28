@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from tracemalloc import stop
 import tiktoken
 import torch
 from torch import nn
@@ -136,6 +135,13 @@ def _clean_inference_results(
                 break
 
     return tgt_tokens, softmax_probs
+
+
+# used for type checking
+_all_search_methods: List[GPT_search_method] = [
+    greedy_search_gpt,
+    topk_sampling_gpt,
+]
 
 
 @dataclass

@@ -1,23 +1,12 @@
-from dataclasses import dataclass
 import inspect
 from typing import Optional, Tuple, Union
-import tiktoken
 import torch
 from torch import Tensor
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim.adamw import AdamW
-from gpt2project.ddp import (
-    ddp,
-    ddp_rank,
-    ddp_world_size,
-    master_process,
-    device,
-    device_type,
-    ddp_local_rank,
-)
-from transformers import GPT2LMHeadModel
-from gpt2project.dropout_embedding import DropoutEmbedding
+from gpt2project.ddp import master_process
+from shared.dropout_embedding import DropoutEmbedding
 from gpt2project.hyperparameters import GPT2ModelConfig
 
 
