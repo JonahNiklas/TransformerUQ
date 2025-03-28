@@ -64,6 +64,19 @@ def validate(
             for hyp in all_hypotheses:
                 f.write(hyp + "\n")
 
+    _print_first_n_generated_sentences(all_hypotheses, all_references)
+
     bleu_score = corpus_bleu(all_hypotheses, [all_references]).score
     logger.info(f"Validation BLEU Score: {bleu_score}")
     return bleu_score
+
+
+def _print_first_n_generated_sentences(
+    hypotheses: list[str],
+    references: list[str],
+    n: int = 30,
+) -> None:
+    for i in range(n):
+        print("-" * 40)
+        print(f"Hypothesis {i+1}: {hypotheses[i]}")
+        print(f"Reference {i+1}: {references[i]}")
