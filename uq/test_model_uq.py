@@ -37,12 +37,13 @@ def main() -> None:
     hyperparameters.transformer.transformer_implementation = transformer_impl
     run_id = "ot0v1maq"
     run_name = "iwslt_transformer"
+    plot_data_output_dir = "translation-results-iwslt"
 
     src_vocab = load_vocab(constants.file_paths.src_vocab)
     tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
     print(f"Source vocab size: {len(src_vocab)}")
     print(f"Target vocab size: {len(tgt_vocab)}")
-    
+
     device = hyperparameters.device
     print(f"Device: {device}")
 
@@ -154,12 +155,12 @@ def main() -> None:
             (
                 validation_results_id,
                 "german_wmt_id",
-                f"local/translation-results/{run_name}/german_wmt_id_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
+                f"local/{plot_data_output_dir}/{run_name}/german_wmt_id_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
             ),
             (
                 validation_results_ood,
                 "dutch_wmt_ood",
-                f"local/translation-results/{run_name}/dutch_wmt_ood_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
+                f"local/{plot_data_output_dir}/{run_name}/dutch_wmt_ood_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
             ),
         ]:
             calc_ret_curve_plot_data_wmt(
