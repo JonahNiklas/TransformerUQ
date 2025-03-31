@@ -3,7 +3,7 @@ import logging
 import os
 from typing import List
 import matplotlib.pyplot as plt
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 from gpt2project.uq.evaluation_run_config import EvaluationRunConfig
 
@@ -17,7 +17,9 @@ class PlotData(BaseModel):
     enable_mcdo: bool
     model_name: str
     benchmark: str
-    aq_func_names: List[str]
+    aq_func_names: List[str] = Field(
+        validation_alias=AliasChoices("aq_func_names", "uq_methods")
+    )
     eval_scores: List[List[float]]
     x_points: List[float]
 

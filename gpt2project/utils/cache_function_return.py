@@ -46,6 +46,7 @@ def cache_evaluation_run_return() -> Callable[[Callable[..., T]], Callable[..., 
                 try:
                     with open(cache_path, "rb") as f:
                         result = torch.load(f)
+                    logger.info(f"Loaded result from cache: {cache_path}")
                     return result  # type: ignore
                 except Exception as e:
                     logger.warning(f"Error loading cache: {e}. Computing result...")
@@ -57,6 +58,7 @@ def cache_evaluation_run_return() -> Callable[[Callable[..., T]], Callable[..., 
             try:
                 with open(cache_path, "wb") as f:
                     torch.save(result, f)
+                logger.info(f"Saved result to cache: {cache_path}")
             except Exception as e:
                 logger.warning(f"Error saving to cache: {e}")
 
