@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import math
+
 import torch
 import torch.nn as nn
-
 from torch.nn import functional as F
+
 from hyperparameters import hyperparameters
 from models.bayesformer import BayesTransformer
 from models.transformer import Transformer as TransformerOwn
@@ -12,7 +15,8 @@ from shared.dropout_embedding import DropoutEmbedding
 class TransformerModel(nn.Module):
     def __init__(
         self,
-        vocab_size: int,
+        src_vocab_size: int,
+        tgt_vocab_size: int,
         d_model: int,
         num_heads: int,
         num_encoder_layers: int,
@@ -22,7 +26,8 @@ class TransformerModel(nn.Module):
         max_len: int,
     ) -> None:
         super().__init__()
-        self.vocab_size = vocab_size
+        self.src_vocab_size = src_vocab_size
+        self.tgt_vocab_size = tgt_vocab_size
         self.d_model = d_model
         self.dropout = nn.Dropout(dropout)
         positional_dropout = (
@@ -30,22 +35,20 @@ class TransformerModel(nn.Module):
             if hyperparameters.transformer.transformer_implementation == "bayesformer"
             else 0
         )
-
-        self.embedding = (
-            DropoutEmbedding(
-                vocab_size, d_model, padding_idx=0, dropout=positional_dropout
-            )
-            if hyperparameters.transformer.transformer_implementation == "bayesformer"
-            else nn.Embedding(vocab_size, d_model, padding_idx=0)
+        self.src_embedding = DropoutEmbedding(
+            src_vocab_size,
+            d_model,
+            padding_idx=0,
+            dropout=positional_dropout,
         )
-        self.pos_encoder = (
-            LearnedPositionalEncoding(
-                d_model, max_len=max_len, dropout=positional_dropout
-            )
-            if hyperparameters.transformer.transformer_implementation == "bayesformer"
-            else PositionalEncoding(
-                d_model, max_len=max_len, dropout=positional_dropout
-            )
+        self.tgt_embedding = DropoutEmbedding(
+            tgt_vocab_size,
+            d_model,
+            padding_idx=0,
+            dropout=positional_dropout,
+        )
+        self.pos_encoder = LearnedPositionalEncoding(
+            d_model, max_len=max_len, dropout=positional_dropout
         )
 
         self.transformer: torch.nn.Module
@@ -79,8 +82,8 @@ class TransformerModel(nn.Module):
             )
         else:
             raise ValueError("Invalid transformer implementation")
-        self.out = nn.Linear(d_model, vocab_size, bias=False)
-        self.embedding.weight = self.out.weight
+        self.out = nn.Linear(d_model, tgt_vocab_size, bias=False)
+        self.tgt_embedding.weight = self.out.weight
 
     def forward(
         self, src: torch.Tensor, tgt: torch.Tensor, pad_idx: int = 0
@@ -92,8 +95,8 @@ class TransformerModel(nn.Module):
             tgt.device
         )
 
-        src = self.embedding(src) * math.sqrt(self.d_model)
-        tgt = self.embedding(tgt) * math.sqrt(self.d_model)
+        src = self.src_embedding(src) * math.sqrt(self.d_model)
+        tgt = self.tgt_embedding(tgt) * math.sqrt(self.d_model)
 
         src = self.pos_encoder(src)
         tgt = self.pos_encoder(tgt)

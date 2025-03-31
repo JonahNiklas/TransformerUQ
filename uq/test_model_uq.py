@@ -1,5 +1,6 @@
 from gc import enable
 import os
+from typing import List, Literal, Tuple
 from pdb import run
 from tabnanny import check
 from typing import List
@@ -30,23 +31,26 @@ from utils.general_plotter import plot_ret_curve
 
 
 def main() -> None:
-    # run_id = "7sy5cau3"
-    # checkpoint = "checkpoints/checkpoint-300000b.pth" # remember to change hyperparameters.training.transformer_implementation
-    run_id = "xn8evvcd"
-    checkpoint = "local/checkpoints/checkpoint-300000_trans.pth"
-    hyperparameters.transformer.transformer_implementation = "own"
-    # run_id = "5c8z0pxa"
-    # checkpoint = "checkpoints/checkpoint-300000_bayes_pre_emb_drop.pth"
+    # Load shared vocabulary
+    checkpoint = "local/checkpoints/iwslt/iwslt-transformer-checkpoint-500000.pth"
+    transformer_impl: Literal["bayesformer", "pytorch", "own"] = "own"
+    hyperparameters.transformer.transformer_implementation = transformer_impl
+    run_id = "ot0v1maq"
+    run_name = "iwslt_transformer"
+    plot_data_output_dir = "translation-results-iwslt"
 
-    run_name = "translation_full_run_25032025"
-    shared_vocab = load_vocab(constants.file_paths.vocab)
-    print(f"Shared vocab size: {len(shared_vocab)}")
+    src_vocab = load_vocab(constants.file_paths.src_vocab)
+    tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
+    print(f"Source vocab size: {len(src_vocab)}")
+    print(f"Target vocab size: {len(tgt_vocab)}")
+
     device = hyperparameters.device
     print(f"Device: {device}")
 
     # Initialize the model with shared vocab size
     model: TransformerModel = TransformerModel(
-        vocab_size=len(shared_vocab),
+        src_vocab_size=len(src_vocab),
+        tgt_vocab_size=len(tgt_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
@@ -69,7 +73,8 @@ def main() -> None:
     test_loader = get_data_loader(
         src_file="local/data/test/bpe_test.de",
         tgt_file="local/data/test/bpe_test.en",
-        vocab=shared_vocab,
+        src_vocab=src_vocab,
+        tgt_vocab=tgt_vocab,
         batch_size=hyperparameters.training.batch_size,  # // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
@@ -79,7 +84,8 @@ def main() -> None:
     test_ood_loader = get_data_loader(
         src_file="local/data/test_ood/bpe_test_ood.nl",
         tgt_file="local/data/test_ood/bpe_test_ood.en",
-        vocab=shared_vocab,
+        src_vocab=src_vocab,
+        tgt_vocab=tgt_vocab,
         batch_size=hyperparameters.training.batch_size,  # // hyperparameters.beam_search.beam_size,
         add_bos_eos=True,
         shuffle=False,
@@ -149,12 +155,12 @@ def main() -> None:
             (
                 validation_results_id,
                 "german_wmt_id",
-                f"local/translation-results/{run_name}/german_wmt_id_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
+                f"local/{plot_data_output_dir}/{run_name}/german_wmt_id_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
             ),
             (
                 validation_results_ood,
                 "dutch_wmt_ood",
-                f"local/translation-results/{run_name}/dutch_wmt_ood_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
+                f"local/{plot_data_output_dir}/{run_name}/dutch_wmt_ood_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
             ),
         ]:
             calc_ret_curve_plot_data_wmt(

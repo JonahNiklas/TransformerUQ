@@ -20,7 +20,8 @@ def test_enable_fast_test_time_dropout(
 
     # Create model
     model = TransformerModel(
-        vocab_size=vocab_size,
+        src_vocab_size=vocab_size,
+        tgt_vocab_size=vocab_size,
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,

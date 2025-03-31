@@ -135,7 +135,10 @@ class ParallelCorpusTokenizer:
             output_codes_path, "w", encoding="utf-8"
         ) as outfile:
             subword_nmt.learn_bpe.learn_bpe(
-                infile, outfile, num_symbols=hyperparameters.vocab.bpe_num_symbols
+                infile,
+                outfile,
+                num_symbols=hyperparameters.vocab.bpe_num_symbols,
+                min_frequency=hyperparameters.vocab.token_min_freq,
             )
 
     def _apply_bpe_line(self, line: str, bpe: subword_nmt.apply_bpe.BPE) -> str:

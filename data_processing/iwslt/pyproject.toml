@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "transformeruq"
+version = "0.1.0"
+description = ""
+authors = ["Sondre Sørbye <sondre@magson.no>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.8"
+fairseq = "^0.12.2" # needed 0.12.2 to download iwslt14.de-en
+torch = "1.12.1"
+numpy = "^1.24.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

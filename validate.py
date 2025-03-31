@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+
 import torch
 import torch.nn as nn
 import torch.utils.data as data
@@ -14,8 +15,8 @@ from beam_search import (
     top_k_sampling,
 )
 from constants import constants
-from generate import generate_autoregressivly
 from data_processing.vocab import load_vocab, output_to_text
+from generate import generate_autoregressivly
 from hyperparameters import hyperparameters
 
 logger = logging.getLogger(__name__)
@@ -23,14 +24,15 @@ logger = logging.getLogger(__name__)
 
 def validate(
     model: nn.Module,
-    test_data: data.DataLoader,
+    test_data: data.DataLoader[tuple[torch.Tensor, torch.Tensor]],
     save_hypotheses_to_file: bool = False,
     num_batches_to_validate_on: int | None = None,
 ) -> float:
     all_references: list[str] = []
     all_hypotheses: list[str] = []
 
-    vocab = load_vocab(constants.file_paths.vocab)
+    src_vocab = load_vocab(constants.file_paths.src_vocab)
+    tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
 
     logger.debug("Started validating models")
     with torch.no_grad():
@@ -42,7 +44,12 @@ def validate(
                 hyperparameters.device
             ), ground_truth.to(hyperparameters.device)
             output = generate_autoregressivly(
-                model, src_tokens, ground_truth, top_k_sampling, vocab, print_ex=1
+                model,
+                src_tokens,
+                ground_truth,
+                beam_search_batched,
+                tgt_vocab,
+                print_ex=1,
             )
             all_hypotheses.extend(output)
             all_references.extend(

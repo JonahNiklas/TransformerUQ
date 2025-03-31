@@ -1,3 +1,5 @@
+import logging
+from typing import Literal
 import torch
 import wandb
 from torch import nn
@@ -11,6 +13,9 @@ from models.transformer_model import TransformerModel
 from utils.checkpoints import load_checkpoint
 from validate import validate
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 # RESULTS
 # - embedding_fix:
 #    - Greedy BLEU: 22.24
@@ -18,11 +23,18 @@ from validate import validate
 
 
 def main() -> None:
+    checkpoint_path = "local/checkpoints/iwslt/iwslt-transformer-checkpoint-500000.pth"
+    transformer_impl: Literal["bayesformer", "pytorch", "own"] = "own"
+
+    hyperparameters.transformer.transformer_implementation = transformer_impl
+
     # Load shared vocabulary
     # wandb.restore("checkpoints/checkpoint-175000.pth", run_path="sondresorbye-magson/TransformerUQ/54inz442")  # type: ignore
-    vocab = load_vocab(constants.file_paths.vocab)
+    src_vocab = load_vocab(constants.file_paths.src_vocab)
+    tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
     model: nn.Module = TransformerModel(
-        vocab_size=len(vocab),
+        src_vocab_size=len(src_vocab),
+        tgt_vocab_size=len(tgt_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
@@ -31,10 +43,12 @@ def main() -> None:
         dropout=hyperparameters.transformer.dropout,
         max_len=hyperparameters.transformer.max_len,
     ).to(hyperparameters.device)
+    logger.info(f"Using device: {hyperparameters.device}")
 
-    if torch.cuda.is_available():
-        model = torch.compile(model)  # type: ignore
-        torch.set_float32_matmul_precision("high")
+    # if torch.cuda.is_available():
+    #     logger.info("Compiling model")
+    #     model = torch.compile(model)  # type: ignore
+    #     torch.set_float32_matmul_precision("high")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
@@ -42,14 +56,15 @@ def main() -> None:
     load_checkpoint(
         model,
         optimizer,
-        "checkpoints/checkpoint-175000.pth",
+        checkpoint_path,
     )
 
     # Set up the test data loader with the shared vocabulary
     test_loader = get_data_loader(
         src_file=constants.file_paths.bpe_test_de,
         tgt_file=constants.file_paths.bpe_test_en,
-        vocab=vocab,
+        src_vocab=src_vocab,
+        tgt_vocab=tgt_vocab,
         batch_size=32,  # Needs to be low due to beam search
         add_bos_eos=True,
         shuffle=False,

@@ -5,12 +5,11 @@ import torch
 import wandb
 from constants import constants
 from data_processing.dataloader import get_data_loader, load_vocab
+from data_processing.tokenizer import ParallelCorpusTokenizer
 from hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
-from data_processing.tokenizer import ParallelCorpusTokenizer
 from train import train
 import logging
-from torch.utils.data import DataLoader
 from torch import nn
 from data_processing.vocab import build_and_save_vocab, load_vocab
 
@@ -44,96 +43,95 @@ def main() -> None:
         output_test_ood_en=constants.file_paths.tokenized_ood_en,
         output_test_ood_nl=constants.file_paths.tokenized_ood_nl,
     )
-
-    logger.info("Merge the tokenized training data")
-    if not os.path.exists(constants.file_paths.tokenized_train_merged):
-        with open(
-            constants.file_paths.tokenized_train_en, "r", encoding="utf-8"
-        ) as f_en, open(
-            constants.file_paths.tokenized_train_de, "r", encoding="utf-8"
-        ) as f_de, open(
-            constants.file_paths.tokenized_train_merged, "w", encoding="utf-8"
-        ) as f_out:
-            for line in f_en:
-                f_out.write(line)
-            for line in f_de:
-                f_out.write(line)
-
-    logger.info("Learn a single set of BPE codes from merged data")
-    shared_bpe_codes = "local/data/training/shared_bpe_codes.txt"
-    tokenizer.learn_bpe(
-        input_path=constants.file_paths.tokenized_train_merged,
-        output_codes_path=shared_bpe_codes,
-    )
-
-    logger.info("Apply BPE to each language using the single shared code")
     for lang in ["en", "de"]:
-        logger.info(f"Applying BPE to training data for {lang}")
-        tokenizer.apply_bpe(
-            input_path=constants.file_paths.tokenized_train_en[:-2] + lang,
-            output_path=constants.file_paths.bpe_train_en[:-2] + lang,
-            codes_path=shared_bpe_codes,
+        logger.info(f"Learning BPE codes for {lang.upper()}")
+        tokenizer.learn_bpe(
+            input_path=f"local/iwslt/training/tokenized_train.{lang}",
+            output_codes_path=f"local/iwslt/training/{lang}_bpe_codes.txt",
         )
-
-        logger.info(f"Applying BPE to dev data for {lang}")
+        logger.info(f"Applying BPE to {lang.upper()} data")
         tokenizer.apply_bpe(
-            input_path=constants.file_paths.tokenized_dev_en[:-2] + lang,
-            output_path=constants.file_paths.bpe_dev_en[:-2] + lang,
-            codes_path=shared_bpe_codes,
+            input_path=f"local/iwslt/training/tokenized_train.{lang}",
+            output_path=f"local/iwslt/training/bpe_train.{lang}",
+            codes_path=f"local/iwslt/training/{lang}_bpe_codes.txt",
         )
-
-        logger.info(f"Applying BPE to test data for {lang}")
+        logger.info(f"Applying BPE to {lang.upper()} test data")
         tokenizer.apply_bpe(
-            input_path=constants.file_paths.tokenized_test_en[:-2] + lang,
-            output_path=constants.file_paths.bpe_test_en[:-2] + lang,
-            codes_path=shared_bpe_codes,
+            input_path=f"local/iwslt/test/tokenized_test.{lang}",
+            output_path=f"local/iwslt/test/bpe_test.{lang}",
+            codes_path=f"local/iwslt/training/{lang}_bpe_codes.txt",
+        )
+        logger.info(f"Applying BPE to {lang.upper()} dev data")
+        tokenizer.apply_bpe(
+            input_path=f"local/iwslt/dev/tokenized_dev.{lang}",
+            output_path=f"local/iwslt/dev/bpe_dev.{lang}",
+            codes_path=f"local/iwslt/training/{lang}_bpe_codes.txt",
         )
 
     # Apply BPE to OOD data
     for lang in ["en", "nl"]:
         logger.info(f"Applying BPE to {lang} out of distribution test data")
         tokenizer.apply_bpe(
-            input_path=constants.file_paths.tokenized_ood_en[:-2] + lang,
-            output_path=constants.file_paths.bpe_test_ood_en[:-2] + lang,
-            codes_path=shared_bpe_codes,
+            input_path=f"local/data/test_ood/tokenized_test_ood.{lang}",
+            output_path=f"local/data/test_ood/bpe_test_ood.{lang}",
+            codes_path=f"local/iwslt/training/{"de" if lang=="nl" else lang}_bpe_codes.txt",
         )
 
     logger.info("Build and save vocab")
-    if not os.path.exists(constants.file_paths.vocab):
+    if not os.path.exists("local/iwslt/vocab_en.pkl") or not os.path.exists(
+        "local/iwslt/vocab_de.pkl"
+    ):
         build_and_save_vocab(
             train_en_path=constants.file_paths.bpe_train_en,
             train_de_path=constants.file_paths.bpe_train_de,
             min_freq=hyperparameters.vocab.token_min_freq,
-            save_path=constants.file_paths.vocab,
+            save_en_path="local/iwslt/vocab_en.pkl",
+            save_de_path="local/iwslt/vocab_de.pkl",
         )
-        logger.warning(
-            "Shared vocab file not found. Building vocab from training data."
-        )
-
-    shared_vocab = load_vocab(constants.file_paths.vocab)
-    logger.info(f"Shared vocab size: {len(shared_vocab)}")
+        logger.warning("Vocab files not found. Building vocab from training data.")
+    en_vocab = load_vocab("local/iwslt/vocab_en.pkl")
+    de_vocab = load_vocab("local/iwslt/vocab_de.pkl")
+    logger.info(f"English vocab size: {len(en_vocab)}")
+    logger.info(f"German vocab size: {len(de_vocab)}")
+    assert (
+        6600 <= len(en_vocab) <= 6700
+    ), f"Expected 6628 English vocab size, got {len(en_vocab)}"
+    # assert 8800 <= len(de_vocab) <= 8900, f"Expected 8844 German vocab size, got {len(de_vocab)}"
 
     logger.info("Create data loaders")
     training_loader = get_data_loader(
-        src_file=constants.file_paths.bpe_train_de,
-        tgt_file=constants.file_paths.bpe_train_en,
-        vocab=shared_vocab,
+        src_file="local/iwslt/training/bpe_train.de",
+        tgt_file="local/iwslt/training/bpe_train.en",
+        src_vocab=de_vocab,
+        tgt_vocab=en_vocab,
         batch_size=hyperparameters.training.batch_size,
         add_bos_eos=True,
         shuffle=hyperparameters.training.shuffle,
         max_len=hyperparameters.transformer.max_len,
     )
 
-    dev_loader = get_data_loader(
-        src_file=constants.file_paths.bpe_dev_de,
-        tgt_file=constants.file_paths.bpe_dev_en,
-        vocab=shared_vocab,
-        batch_size=hyperparameters.training.batch_size
-        // hyperparameters.beam_search.beam_size,
+    test_loader = get_data_loader(
+        src_file="local/iwslt/test/bpe_test.de",
+        tgt_file="local/iwslt/test/bpe_test.en",
+        src_vocab=de_vocab,
+        tgt_vocab=en_vocab,
+        batch_size=124,
         add_bos_eos=True,
         shuffle=False,
         max_len=hyperparameters.transformer.max_len,
     )
+
+    dev_loader = get_data_loader(
+        src_file="local/iwslt/dev/bpe_dev.de",
+        tgt_file="local/iwslt/dev/bpe_dev.en",
+        src_vocab=de_vocab,
+        tgt_vocab=en_vocab,
+        batch_size=124,
+        add_bos_eos=True,
+        shuffle=False,
+        max_len=hyperparameters.transformer.max_len,
+    )
+
     logger.info(f"Training set size: {len(training_loader.dataset)}")  # type: ignore
     logger.info(f"Dev set size: {len(dev_loader.dataset)}")  # type: ignore
 
@@ -143,7 +141,8 @@ def main() -> None:
     logger.info("Creating model")
 
     model: nn.Module = TransformerModel(
-        vocab_size=len(shared_vocab),
+        src_vocab_size=len(de_vocab),
+        tgt_vocab_size=len(en_vocab),
         d_model=hyperparameters.transformer.hidden_size,
         num_heads=hyperparameters.transformer.num_heads,
         d_ff=hyperparameters.transformer.encoder_ffn_embed_dim,
@@ -154,6 +153,13 @@ def main() -> None:
     )
     number_of_params = sum(p.numel() for p in model.parameters())
     print(f"Model number of parameters: {number_of_params/1e6:.2f}M")
+    number_of_params_without_embeddings = sum(
+        p.numel() for p in model.transformer.parameters()
+    )
+    print(
+        f"Model number of parameters without embeddings: {number_of_params_without_embeddings/1e6:.2f}M"
+    )
+    # assert 34_000_000 <= number_of_params_without_embeddings <= 35_000_000, f"Expected ~34.5M parameters, got {number_of_params_without_embeddings/1e6:.2f}M"
     model.to(device)
     if torch.cuda.is_available() and torch_compile:
         logger.info("Compiling model with torch compile")
@@ -192,7 +198,7 @@ def main() -> None:
     train(
         model,
         training_loader,
-        dev_loader,
+        test_loader,
         optimizer,
         scheduler,
         criterion,
