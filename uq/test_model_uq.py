@@ -32,11 +32,12 @@ from utils.general_plotter import plot_ret_curve
 def main() -> None:
     # run_id = "7sy5cau3"
     # checkpoint = "checkpoints/checkpoint-300000b.pth" # remember to change hyperparameters.training.transformer_implementation
-    run_id = "xn8evvcd"
-    checkpoint = "local/checkpoints/checkpoint-300000_trans.pth"
-    hyperparameters.transformer.transformer_implementation = "own"
-    # run_id = "5c8z0pxa"
-    # checkpoint = "checkpoints/checkpoint-300000_bayes_pre_emb_drop.pth"
+    # run_id = "xn8evvcd"
+    # checkpoint = "local/checkpoints/checkpoint-300000_trans.pth"
+    # hyperparameters.transformer.transformer_implementation = "own"
+    run_id = "5c8z0pxa"
+    checkpoint = "checkpoints/5c8z0pxa/checkpoint-300000_bayes_pre_emb_drop.pth"
+    hyperparameters.transformer.transformer_implementation = "bayesformer"
 
     run_name = "translation_full_run_25032025"
     shared_vocab = load_vocab(constants.file_paths.vocab)
@@ -98,20 +99,20 @@ def main() -> None:
     val_spec = [
         {
             "search_method": "greedy",
-            "dropout": True,
+            "dropout": False,
         },
         {
             "search_method": "beam",
             "dropout": True,
         },
-        {
-            "search_method": "sample",
-            "dropout": True,
-        },
-        {
-            "search_method": "sample",
-            "dropout": False,
-        },
+        # {
+        #     "search_method": "sample",
+        #     "dropout": True,
+        # },
+        # {
+        #     "search_method": "sample",
+        #     "dropout": False,
+        # },
     ]
 
     for spec in val_spec:
