@@ -47,7 +47,7 @@ def validate(
                 model,
                 src_tokens,
                 ground_truth,
-                beam_search_batched,
+                greedy_search,
                 tgt_vocab,
                 print_ex=1,
             )

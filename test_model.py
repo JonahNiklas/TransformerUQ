@@ -10,6 +10,7 @@ from data_processing.dataloader import get_data_loader
 from data_processing.vocab import load_vocab, output_to_text
 from hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
+from uq.generate_with_uq import _enable_test_time_dropout
 from utils.checkpoints import load_checkpoint
 from validate import validate
 
@@ -72,6 +73,8 @@ def main() -> None:
     )
 
     # Validate the model and calculate BLEU score
+    logger.info("Enabling test time dropout")
+    _enable_test_time_dropout(model)
     bleu = validate(model, test_loader)
     print(f"BLEU Score on test_set: {bleu}")
 

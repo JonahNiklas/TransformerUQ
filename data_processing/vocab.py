@@ -137,10 +137,10 @@ def output_to_text(output: List[int], lang: str = "en") -> str:
     global _vocab_en, _vocab_de
     if lang == "de" and _vocab_de is None:
         logger.debug("Loading vocab")
-        _vocab_de = load_vocab(constants.file_paths.tgt_vocab)
+        _vocab_de = load_vocab(constants.file_paths.src_vocab)
     if lang == "en" and _vocab_en is None:
         logger.debug("Loading vocab")
-        _vocab_en = load_vocab(constants.file_paths.src_vocab)
+        _vocab_en = load_vocab(constants.file_paths.tgt_vocab)
 
     if lang == "de":
         assert _vocab_de is not None

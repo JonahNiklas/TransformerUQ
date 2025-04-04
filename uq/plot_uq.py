@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sacrebleu import corpus_bleu
 from sklearn.metrics import roc_curve, auc
+from tqdm import tqdm
 
 from uq.validate_uq import ValidationResult
 from utils.general_plotter import PlotData, cache_plot_data_wmt
@@ -17,12 +18,14 @@ def calc_ret_curve_plot_data_wmt(
     model_name: str,
     eval_method: str,
     benchmark_name: str,
+    search_method: str,
+    enable_mcdo: bool,
     save_path: str,
 ) -> None:
     # Sort the hypothesis-UQ pairs by UQ value
     bleu_scores: List[List[float]] = [[] for _ in range(len(validationResults))]
     interval = 0.025
-    for idx, val_result in enumerate(validationResults):
+    for aq_func_idx, val_result in enumerate(validationResults):
         hyp_ref_uq_pair = [
             (
                 val_result.hypothesis[i],
@@ -34,8 +37,12 @@ def calc_ret_curve_plot_data_wmt(
 
         hyp_ref_uq_pair.sort(key=lambda x: abs(x[2]))
 
-        for i in range(
-            0, len(hyp_ref_uq_pair), max(int(interval * len(hyp_ref_uq_pair)), 1)
+        for i in tqdm(
+            range(
+                0, len(hyp_ref_uq_pair), max(int(interval * len(hyp_ref_uq_pair)), 1)
+            ),
+            desc=f"Processing {aq_func_names[aq_func_idx]}",
+            total=len(hyp_ref_uq_pair) // max(int(interval * len(hyp_ref_uq_pair)), 1),
         ):
             interval_pairs = hyp_ref_uq_pair[
                 : i + max(int(interval * len(hyp_ref_uq_pair)), 1)
@@ -45,21 +52,22 @@ def calc_ret_curve_plot_data_wmt(
             interval_bleu_scores = corpus_bleu(
                 hypothesis_in_interval, [reference_in_interval]
             ).score
-            bleu_scores[idx].append(interval_bleu_scores)
+            bleu_scores[aq_func_idx].append(interval_bleu_scores)
 
     # Calculate the area under the retention curves
     aq_funcs_and_auc = aq_func_names
-    for idx, scores in enumerate(bleu_scores):
+    for aq_func_idx, scores in enumerate(bleu_scores):
         x = [i * interval for i in range(len(scores))]
         auc_score = auc(x, scores)
-        aq_funcs_and_auc[idx] = f"{aq_funcs_and_auc[idx]} (AUC = {auc_score:.2f})"
+        aq_funcs_and_auc[aq_func_idx] = (
+            f"{aq_funcs_and_auc[aq_func_idx]} (AUC = {auc_score:.2f})"
+        )
 
     cache_plot_data_wmt(
-        # the legends gets too noisy, so ommit some of the props
         PlotData(
             eval_method=eval_method,
-            search_method_type="",  # ommit
-            enable_mcdo=False,  # ommit
+            search_method_type=search_method,
+            enable_mcdo=enable_mcdo,
             model_name=model_name,
             benchmark=benchmark_name,
             aq_func_names=aq_funcs_and_auc,

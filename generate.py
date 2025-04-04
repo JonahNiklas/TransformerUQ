@@ -18,7 +18,7 @@ def generate_autoregressivly(
     tgt_vocab: Vocabulary,
     print_ex: int,
 ) -> List[str]:
-    model.eval()
+    # model.eval()
     inference_results = search_method(model, src_tokens, tgt_vocab)
     tgt_tokens = inference_results.token_ids
     batch_size = src_tokens.size(0)

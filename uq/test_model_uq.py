@@ -1,4 +1,5 @@
 from gc import enable
+import logging
 import os
 from typing import List, Literal, Tuple
 from pdb import run
@@ -30,6 +31,8 @@ from constants import constants
 from utils.general_plotter import plot_ret_curve
 
 
+logger = logging.getLogger(__name__)
+
 def main() -> None:
     # Load shared vocabulary
     checkpoint = "local/checkpoints/iwslt/iwslt-transformer-checkpoint-500000.pth"
@@ -41,11 +44,11 @@ def main() -> None:
 
     src_vocab = load_vocab(constants.file_paths.src_vocab)
     tgt_vocab = load_vocab(constants.file_paths.tgt_vocab)
-    print(f"Source vocab size: {len(src_vocab)}")
-    print(f"Target vocab size: {len(tgt_vocab)}")
+    logger.info(f"Source vocab size: {len(src_vocab)}")
+    logger.info(f"Target vocab size: {len(tgt_vocab)}")
 
     device = hyperparameters.device
-    print(f"Device: {device}")
+    logger.info(f"Device: {device}")
 
     # Initialize the model with shared vocab size
     model: TransformerModel = TransformerModel(
@@ -61,7 +64,7 @@ def main() -> None:
     ).to(device)
 
     if torch.cuda.is_available():
-        model = torch.compile(model)  # type: ignore
+        # model = torch.compile(model)  # type: ignore
         torch.set_float32_matmul_precision("high")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
@@ -71,8 +74,8 @@ def main() -> None:
 
     # Set up the test data loader with the shared vocabulary
     test_loader = get_data_loader(
-        src_file="local/data/test/bpe_test.de",
-        tgt_file="local/data/test/bpe_test.en",
+        src_file="local/iwslt/test/bpe_test.de",
+        tgt_file="local/iwslt/test/bpe_test.en",
         src_vocab=src_vocab,
         tgt_vocab=tgt_vocab,
         batch_size=hyperparameters.training.batch_size,  # // hyperparameters.beam_search.beam_size,
@@ -81,43 +84,47 @@ def main() -> None:
         max_len=hyperparameters.transformer.max_len,
     )
 
-    test_ood_loader = get_data_loader(
-        src_file="local/data/test_ood/bpe_test_ood.nl",
-        tgt_file="local/data/test_ood/bpe_test_ood.en",
-        src_vocab=src_vocab,
-        tgt_vocab=tgt_vocab,
-        batch_size=hyperparameters.training.batch_size,  # // hyperparameters.beam_search.beam_size,
-        add_bos_eos=True,
-        shuffle=False,
-        max_len=hyperparameters.transformer.max_len,
-    )
+    # test_ood_loader = get_data_loader(
+    #     src_file="local/data/test_ood/bpe_test_ood.nl",
+    #     tgt_file="local/data/test_ood/bpe_test_ood.en",
+    #     src_vocab=src_vocab,
+    #     tgt_vocab=tgt_vocab,
+    #     batch_size=hyperparameters.training.batch_size,  # // hyperparameters.beam_search.beam_size,
+    #     add_bos_eos=True,
+    #     shuffle=False,
+    #     max_len=hyperparameters.transformer.max_len,
+    # )
 
     # Define the acquisition functions used for validation
     aq_funcs: List[AcquisitionFunction] = [
         BeamScore(),
-        BLEUVar(),
-        mpnet_cosine(),
-        mpnet_norm(),
+        # BLEUVar(),
+        # mpnet_cosine(),
+        # mpnet_norm(),
     ]
 
     # The different validation configs to run
     val_spec = [
         {
             "search_method": "greedy",
-            "dropout": True,
-        },
-        {
-            "search_method": "beam",
-            "dropout": True,
-        },
-        {
-            "search_method": "sample",
-            "dropout": True,
-        },
-        {
-            "search_method": "sample",
             "dropout": False,
         },
+        # {
+        #     "search_method": "greedy",
+        #     "dropout": True,
+        # },
+        # {
+        #     "search_method": "beam",
+        #     "dropout": True,
+        # },
+        # {
+        #     "search_method": "sample",
+        #     "dropout": True,
+        # },
+        # {
+        #     "search_method": "sample",
+        #     "dropout": False,
+        # },
     ]
 
     for spec in val_spec:
@@ -127,7 +134,7 @@ def main() -> None:
         os.makedirs(
             f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True
         )
-        print(f"Validating model with {search_method} search, dropout={dropout}")
+        logger.info(f"Validating model with {search_method} search, dropout={dropout}")
 
         # run validate_uq or load cached results for in-distribution data
         validation_results_id = load_or_validate(
@@ -140,28 +147,29 @@ def main() -> None:
             run_id,
         )
 
-        # run validate_uq or load cached results for ood data
-        validation_results_ood = load_or_validate(
-            model,
-            test_ood_loader,
-            search_method,
-            aq_funcs,
-            dropout,
-            filename + "_ood",
-            run_id,
-        )
+        # # run validate_uq or load cached results for ood data
+        # validation_results_ood = load_or_validate(
+        #     model,
+        #     test_ood_loader,
+        #     search_method,
+        #     aq_funcs,
+        #     dropout,
+        #     filename + "_ood",
+        #     run_id,
+        # )
 
+        os.makedirs(f"local/{plot_data_output_dir}/{run_name}", exist_ok=True)
         for validation_result, benchmark_name, save_path in [
             (
                 validation_results_id,
                 "german_wmt_id",
                 f"local/{plot_data_output_dir}/{run_name}/german_wmt_id_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
             ),
-            (
-                validation_results_ood,
-                "dutch_wmt_ood",
-                f"local/{plot_data_output_dir}/{run_name}/dutch_wmt_ood_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
-            ),
+            # (
+            #     validation_results_ood,
+            #     "dutch_wmt_ood",
+            #     f"local/{plot_data_output_dir}/{run_name}/dutch_wmt_ood_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
+            # ),
         ]:
             calc_ret_curve_plot_data_wmt(
                 validation_result,
@@ -169,18 +177,20 @@ def main() -> None:
                 model_name=hyperparameters.transformer.transformer_implementation,
                 eval_method="BLEU",
                 benchmark_name=benchmark_name,
+                search_method=search_method,
+                enable_mcdo=dropout,
                 save_path=save_path,
             )
 
-        get_run_curves_and_histograms(
-            validation_results_id,
-            validation_results_ood,
-            aq_funcs,
-            run_id,
-            run_name,
-            search_method,
-            dropout,
-        )
+        # get_run_curves_and_histograms(
+        #     validation_results_id,
+        #     validation_results_ood,
+        #     aq_funcs,
+        #     run_id,
+        #     run_name,
+        #     search_method,
+        #     dropout,
+        # )
 
 
 def get_run_curves_and_histograms(
@@ -228,7 +238,7 @@ def load_or_validate(
     cache_file = f"local/results/{run_id}/{filename}.pth"
     validation_results: List[ValidationResult] = []
     if os.path.exists(cache_file):
-        print(f"Loading cached results from {cache_file}...")
+        logger.info(f"Loading cached results from {cache_file}...")
         cache = torch.load(cache_file)
         validation_results = cache
     else:
@@ -242,7 +252,7 @@ def load_or_validate(
         )
         os.makedirs(f"local/results/{run_id}", exist_ok=True)
         torch.save(validation_results, cache_file)
-        print(f"Cached validation results in local/results/{run_id}/{filename}.pth")
+        logger.info(f"Cached validation results in local/results/{run_id}/{filename}.pth")
     return validation_results
 
 
