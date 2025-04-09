@@ -19,8 +19,9 @@ from hyperparameters import hyperparameters
 from models.transformer_model import TransformerModel
 from uq.plot_uq import (
     calc_ret_curve_plot_data_wmt,
+    plot_combined_roc_curve,
     plot_data_retained_curve,
-    plot_uq_histogram_and_roc,
+    plot_uq_histogram,
 )
 from utils.checkpoints import load_checkpoint
 from uq.validate_uq import ValidationResult, validate_uq
@@ -32,12 +33,12 @@ from utils.general_plotter import plot_ret_curve
 def main() -> None:
     # run_id = "7sy5cau3"
     # checkpoint = "checkpoints/checkpoint-300000b.pth" # remember to change hyperparameters.training.transformer_implementation
-    # run_id = "xn8evvcd"
-    # checkpoint = "local/checkpoints/checkpoint-300000_trans.pth"
-    # hyperparameters.transformer.transformer_implementation = "own"
-    run_id = "5c8z0pxa"
-    checkpoint = "checkpoints/5c8z0pxa/checkpoint-300000_bayes_pre_emb_drop.pth"
-    hyperparameters.transformer.transformer_implementation = "bayesformer"
+    run_id = "xn8evvcd"
+    checkpoint = "local/checkpoints/checkpoint-300000_trans.pth"
+    hyperparameters.transformer.transformer_implementation = "own"
+    # run_id = "5c8z0pxa"
+    # checkpoint = "local/checkpoints/5c8z0pxa/checkpoint-300000_bayes_pre_emb_drop.pth"
+    # hyperparameters.transformer.transformer_implementation = "bayesformer"
 
     run_name = "translation_full_run_25032025"
     shared_vocab = load_vocab(constants.file_paths.vocab)
@@ -102,6 +103,10 @@ def main() -> None:
             "dropout": False,
         },
         {
+            "search_method": "greedy",
+            "dropout": True,
+        },
+        {
             "search_method": "beam",
             "dropout": True,
         },
@@ -158,6 +163,7 @@ def main() -> None:
                 f"local/translation-results/{run_name}/dutch_wmt_ood_{hyperparameters.transformer.transformer_implementation}_dropout{dropout}_{search_method}.json",
             ),
         ]:
+            os.makedirs(f"local/translation-results/{run_name}", exist_ok=True)
             calc_ret_curve_plot_data_wmt(
                 validation_result,
                 aq_func_names=[aq_func.__class__.__name__ for aq_func in aq_funcs],
@@ -165,6 +171,8 @@ def main() -> None:
                 eval_method="BLEU",
                 benchmark_name=benchmark_name,
                 save_path=save_path,
+                search_method=search_method,
+                enable_mcdo=dropout,
             )
 
         get_run_curves_and_histograms(
@@ -202,13 +210,20 @@ def get_run_curves_and_histograms(
     )
 
     for i, aq_func in enumerate(aq_funcs):
-        plot_uq_histogram_and_roc(
+        plot_uq_histogram(
             validation_results_id[i],
             validation_results_ood[i],
             aq_func.__class__.__name__,
             f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_hist_{aq_func.__class__.__name__}.svg",
             run_name,
         )
+
+    plot_combined_roc_curve(
+        validation_results_id,
+        validation_results_ood,
+        methods=[aq_func.__class__.__name__ for aq_func in aq_funcs],
+        save_path=f"local/results/{run_id}/{search_method}/dropout{dropout}/{run_name}_{search_method}_drop{dropout}_roc.svg",
+    )
 
 
 def load_or_validate(

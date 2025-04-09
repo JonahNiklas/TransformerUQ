@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 import os
-from typing import List
+from typing import Any, List
 import matplotlib.pyplot as plt
 from pydantic import AliasChoices, BaseModel, Field
 
@@ -22,7 +22,35 @@ class PlotData(BaseModel):
     )
     eval_scores: List[List[float]]
     x_points: List[float]
+    auc: List[float] = Field(default_factory=list)
 
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        # Normalize x_points to be between 0 and 1
+        self.x_points = [x / self.x_points[-1] for x in self.x_points]
+
+        # Extract AUC values from aq_func_names if present
+        cleaned_names = []
+        auc_values = []
+        for name in self.aq_func_names:
+            if "(AUC =" in name:
+                base_name, auc_part = name.split(" (AUC =")
+                auc_value = float(auc_part.rstrip(")"))
+                cleaned_names.append(base_name)
+                auc_values.append(auc_value)
+            else:
+                cleaned_names.append(name)
+                auc_values.append(0.0)
+        self.aq_func_names = cleaned_names
+        self.auc = auc_values
+
+        if self.model_name == "own":
+            self.model_name = "Transformer"
+        elif self.model_name == "bayesformer":
+            self.model_name = "BayesFormer"
+        elif self.model_name == "pytorch":
+            self.model_name = "PyTorch"
+        
 
 def get_gpt_evaluation_path(
     evaluation_run_config: EvaluationRunConfig,
