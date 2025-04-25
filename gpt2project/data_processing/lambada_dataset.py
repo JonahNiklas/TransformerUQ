@@ -32,7 +32,7 @@ class Lambada(AbstractEvaluationDataset):
 
 
 def _get_lambada_data() -> List[DatasetExample]:
-    dataset: Any = load_dataset("cimec/lambada", split="validation")
+    dataset: Any = load_dataset("EleutherAI/lambada_openai", "default", split="test")
     subset = 1000
     dataset = dataset.select(range(subset))
 

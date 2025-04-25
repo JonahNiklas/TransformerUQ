@@ -16,7 +16,7 @@ from gpt2project.data_processing.squad_dataset import Squad
 from gpt2project.data_processing.triviaqa_dataset import TriviaQA
 from gpt2project.gpt2_generate import generate_with_uq_for_entire_dataset
 from gpt2project.gpt_generate_hellaswag import eval_with_uq_for_entire_hellaswag_dataset
-from gpt2project.search_methods_gpt import greedy_search_gpt
+from gpt2project.search_methods_gpt import greedy_search_gpt, topk_sampling_gpt
 from gpt2project.uq.calc_plot_data import calc_retention_curve
 from gpt2project.uq.evaluation_run_config import EvaluationRunConfig
 from gpt2project.uq.gpt_aq_funcs import (
@@ -48,9 +48,9 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    run_name = "full_run_24032025"
+    run_name = "topk_sampling_run_04042025"
     enable_mcdo = True
-    search_method = greedy_search_gpt
+    search_method = topk_sampling_gpt
     step_size = 25
 
     # wandb.init(project="GPT2Project", name=run_name, job_type="inference")
