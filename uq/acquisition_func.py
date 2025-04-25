@@ -54,7 +54,9 @@ class BeamScore(AcquisitionFunction):
         ).all(), "Softmax probabilities should be positive"
         log_prob = torch.log(token_softmax_probs)
         seq_prob = torch.sum(log_prob, dim=1)
-        return seq_prob / _length_penalty(tgt_tokens, self.alpha)
+        beam_score = seq_prob / _length_penalty(tgt_tokens, self.alpha)
+        uq = -beam_score
+        return uq
 
 
 # class SequenceProbability(AcquisitionFunction):

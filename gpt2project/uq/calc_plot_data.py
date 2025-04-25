@@ -24,7 +24,7 @@ def calc_retention_curve(
         o_text = output_texts[aq_func_idx]
         assert len(uq) == len(o_text), "UQ and output texts are not the same length"
 
-        sorted_indices = sorted(range(len(uq)), key=lambda i: abs(uq[i].item()))
+        sorted_indices = sorted(range(len(uq)), key=lambda i: uq[i].item())
         assert sorted_indices != list(range(len(uq))), "UQ is not working"
 
         sorted_outputs = [o_text[i] for i in sorted_indices]
