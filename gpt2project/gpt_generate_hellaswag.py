@@ -72,18 +72,18 @@ def _eval_hellaswag_example(
 
     n = hyperparameters.uq.num_inferences
     class_prediction_strs = []
-    avg_scores = torch.zeros(n, len(choice_options)).to(hyperparameters.device)
+    avg_probs = torch.zeros(n, len(choice_options)).to(hyperparameters.device)
     for i in range(n):
         logits, _ = model(full_prompts)
         logits = logits.view(len(choice_options), full_len, -1)
-        most_likely_row, avg_score = _get_most_likely_row(full_prompts, mask, logits)
-        avg_scores[i] = avg_score
+        most_likely_row, _, avg_prob = _get_most_likely_row(full_prompts, mask, logits)
+        avg_probs[i] = avg_prob
         class_prediction_strs.append(str(most_likely_row))
 
-    uqs = torch.tensor([_hellaSwag_UQ(avg_scores)]).to(hyperparameters.device)
-    final_class_prediction_str = [_majority_vote(class_prediction_strs)]
+    final_class_prediction = _majority_vote(class_prediction_strs)
+    uqs = torch.tensor([_hellaSwag_UQ_selected_class_only(avg_probs, int(final_class_prediction))]).to(hyperparameters.device)
 
-    return final_class_prediction_str, uqs
+    return [final_class_prediction], uqs
 
 
 def _encode_full_prompt(
@@ -125,7 +125,7 @@ def _encode_full_prompt(
 
 def _get_most_likely_row(
     tokens: torch.Tensor, mask: torch.Tensor, logits: torch.Tensor
-) -> Tuple[int, torch.Tensor]:
+) -> Tuple[int, torch.Tensor, torch.Tensor]:
 
     # evaluate the autoregressive loss at all positions
     shift_logits = (logits[..., :-1, :]).contiguous()
@@ -148,20 +148,75 @@ def _get_most_likely_row(
     # the one with the lowest loss should be the most likely
     most_likely_row = avg_loss.argmin().item()
 
-    return int(most_likely_row), avg_loss
+    # Calculate average probability of the correct next token in the completion region
+    probs = F.softmax(shift_logits, dim=-1)
+    actual_token_probs = torch.gather(probs, 2, shift_tokens.unsqueeze(-1)).squeeze(-1)
+    actual_token_log_probs = torch.log(actual_token_probs)
+    masked_actual_token_log_probs = actual_token_log_probs * shift_mask
+    sum_prob = masked_actual_token_log_probs.sum(dim=1)
+    avg_prob = sum_prob / shift_mask.sum(dim=1)
+
+    # TODO: remove cross entropy loss part
+
+    assert int(most_likely_row) == avg_prob.argmax().item()
+
+    return int(most_likely_row), avg_loss, avg_prob
 
 
 def _majority_vote(class_predictions: List[str]) -> str:
     return Counter(class_predictions).most_common(1)[0][0]
 
 
-def _hellaSwag_UQ(avg_cross_entropy_score: torch.Tensor) -> torch.Tensor:
-    softmax_probs_for_classes = torch.softmax(
-        avg_cross_entropy_score, dim=-1
-    )  # (num_inferences, class_size)
-    class_averaged_softmax_probs = torch.mean(
-        softmax_probs_for_classes, dim=0
-    )  # (class_size)
-    class_averaged_variance = torch.var(class_averaged_softmax_probs)  # (class_size)
+def _hellaSwag_UQ(sequence_probabilities: torch.Tensor) -> torch.Tensor:
+    # avg_token_probabilities is (num_inferences, class_size)
+    softmax_probs = F.softmax(sequence_probabilities, dim=1)
+    variance_of_probs = torch.var(softmax_probs, dim=0)  # (class_size)
+    class_averaged_variance = torch.mean(variance_of_probs)  # (1)
 
-    return torch.mean(class_averaged_variance, dim=0)  # (1)
+    return class_averaged_variance  # (1)
+
+
+def _hellaSwag_UQ_selected_class_only(
+    sequence_probabilities: torch.Tensor, selected_class: int
+) -> torch.Tensor:
+    # avg_token_probabilities is (num_inferences, class_size)
+    softmax_probs = F.softmax(sequence_probabilities, dim=1)
+    variance_of_probs = torch.var(softmax_probs, dim=0)  # (class_size)
+    output = variance_of_probs[selected_class]
+    assert output.numel() == 1, "Should be a scalar"
+    return output
+
+
+def _hellaSwag_UQ_beam_score(
+    sequence_probabilities: torch.Tensor, selected_class: int
+) -> torch.Tensor:
+    # avg_token_probabilities is (num_inferences, class_size)
+    avg_token_probabilities_across_inferences = torch.mean(
+        sequence_probabilities, dim=0
+    )  # (class_size)
+    output = avg_token_probabilities_across_inferences[selected_class]  # (1)
+    assert output.numel() == 1, "Should be a scalar"
+    return output
+
+
+def _hellaSwag_BALD_UQ(sequence_log_probabilities: torch.Tensor) -> torch.Tensor:
+    # Convert log probabilities to probabilities via softmax along candidate dimension.
+    dropout_probs = F.softmax(sequence_log_probabilities, dim=1)  # shape: (T, num_choices)
+
+    # Compute the predictive distribution as the average over the dropout samples.
+    predictive_distribution = dropout_probs.mean(dim=0)  # shape: (num_choices)
+
+    # Compute the entropy of the predictive distribution.
+    predictive_entropy = -(
+        predictive_distribution * (predictive_distribution + 1e-8).log()
+    ).sum()
+
+    # Compute the entropy for each dropout sample.
+    sample_entropies = -(dropout_probs * (dropout_probs + 1e-8).log()).sum(
+        dim=1
+    )  # shape: (T,)
+    expected_entropy = sample_entropies.mean()
+
+    # BALD score: the mutual information between predictions and the model parameters.
+    bald_score = predictive_entropy - expected_entropy
+    return bald_score

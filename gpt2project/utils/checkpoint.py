@@ -31,7 +31,7 @@ def save_checkpoint(
 def load_checkpoint(
     checkpoint_path: str,
 ) -> Tuple[GPT | BayesformerGPT, int, torch.optim.Optimizer]:
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, weights_only=False)
     model_config = GPT2ModelConfig.model_validate(checkpoint["model_config"])
     model: GPT | BayesformerGPT
     if model_config.transformer_impl == "bayesformer":

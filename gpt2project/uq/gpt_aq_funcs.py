@@ -261,3 +261,15 @@ class BALD(AcquisitionFunctionGPT):
         )  # (batch_size)
 
         return bald_score_sum / length_penalty
+    
+
+class ProbabilityVariance(AcquisitionFunctionGPT):
+    """
+    Used by Hellaswag. This is class is just for types and aq name.
+    """
+    def __call__(
+        self,
+        hypothesis: List[List[str]],
+        inference_results: List[AutoregressiveInferenceResultsGPT],
+    ) -> torch.Tensor:
+        raise NotImplementedError("This is just for types and aq name.")

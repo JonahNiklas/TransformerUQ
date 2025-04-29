@@ -45,7 +45,7 @@ def cache_evaluation_run_return() -> Callable[[Callable[..., T]], Callable[..., 
             if os.path.exists(cache_path):
                 try:
                     with open(cache_path, "rb") as f:
-                        result = torch.load(f)
+                        result = torch.load(f, weights_only=False)
                     logger.info(f"Loaded result from cache: {cache_path}")
                     return result  # type: ignore
                 except Exception as e:
