@@ -214,6 +214,10 @@ def plot_combined_roc_curve(
 
         plt.plot(fpr, tpr, label=f"{method} (area = {roc_auc:.2f})")
 
+        # # Find TPR at FPR=0.95
+        # idx = (fpr >= 0.05).nonzero()[0][0]
+        # plt.plot([0.05], [tpr[idx]], 'o', label=f"{method} TPR at FPR=0.05: {tpr[idx]:.2f}")
+
     plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])

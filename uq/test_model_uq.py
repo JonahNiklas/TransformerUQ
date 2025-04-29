@@ -40,7 +40,7 @@ def main() -> None:
     # checkpoint = "local/checkpoints/5c8z0pxa/checkpoint-300000_bayes_pre_emb_drop.pth"
     # hyperparameters.transformer.transformer_implementation = "bayesformer"
 
-    run_name = "translation_full_run_25032025"
+    run_name = "beam_score_fix2_2504"
     shared_vocab = load_vocab(constants.file_paths.vocab)
     print(f"Shared vocab size: {len(shared_vocab)}")
     device = hyperparameters.device
@@ -98,18 +98,18 @@ def main() -> None:
 
     # The different validation configs to run
     val_spec = [
-        {
-            "search_method": "greedy",
-            "dropout": False,
-        },
+        # {
+        #     "search_method": "greedy",
+        #     "dropout": False,
+        # },
         {
             "search_method": "greedy",
             "dropout": True,
         },
-        {
-            "search_method": "beam",
-            "dropout": True,
-        },
+        # {
+        #     "search_method": "beam",
+        #     "dropout": True,
+        # },
         # {
         #     "search_method": "sample",
         #     "dropout": True,
@@ -239,7 +239,7 @@ def load_or_validate(
     validation_results: List[ValidationResult] = []
     if os.path.exists(cache_file):
         print(f"Loading cached results from {cache_file}...")
-        cache = torch.load(cache_file)
+        cache = torch.load(cache_file, weights_only=False)
         validation_results = cache
     else:
         validation_results = validate_uq(

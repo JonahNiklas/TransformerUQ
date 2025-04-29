@@ -1,3 +1,4 @@
+from __future__ import annotations
 import torch
 
 from data_processing.vocab import output_to_text

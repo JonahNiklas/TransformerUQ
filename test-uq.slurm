@@ -1,5 +1,5 @@
 #! /bin/sh
-#SBATCH --job-name="test_model_uq transformer"
+#SBATCH --job-name="beam score fix transformer"
 #SBATCH --partition=GPUQ
 #SBATCH --account=share-ie-idi
 #SBATCH --time=0-2:00:00
@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=16     # 2 CPU cores
 #SBATCH --mem=64G              # 5 gigabytes memory
 #SBATCH --gres=gpu:a100:1
-#SBATCH --output=logs/test_model_uq_transformer.txt
+#SBATCH --output=logs/beam_score_fix_transformer.txt
 
 module load Python/3.12.3-GCCcore-13.3.0
 source venv/bin/activate
