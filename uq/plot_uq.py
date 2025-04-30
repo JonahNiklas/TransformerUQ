@@ -139,7 +139,7 @@ def plot_data_retained_curve(
     plt.ylabel("BLEU Score", fontsize=label_fontsize)
     plt.savefig(save_path)
     plt.show()
-    print("Data retained curve saved at: ", save_path)
+    logger.info(f"Data retained curve saved at: {save_path}")
 
 
 def plot_uq_histogram(
@@ -173,7 +173,7 @@ def plot_uq_histogram(
     plt.legend(loc="upper left")
     plt.savefig(save_path)
     plt.show()
-    print("UQ histogram saved at: ", save_path)
+    logger.info(f"UQ histogram saved at: {save_path}")
 
 
 def plot_combined_roc_curve(
@@ -226,3 +226,4 @@ def plot_combined_roc_curve(
     plt.legend()
     plt.savefig(save_path)
     plt.show()
+    logger.info(f"ROC curve saved at: {save_path}")

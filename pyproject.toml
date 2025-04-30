@@ -26,6 +26,9 @@ transformers = "^4.49.0"
 tiktoken = "^0.9.0"
 ipywidgets = "^8.1.5"
 datasets = "^3.3.2"
+google-genai = "^1.12.1"
+python-dotenv = "^1.1.0"
+gcsfs = "<2025.3.1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.14.1"

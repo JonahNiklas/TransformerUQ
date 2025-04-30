@@ -54,5 +54,11 @@
             "request": "launch",
             "module": "gpt2project.uq.run_all_uq",
         },
+        {
+            "name": "translate_dataset",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gpt2project.data_processing.translated_dataset",
+        }
     ]
 }
