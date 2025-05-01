@@ -192,7 +192,7 @@ def plot_combined_roc_curve(
     for val_id, val_ood, method in zip(
         validation_result_id, validation_result_ood, methods
     ):
-        if method == "mpnet_dot" or method == "mpnet_cosine" or method == "mpnet_norm":
+        if method == "mpnet_dot" or method == "mpnet_norm":
             continue
 
         test_uq_values_id = val_id.uncertainty.tolist()
