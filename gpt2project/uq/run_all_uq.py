@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    run_name = "bayesgpt_reduced_dropout_run_29042025"
+    run_name = "gpt_ood_run_30042025"
     enable_mcdo = True
     search_method = greedy_search_gpt
     step_size = 25
@@ -69,10 +69,6 @@ def main() -> None:
     model_BayesGPT.to(hyperparameters.device)
     model_BayesGPT.eval()
 
-    # model_GPT = get_model_from_wandb_checkpoint(
-    #     wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v1",
-    #     checkpoint_name="model_transformer_76291.pt",
-    # )
     model_GPT = get_model_from_wandb_checkpoint(
         wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v1",
         checkpoint_name="model_transformer_76291.pt",

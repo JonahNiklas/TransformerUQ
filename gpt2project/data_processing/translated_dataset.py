@@ -89,7 +89,7 @@ class TranslatedDataset(AbstractEvaluationDataset):
         return len(self.translated_dataset)
 
     def __repr__(self) -> str:
-        return f"Translated{self.original_dataset.__class__.__name__}"
+        return f"Translated{self.original_dataset.__repr__()}"
 
 
 class DatasetTranslator:
