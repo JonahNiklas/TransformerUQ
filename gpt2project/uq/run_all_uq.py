@@ -182,20 +182,22 @@ def _plot_uq_histogram(
     aq_funcs: List[AcquisitionFunctionGPT],
     run_config: EvaluationRunConfig,
 ) -> None:
+    assert all_uqs.shape == (len(run_config.dataset), len(aq_funcs))
+
     validation_result_id_list: List[ValidationResult] = []
     validation_result_ood_list: List[ValidationResult] = []
-    for aq_func in aq_funcs:
+    for i, aq_func in enumerate(aq_funcs):
         validation_result_id = ValidationResult(
-            hypothesis=[], reference=[], uncertainty=all_uqs
+            hypothesis=[], reference=[], uncertainty=all_uqs[:, i]
         )
         validation_result_ood = ValidationResult(
-            hypothesis=[], reference=[], uncertainty=ood_all_uqs
+            hypothesis=[], reference=[], uncertainty=ood_all_uqs[:, i]
         )
         plot_uq_histogram(
             validation_result_id,
             validation_result_ood,
             aq_func.__class__.__name__,
-            get_gpt_plot_data_path(run_config, file_extension="histogram.svg"),
+            get_gpt_plot_data_path(run_config, file_extension=f"_{aq_func.__class__.__name__}_histogram.svg"),
             run_config.run_name,
         )
         validation_result_id_list.append(validation_result_id)

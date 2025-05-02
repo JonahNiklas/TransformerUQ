@@ -49,6 +49,25 @@ class TranslatedDataset(AbstractEvaluationDataset):
             self.translated_dataset: (
                 List[DatasetExample] | List[DatasetExampleWithConcepts]
             ) = pickle.load(self.cache_path.open("rb"))
+
+            # technical debt, but if we load DatasetExample and the original dataset is DatasetExampleWithConcepts, we need to convert it
+            if isinstance(self.translated_dataset[0], DatasetExample) and isinstance(
+                dataset[0], DatasetExampleWithConcepts
+            ):
+                assert all(
+                    isinstance(example, DatasetExampleWithConcepts)
+                    for example in dataset
+                )
+                self.translated_dataset = [
+                    DatasetExampleWithConcepts(
+                        prompt=translated_example.prompt,
+                        targets=translated_example.targets,
+                        concepts=original_example.concepts,  # type: ignore
+                    )
+                    for translated_example, original_example in zip(
+                        self.translated_dataset, dataset
+                    )
+                ]
             return
 
         self.translator = DatasetTranslator()

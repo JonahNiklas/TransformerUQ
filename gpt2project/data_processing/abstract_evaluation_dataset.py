@@ -39,14 +39,14 @@ class AbstractEvaluationDataset(Dataset, ABC):
         pass
 
     @abstractmethod
-    def __getitem__(self, idx: int) -> DatasetExample:
+    def __getitem__(self, idx: int) -> DatasetExample | DatasetExampleWithConcepts:
         pass
 
     @abstractmethod
     def __len__(self) -> int:
         pass
 
-    def __iter__(self) -> Iterator[DatasetExample]:
+    def __iter__(self) -> Iterator[DatasetExample | DatasetExampleWithConcepts]:
         for i in range(len(self)):
             yield self[i]
 
