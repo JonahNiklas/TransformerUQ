@@ -55,7 +55,7 @@ class AbstractEvaluationDataset(Dataset, ABC):
 
     @staticmethod
     def get_all_targets_transposed(
-        examples: List[DatasetExampleWithConcepts],
+        examples: List[DatasetExample],
     ) -> List[List[str]]:
         """
         Returns all targets in a transposed manner to be directly used by sacrebleu.corpus_bleu.

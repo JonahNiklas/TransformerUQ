@@ -49,7 +49,7 @@ from utils.general_plotter import (
 )
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -103,11 +103,11 @@ def main() -> None:
             [TargetUsageEval(), BLEU_eval()],
             [BeamScore(), mpnet_cosine(), BLEUVar()],
         ),
-        (
-            HellaSwag(),
-            [MultipleChoiceEval()],
-            [BeamScore()],
-        ),  # BeamScore here is just a arbitrary placeholder since UQ is hardcoded into the Hellaswag evaluation code
+        # (
+        #     HellaSwag(),
+        #     [MultipleChoiceEval()],
+        #     [BeamScore()],
+        # ),  # BeamScore here is just a arbitrary placeholder since UQ is hardcoded into the Hellaswag evaluation code
     ]
 
     run_configs = [

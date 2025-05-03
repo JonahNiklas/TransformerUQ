@@ -123,7 +123,7 @@ class BLEU_eval(MultipleTargetEval):
     ) -> float:
         # Calculate BLEU score
         targets_transposed = AbstractEvaluationDataset.get_all_targets_transposed(
-            assert_list_element_type(dataset_examples, DatasetExampleWithConcepts)
+            assert_list_element_type(dataset_examples, DatasetExample)
         )
         bleu = corpus_bleu(output_text, targets_transposed)
         return bleu.score
