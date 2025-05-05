@@ -1,5 +1,5 @@
 #! /bin/sh
-#SBATCH --job-name="gpt ood"
+#SBATCH --job-name="bayesgpt reduced dropout ood"
 #SBATCH --partition=GPUQ
 #SBATCH --account=share-ie-idi
 #SBATCH --time=0-08:00:00     
@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=16     # 2 CPU cores
 #SBATCH --mem=64G              # 5 gigabytes memory
 #SBATCH --gres=gpu:a100:1
-#SBATCH --output=gpt2project/local/gpt2_log/gpt_ood.txt
+#SBATCH --output=gpt2project/local/gpt2_log/bayesgpt_reduced_dropout_ood.txt
 
 export TRANSFORMER_IMPL=transformer
 

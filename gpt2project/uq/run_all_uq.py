@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    run_name = "gpt_ood_run_30042025"
+    run_name = "bayesgpt_reduced_dropout_ood_run_05052025"
     enable_mcdo = True
     search_method = greedy_search_gpt
     step_size = 25
@@ -62,10 +62,17 @@ def main() -> None:
     # wandb.init(project="GPT2Project", name=run_name, job_type="inference")
 
     tokenizer = tiktoken.get_encoding("gpt2")
+    # model_BayesGPT = get_model_from_wandb_checkpoint(
+    #     wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v2",
+    #     checkpoint_name="model_bayesformer_76291.pt",
+    # )
+
+    # BayesGPT with reduced dropout
     model_BayesGPT = get_model_from_wandb_checkpoint(
-        wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v2",
-        checkpoint_name="model_bayesformer_76291.pt",
+        wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v3",
+        checkpoint_name="model_bayesformer_reduced_dropout_76291.pt",
     )
+
     model_BayesGPT.to(hyperparameters.device)
     model_BayesGPT.eval()
 
