@@ -1,13 +1,78 @@
 from typing import List, Tuple
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from sacrebleu import corpus_bleu
 from sklearn.metrics import roc_curve, auc
 
 from uq.validate_uq import ValidationResult
+from utils.general_plotter import PlotData, cache_plot_data_wmt
+
+logger = logging.getLogger(__name__)
 
 label_fontsize = 12
-plot_figsize = (6.4 * 0.75, 4.8 * 0.75)
+plot_figsize = (6.4 * 0.85, 4.8 * 0.85)
+
+
+def calc_ret_curve_plot_data_wmt(
+    validationResults: List[ValidationResult],
+    aq_func_names: List[str],
+    model_name: str,
+    eval_method: str,
+    search_method: str,
+    enable_mcdo: bool,
+    benchmark_name: str,
+    save_path: str,
+) -> None:
+    # Sort the hypothesis-UQ pairs by UQ value
+    bleu_scores: List[List[float]] = [[] for _ in range(len(validationResults))]
+    interval = 0.025
+    for idx, val_result in enumerate(validationResults):
+        hyp_ref_uq_pair = [
+            (
+                val_result.hypothesis[i],
+                val_result.reference[i],
+                val_result.uncertainty[i].item(),
+            )
+            for i in range(len(val_result.hypothesis))
+        ]
+
+        hyp_ref_uq_pair.sort(key=lambda x: abs(x[2]))
+
+        for i in range(
+            0, len(hyp_ref_uq_pair), max(int(interval * len(hyp_ref_uq_pair)), 1)
+        ):
+            interval_pairs = hyp_ref_uq_pair[
+                : i + max(int(interval * len(hyp_ref_uq_pair)), 1)
+            ]
+            hypothesis_in_interval = [pair[0] for pair in interval_pairs]
+            reference_in_interval = [pair[1] for pair in interval_pairs]
+            interval_bleu_scores = corpus_bleu(
+                hypothesis_in_interval, [reference_in_interval]
+            ).score
+            bleu_scores[idx].append(interval_bleu_scores)
+
+    # Calculate the area under the retention curves
+    aq_funcs_and_auc = aq_func_names
+    for idx, scores in enumerate(bleu_scores):
+        x = [i * interval for i in range(len(scores))]
+        auc_score = auc(x, scores)
+        aq_funcs_and_auc[idx] = f"{aq_funcs_and_auc[idx]} (AUC = {auc_score:.2f})"
+
+    logger.info(f"Saving plot data to {save_path}")
+    cache_plot_data_wmt(
+        PlotData(
+            eval_method=eval_method,
+            search_method_type=search_method,
+            enable_mcdo=enable_mcdo,
+            model_name=model_name,
+            benchmark=benchmark_name,
+            aq_func_names=aq_funcs_and_auc,
+            eval_scores=bleu_scores,
+            x_points=[i * interval for i in range(len(bleu_scores[0]))],
+        ),
+        save_path,
+    )
 
 
 def plot_data_retained_curve(
@@ -77,7 +142,7 @@ def plot_data_retained_curve(
     print("Data retained curve saved at: ", save_path)
 
 
-def plot_uq_histogram_and_roc(
+def plot_uq_histogram(
     validation_result_id: ValidationResult,
     validation_result_ood: ValidationResult,
     method: str,
@@ -127,7 +192,7 @@ def plot_combined_roc_curve(
     for val_id, val_ood, method in zip(
         validation_result_id, validation_result_ood, methods
     ):
-        if method == "mpnet_dot":
+        if method == "mpnet_dot" or method == "mpnet_cosine" or method == "mpnet_norm":
             continue
 
         test_uq_values_id = val_id.uncertainty.tolist()
@@ -148,6 +213,10 @@ def plot_combined_roc_curve(
         roc_auc = auc(fpr, tpr)
 
         plt.plot(fpr, tpr, label=f"{method} (area = {roc_auc:.2f})")
+
+        # # Find TPR at FPR=0.95
+        # idx = (fpr >= 0.05).nonzero()[0][0]
+        # plt.plot([0.05], [tpr[idx]], 'o', label=f"{method} TPR at FPR=0.05: {tpr[idx]:.2f}")
 
     plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
     plt.xlim([0.0, 1.0])

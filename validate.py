@@ -42,7 +42,7 @@ def validate(
                 hyperparameters.device
             ), ground_truth.to(hyperparameters.device)
             output = generate_autoregressivly(
-                model, src_tokens, ground_truth, top_k_sampling, vocab, print_ex=1
+                model, src_tokens, ground_truth, greedy_search, vocab, print_ex=1
             )
             all_hypotheses.extend(output)
             all_references.extend(
@@ -64,6 +64,19 @@ def validate(
             for hyp in all_hypotheses:
                 f.write(hyp + "\n")
 
+    _print_first_n_generated_sentences(all_hypotheses, all_references)
+
     bleu_score = corpus_bleu(all_hypotheses, [all_references]).score
     logger.info(f"Validation BLEU Score: {bleu_score}")
     return bleu_score
+
+
+def _print_first_n_generated_sentences(
+    hypotheses: list[str],
+    references: list[str],
+    n: int = 30,
+) -> None:
+    for i in range(n):
+        print("-" * 40)
+        print(f"Hypothesis {i+1}: {hypotheses[i]}")
+        print(f"Reference {i+1}: {references[i]}")

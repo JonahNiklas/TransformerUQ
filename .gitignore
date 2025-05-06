@@ -2,3 +2,4 @@ venv/
 local/
 checkpoints/
 __pycache__/
+logs/

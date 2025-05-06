@@ -72,7 +72,7 @@ def generate_autoregressivly_with_uq(
         hyperparameters.transformer.max_len,
     ).to(hyperparameters.device)
 
-    for n in tqdm(range(hyperparameters.uq.num_inferences)):
+    for n in range(hyperparameters.uq.num_inferences):
         inference_result: AutoregressiveInferenceResults = beam_search_function(
             model,
             src_tokens,
@@ -102,6 +102,9 @@ def generate_autoregressivly_with_uq(
 
 
 def _enable_test_time_dropout(model: nn.Module) -> None:
+    assert any(
+        isinstance(module, nn.Dropout) for module in model.modules()
+    ), "No dropout layer found in model"
     for module in model.modules():
         if isinstance(module, nn.Dropout):
             module.train()

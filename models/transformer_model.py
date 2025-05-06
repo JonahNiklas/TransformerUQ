@@ -6,6 +6,7 @@ from torch.nn import functional as F
 from hyperparameters import hyperparameters
 from models.bayesformer import BayesTransformer
 from models.transformer import Transformer as TransformerOwn
+from shared.dropout_embedding import DropoutEmbedding
 
 
 class TransformerModel(nn.Module):
@@ -23,12 +24,30 @@ class TransformerModel(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.d_model = d_model
-        self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=0)
         self.dropout = nn.Dropout(dropout)
-        positional_dropout = 0.0
-        self.pos_encoder = PositionalEncoding(
-            d_model, max_len=max_len, dropout=positional_dropout
+        positional_dropout = (
+            hyperparameters.transformer.dropout_pre_embedding
+            if hyperparameters.transformer.transformer_implementation == "bayesformer"
+            else 0
         )
+
+        self.embedding = (
+            DropoutEmbedding(
+                vocab_size, d_model, padding_idx=0, dropout=positional_dropout
+            )
+            if hyperparameters.transformer.transformer_implementation == "bayesformer"
+            else nn.Embedding(vocab_size, d_model, padding_idx=0)
+        )
+        self.pos_encoder = (
+            LearnedPositionalEncoding(
+                d_model, max_len=max_len, dropout=positional_dropout
+            )
+            if hyperparameters.transformer.transformer_implementation == "bayesformer"
+            else PositionalEncoding(
+                d_model, max_len=max_len, dropout=positional_dropout
+            )
+        )
+
         self.transformer: torch.nn.Module
         if hyperparameters.transformer.transformer_implementation == "pytorch":
             self.transformer = nn.Transformer(
@@ -73,17 +92,8 @@ class TransformerModel(nn.Module):
             tgt.device
         )
 
-        # # Apply dropout to the rows of the embedding matrix
-        # if hyperparameters.transformer.transformer_implementation == "bayesformer":
-        #     src = token_dropout(src, dropout_prob=self.dropout.p, pad_idx=pad_idx)
-        #     tgt = token_dropout(tgt, dropout_prob=self.dropout.p, pad_idx=pad_idx)
-
         src = self.embedding(src) * math.sqrt(self.d_model)
         tgt = self.embedding(tgt) * math.sqrt(self.d_model)
-
-        if hyperparameters.transformer.transformer_implementation == "bayesformer":
-            src = self.dropout(src)
-            tgt = self.dropout(tgt)
 
         src = self.pos_encoder(src)
         tgt = self.pos_encoder(tgt)
@@ -101,6 +111,29 @@ class TransformerModel(nn.Module):
         )
         result: torch.Tensor = self.out(out)
         return result
+
+
+class LearnedPositionalEncoding(nn.Module):
+    def __init__(self, d_model: int, max_len: int, dropout: float) -> None:
+        super().__init__()
+        self.pos_embedding = DropoutEmbedding(
+            max_len,
+            d_model,
+            dropout=dropout,
+            padding_idx=None,
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (batch_size, seq_len, d_model)
+        batch_size, seq_len, _ = x.size()
+        positions = (
+            torch.arange(0, seq_len, device=x.device)
+            .unsqueeze(0)
+            .expand(batch_size, seq_len)
+        )
+        pos_embeddings = self.pos_embedding(positions)
+        x = x + pos_embeddings
+        return x
 
 
 class PositionalEncoding(nn.Module):
@@ -140,10 +173,3 @@ class PositionalEncoding(nn.Module):
             pe = pe * mask
         x = x + pe
         return x
-
-
-# def token_dropout(tokens: torch.Tensor, dropout_prob: float, pad_idx: int) -> torch.Tensor:
-#     # Generate dropout mask on tokens (True indicates to drop)
-#     dropout_mask = torch.rand(tokens.shape, device=tokens.device) < dropout_prob
-#     # Replace dropped tokens with pad_idx
-#     return tokens.masked_fill(dropout_mask, pad_idx)
