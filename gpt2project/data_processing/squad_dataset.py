@@ -41,7 +41,7 @@ def _extract_answers(answer_dict: Any) -> List[str]:
 
 def _get_squad_data() -> List[DatasetExample]:
     data: Any = load_dataset(
-        "rajpurkar/squad",
+        "christti/squad-augmented-v2",
         split="validation",
     )
     subset = 1000
