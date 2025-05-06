@@ -50,7 +50,7 @@ class PlotData(BaseModel):
             self.model_name = "BayesFormer"
         elif self.model_name == "pytorch":
             self.model_name = "PyTorch"
-        
+
 
 def get_gpt_evaluation_path(
     evaluation_run_config: EvaluationRunConfig,
