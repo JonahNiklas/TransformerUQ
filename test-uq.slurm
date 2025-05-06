@@ -11,6 +11,6 @@
 #SBATCH --output=logs/fast_dropout_uq_run.txt
 
 module load Python/3.12.3-GCCcore-13.3.0
-source venv/bin/activate
+source .venv/bin/activate
 poetry install
 python -m uq.test_model_uq
