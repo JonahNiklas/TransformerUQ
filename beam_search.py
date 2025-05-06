@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from typing import Callable, List, Tuple, cast
 import torch
 import torch.nn as nn
@@ -12,7 +13,7 @@ from hyperparameters import hyperparameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 BeamSearchFunction = Callable[
-    [nn.Module, torch.Tensor, Vocabulary], torch.Tensor
+    [nn.Module, torch.Tensor, Vocabulary], "AutoregressiveInferenceResults"
 ]
 
 
@@ -20,23 +21,22 @@ def beam_search_batched(
     model: nn.Module,
     src_tokens: torch.Tensor,
     vocab: Vocabulary,
-) -> torch.Tensor:
+) -> AutoregressiveInferenceResults:
     """
-    Performs a batched beam search on a Transformer-based model.
+    Performs a batched beam search on a Transformer-based model and returns both the
+    final token sequences and the corresponding softmax probability distributions
+    (computed via teacher forcing on the final sequences).
 
     Args:
         model (nn.Module): Transformer model with `encode` and `decode` methods.
-        src (torch.Tensor): Source sequences (batch_size, src_len).
-        src_mask (torch.Tensor): Mask for the source sequences, shape (batch_size, 1, src_len) or similar.
-        beam_size (int): Beam size.
-        max_len (int): Maximum decoding length.
-        start_symbol (int): Index of the start token.
-        end_symbol (int): Index of the end token.
-        pad_symbol (int): Index of the padding token.
-        device (str): Device to use ('cuda' or 'cpu').
+        src_tokens (torch.Tensor): Source sequences (batch_size, src_len).
+        vocab (Vocabulary): Vocabulary for mapping tokens to ids.
 
     Returns:
-        List[List[int]]: A list of predicted token sequences (one for each item in the batch).
+        AutoregressiveInferenceResults: A dataclass containing:
+            - tgt_tokens: A tensor of predicted token sequences (batch_size, max_len).
+            - softmax_probs: A tensor of softmax probability distributions
+              (batch_size, max_len, vocab_size).
     """
     batch_size = src_tokens.size(0)
     src_tokens = src_tokens.to(device)
@@ -72,8 +72,10 @@ def beam_search_batched(
         # 3) Decode to get logits for the next token
         with torch.no_grad():
             # model output shape: [batch_size*beam_size, seq_len, vocab_size]
-            encoder_input = src_tokens.unsqueeze(1).repeat(1, beam_size, 1).view(
-                batch_size * beam_size, -1
+            encoder_input = (
+                src_tokens.unsqueeze(1)
+                .repeat(1, beam_size, 1)
+                .view(batch_size * beam_size, -1)
             )
             model_output, regularization = model(encoder_input, decoder_input)
             next_token_logits = model_output[
@@ -184,8 +186,140 @@ def beam_search_batched(
         end = min(len(seq), max_len)
         final_tgt_tokens[i, :end] = torch.tensor(seq[:end], device=device)
 
+    # -------------------------------------------------------------------------
+    # Compute softmax probabilities for the generated sequences using teacher forcing.
+    # Here we re-run the model with the final sequence (which includes PAD after EOS)
+    # so that we can collect the probability distributions.
+    # -------------------------------------------------------------------------
+    vocab_size = len(vocab)
+    softmax_probs = torch.zeros(batch_size, max_len, vocab_size, device=device)
+    with torch.no_grad():
+        output = model(
+            src_tokens, final_tgt_tokens
+        )  # shape: (batch_size, max_len, vocab_size)
+        for t in range(1, max_len):
+            softmax_probs[:, t, :] = torch.softmax(output[:, t - 1, :], dim=-1)
+
+    final_tgt_tokens, softmax_probs = _clean_inference_results(
+        final_tgt_tokens, softmax_probs, vocab
+    )
+
     assert final_tgt_tokens.shape == (batch_size, max_len)
-    return final_tgt_tokens
+    return AutoregressiveInferenceResults(final_tgt_tokens, softmax_probs)
+
+
+def greedy_search(
+    model: nn.Module,
+    src_tokens: torch.Tensor,
+    vocab: Vocabulary,
+) -> AutoregressiveInferenceResults:
+    max_len = hyperparameters.transformer.max_len
+    with torch.no_grad():
+        batch_size = src_tokens.size(0)
+        tgt_tokens = torch.zeros(batch_size, max_len).long().to(device)
+        softmax_probs = torch.zeros(batch_size, max_len, len(vocab)).to(device)
+        tgt_tokens[:, 0] = vocab.token_to_id(BOS_TOKEN)
+
+        for t in range(1, max_len):
+            output = model(src_tokens, tgt_tokens)
+            assert output.shape == (batch_size, max_len, len(vocab))
+            logits = output[:, t - 1, :]
+            assert logits.shape == (batch_size, len(vocab))
+            probs = torch.softmax(logits, dim=-1)
+            assert probs.shape == (batch_size, len(vocab))
+            softmax_probs[:, t, :] = probs
+            predicted_tokens = torch.argmax(probs, dim=-1)
+            tgt_tokens[:, t] = predicted_tokens
+
+        tgt_tokens, softmax_probs = _clean_inference_results(
+            tgt_tokens, softmax_probs, vocab
+        )
+
+    assert tgt_tokens.shape == (batch_size, max_len)
+    return AutoregressiveInferenceResults(tgt_tokens, softmax_probs)
+
+
+def top_k_sampling(
+    model: nn.Module,
+    src_tokens: torch.Tensor,
+    vocab: Vocabulary,
+    k: int = 5,
+    temperature: float = 0.4,
+) -> AutoregressiveInferenceResults:
+    max_len = hyperparameters.transformer.max_len
+    with torch.no_grad():
+        batch_size = src_tokens.size(0)
+        tgt_tokens = torch.zeros(batch_size, max_len, dtype=torch.long, device=device)
+        softmax_probs = torch.zeros(batch_size, max_len, len(vocab), device=device)
+
+        tgt_tokens[:, 0] = vocab.token_to_id(BOS_TOKEN)
+
+        for t in range(1, max_len):
+            output = model(src_tokens, tgt_tokens)
+            logits = output[:, t - 1, :]
+
+            full_probs = torch.softmax(logits, dim=-1)
+            softmax_probs[:, t, :] = full_probs
+
+            logits = logits / temperature
+            top_k_logits, top_k_indices = torch.topk(logits, k, dim=-1)
+            top_k_probs = torch.softmax(top_k_logits, dim=-1)
+
+            sampled_indices = torch.multinomial(top_k_probs, num_samples=1)
+            predicted_tokens = top_k_indices.gather(1, sampled_indices).squeeze(-1)
+            tgt_tokens[:, t] = predicted_tokens
+
+            if torch.all((tgt_tokens == vocab.token_to_id(EOS_TOKEN)).any(dim=1)):
+                break
+
+        tgt_tokens, softmax_probs = _clean_inference_results(
+            tgt_tokens, softmax_probs, vocab
+        )
+
+    assert tgt_tokens.shape == (batch_size, max_len)
+    return AutoregressiveInferenceResults(tgt_tokens, softmax_probs)
+
+
+def _clean_inference_results(
+    tgt_tokens: torch.Tensor, softmax_probs: torch.Tensor, vocab: Vocabulary
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    assert (
+        tgt_tokens[:, 0].eq(vocab.token_to_id(BOS_TOKEN)).all()
+    ), "First token must be BOS"
+    softmax_probs[:, 0, vocab.token_to_id(BOS_TOKEN)] = 1.0
+    for i in range(tgt_tokens.size(0)):
+        for j in range(1, tgt_tokens.size(1)):
+            if tgt_tokens[i, j] == vocab.token_to_id(EOS_TOKEN):
+                tgt_tokens[i, j + 1 :] = vocab.token_to_id(PAD_TOKEN)
+                softmax_probs[i, j + 1 :, vocab.token_to_id(PAD_TOKEN)] = 1.0
+                break
+    return tgt_tokens, softmax_probs
+
+
+@dataclass
+class AutoregressiveInferenceResults:
+    """
+    Results of autoregressive inference (batch_size, max_len)
+    """
+
+    token_ids: torch.Tensor
+    """
+    Softmax probabilities for each token (batch_size, max_len, vocab_size)
+    """
+    softmax_probs: torch.Tensor
+
+    def get_softmax_probs_for_selected_token(self) -> torch.Tensor:
+        """
+        Get the softmax probability for each token in token_ids by indexing into softmax_probs.
+        For each batch and timestep, this returns the probability corresponding to the predicted token.
+
+        Returns:
+            A tensor of shape (batch_size, max_len) containing the probabilities for the selected tokens.
+        """
+        selected_probs = self.softmax_probs.gather(
+            dim=2, index=self.token_ids.unsqueeze(2)
+        )
+        return selected_probs.squeeze(2)
 
 
 def beam_search_unbatched(
@@ -193,9 +327,11 @@ def beam_search_unbatched(
     src_tokens: torch.Tensor,
     vocab: Vocabulary,
 ) -> torch.Tensor:
+    """
+    This function is deprecated. Use `beam_search_batched` instead.
+    """
     max_len = hyperparameters.transformer.max_len
     beam_size = hyperparameters.beam_search.beam_size
-    model.eval()
     with torch.no_grad():
         batch_size = src_tokens.size(0)
 
@@ -213,7 +349,7 @@ def beam_search_unbatched(
         ]
 
         final_sequences: List[torch.Tensor | None] = [None] * batch_size
-        for _ in tqdm(range(max_len - 1), desc="Generating tokens"):
+        for _ in range(max_len - 1):
             # Expand each beam, compute log probs for each possible next token
             new_beams: List[List[Tuple[float, torch.Tensor]]] = [
                 [] for _ in range(batch_size)
@@ -263,34 +399,3 @@ def beam_search_unbatched(
 
     assert final_tgt_tokens.shape == (batch_size, max_len)
     return final_tgt_tokens
-
-
-def greedy_search(
-    model: nn.Module,
-    src_tokens: torch.Tensor,
-    vocab: Vocabulary,
-) -> torch.Tensor:
-    max_len = hyperparameters.transformer.max_len
-    model.eval()
-    with torch.no_grad():
-        batch_size = src_tokens.size(0)
-        tgt_tokens = torch.zeros(batch_size, max_len).long().to(device)
-        tgt_tokens[:, 0] = vocab.token_to_id(BOS_TOKEN)
-
-        for t in tqdm(range(1, max_len), desc="Generating tokens"):
-            output = model(src_tokens, tgt_tokens)
-            assert output.shape == (batch_size, max_len, len(vocab))
-            output = output[:, t - 1, :]
-            assert output.shape == (batch_size, len(vocab))
-            output = output.argmax(dim=1)
-            assert output.shape == (batch_size,)
-            tgt_tokens[:, t] = output
-
-        for i in range(batch_size):
-            for j in range(1, max_len):
-                if tgt_tokens[i, j] == vocab.token_to_id(EOS_TOKEN):
-                    tgt_tokens[i, j + 1 :] = vocab.token_to_id(PAD_TOKEN)
-                    break
-
-    assert tgt_tokens.shape == (batch_size, max_len)
-    return tgt_tokens

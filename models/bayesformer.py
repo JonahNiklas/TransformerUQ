@@ -31,7 +31,7 @@ class BayesMultiheadAttention(nn.Module):
         self, query: Tensor, key: Tensor, value: Tensor, mask: Tensor
     ) -> Tuple[Tensor, Tensor]:
         batch_size, q_seq_length, _ = query.shape
-        k_seq_length= key.shape[1]
+        k_seq_length = key.shape[1]
 
         Q, regularization1 = self.dropout(query, self.W_q) # red dropout
         K, regularization2 = self.dropout(key, self.W_k) # green dropout
