@@ -62,17 +62,17 @@ def main() -> None:
     # wandb.init(project="GPT2Project", name=run_name, job_type="inference")
 
     tokenizer = tiktoken.get_encoding("gpt2")
-    model_BayesGPT = get_model_from_wandb_checkpoint(
-        wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v2",
-        checkpoint_name="model_bayesformer_76291.pt",
-    )
+    # model_BayesGPT = get_model_from_wandb_checkpoint(
+    #     wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v2",
+    #     checkpoint_name="model_bayesformer_76291.pt",
+    # )
 
     # BayesGPT with reduced dropout
-    # model_BayesGPT = get_model_from_wandb_checkpoint(
-    #     wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v3",
-    #     checkpoint_name="model_bayesformer_76291.pt",
-    #     artifact_dir="local/gpt_checkpoints/bayesgpt_reduced_dropout",
-    # )
+    model_BayesGPT = get_model_from_wandb_checkpoint(
+        wandb_artifact_path="sondresorbye-magson/GPT2Project/model-checkpoint-76291:v3",
+        checkpoint_name="model_bayesformer_76291.pt",
+        artifact_dir="local/gpt_checkpoints/bayesgpt_reduced_dropout",
+    )
 
     model_BayesGPT.to(hyperparameters.device)
     model_BayesGPT.eval()
