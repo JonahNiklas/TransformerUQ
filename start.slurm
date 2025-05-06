@@ -11,8 +11,8 @@
 #SBATCH --output=TransformerUQ/concrete_dropout_wmt14_log.txt
 
 module load Python/3.12.3-GCCcore-13.3.0
-python -m venv venv
-source venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 poetry install
 python data_processing/wat_zei_je_download_data.py
 python main.py
