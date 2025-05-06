@@ -129,7 +129,9 @@ def main() -> None:
         search_method: str = str(spec["search_method"])
         dropout: bool = bool(spec["dropout"])
         fast_dropout: bool = bool(spec["fast_dropout"])
-        filename = f"{run_name}_{search_method}_{dropout}{'_fast' if fast_dropout else ''}"
+        filename = (
+            f"{run_name}_{search_method}_{dropout}{'_fast' if fast_dropout else ''}"
+        )
         os.makedirs(
             f"local/results/{run_id}/{search_method}/dropout{dropout}{'/fast' if fast_dropout else ''}",
             exist_ok=True,
