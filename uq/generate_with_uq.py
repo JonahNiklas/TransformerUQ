@@ -49,6 +49,7 @@ def generate_autoregressivly_with_uq(
     model.eval()
     if enable_dropout:
         if enable_fast_dropout:
+            assert isinstance(model, TransformerModel)
             enable_fast_test_time_dropout(model)
         else:
             _enable_test_time_dropout(model)
