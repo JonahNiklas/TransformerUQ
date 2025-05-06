@@ -30,7 +30,7 @@ def get_data_loader(
         batch_size=batch_size,
         shuffle=shuffle,
         collate_fn=collate_fn,
-        num_workers=8,
+        num_workers=1,
         prefetch_factor=4,
         pin_memory=True,
     )
