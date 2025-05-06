@@ -8,7 +8,9 @@ from gpt2project.hyperparameters import GPT2ModelConfig, TrainingConfig, hyperpa
 from gpt2project.gpt2model import GPT
 from gpt2project.bayesformer_gpt import BayesformerGPT
 from gpt2project.ddp import device_type
+import logging
 
+logger = logging.getLogger(__name__)
 
 def save_checkpoint(
     model: GPT | BayesformerGPT,
@@ -31,6 +33,7 @@ def save_checkpoint(
 def load_checkpoint(
     checkpoint_path: str,
 ) -> Tuple[GPT | BayesformerGPT, int, torch.optim.Optimizer]:
+    logger.info(f"Loading checkpoint from {checkpoint_path}")
     checkpoint = torch.load(checkpoint_path, weights_only=False)
     model_config = GPT2ModelConfig.model_validate(checkpoint["model_config"])
     model: GPT | BayesformerGPT
@@ -41,7 +44,7 @@ def load_checkpoint(
 
     try:
         model.load_state_dict(checkpoint["model"])
-    except RuntimeError:
+    except RuntimeError as e:
         checkpoint["model"] = {
             k.replace("_orig_mod.", ""): v for k, v in checkpoint["model"].items()
         }
@@ -60,11 +63,12 @@ def load_checkpoint(
 
 
 def get_model_from_wandb_checkpoint(
-    wandb_artifact_path: str, checkpoint_name: str
+    wandb_artifact_path: str,
+    checkpoint_name: str,
+    artifact_dir: str = "local/gpt_checkpoints",
 ) -> GPT | BayesformerGPT:
     """Loads a model from a wandb checkpoint"""
-    os.makedirs("local/gpt_checkpoints", exist_ok=True)
-    artifact_dir = "local/gpt_checkpoints"
+    os.makedirs(artifact_dir, exist_ok=True)
 
     if not os.path.exists(os.path.join(artifact_dir, checkpoint_name)):
         api = wandb.Api()
