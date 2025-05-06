@@ -7,6 +7,7 @@ from torch import nn
 
 from hyperparameters import hyperparameters
 
+
 class ConcreteDropout(nn.Module):
     def __init__(
         self,
@@ -25,14 +26,16 @@ class ConcreteDropout(nn.Module):
 
         self.p_logit = nn.Parameter(torch.empty(1).uniform_(init_min, init_max))
 
-    def forward(self, x: torch.Tensor, layer: nn.Module | None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor, layer: nn.Module | None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         p = torch.sigmoid(self.p_logit)
 
         out = self._concrete_dropout(x, p)
         if layer is not None:
             out = layer(out)
 
-        sum_of_square: torch.Tensor = 0 # type: ignore
+        sum_of_square: torch.Tensor = 0  # type: ignore
         if layer is not None:
             for param in layer.parameters():
                 sum_of_square += torch.sum(torch.pow(param, 2))

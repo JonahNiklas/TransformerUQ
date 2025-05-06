@@ -40,7 +40,7 @@ class TrainingHyperparameters(BaseModel):
 
 
 class ConcreteDropoutHyperparameters(BaseModel):
-    l: float = 0.01 # Try also 0.1 and 0.001 for more weight regularization
+    l: float = 0.01  # Try also 0.1 and 0.001 for more weight regularization
     _number_of_training_examples: int = 4_603_578
     weight_regularizer: float = l**2 / _number_of_training_examples
     dropout_regularizer: float = 2 / (_number_of_training_examples)

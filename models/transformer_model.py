@@ -60,7 +60,9 @@ class TransformerModel(nn.Module):
                 dropout=dropout,
                 batch_first=True,
             )
-            raise NotImplementedError("Concrete dropout adjustments not implemented for pytorch transformer")
+            raise NotImplementedError(
+                "Concrete dropout adjustments not implemented for pytorch transformer"
+            )
         elif hyperparameters.transformer.transformer_implementation == "own":
             self.transformer = TransformerOwn(
                 d_model=d_model,
@@ -70,7 +72,9 @@ class TransformerModel(nn.Module):
                 dim_feedforward=d_ff,
                 dropout=dropout,
             )
-            raise NotImplementedError("Concrete dropout adjustments not implemented for own transformer")
+            raise NotImplementedError(
+                "Concrete dropout adjustments not implemented for own transformer"
+            )
         elif hyperparameters.transformer.transformer_implementation == "bayesformer":
             self.transformer = BayesTransformer(
                 d_model=d_model,

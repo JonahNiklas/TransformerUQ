@@ -33,9 +33,9 @@ class BayesMultiheadAttention(nn.Module):
         batch_size, q_seq_length, _ = query.shape
         k_seq_length = key.shape[1]
 
-        Q, regularization1 = self.dropout(query, self.W_q) # red dropout
-        K, regularization2 = self.dropout(key, self.W_k) # green dropout
-        V, regularization3 = self.dropout(value, self.W_v) # blue dropout
+        Q, regularization1 = self.dropout(query, self.W_q)  # red dropout
+        K, regularization2 = self.dropout(key, self.W_k)  # green dropout
+        V, regularization3 = self.dropout(value, self.W_v)  # blue dropout
 
         # Split into (batch_size, num_heads, seq_length, d_k)
         Q = Q.view(batch_size, q_seq_length, self.num_heads, self.d_k).transpose(1, 2)
@@ -91,7 +91,9 @@ class BayesEncoderLayer(nn.Module):
     def forward(self, x: Tensor, mask: Tensor) -> Tuple[Tensor, Tensor]:
         # Self-attention sub-layer
         attn_output, regularization1 = self.self_attn(x, x, x, mask)
-        skip_connection, regularization2 = self.dropout_skip_connection(attn_output, None)
+        skip_connection, regularization2 = self.dropout_skip_connection(
+            attn_output, None
+        )
         x = x + skip_connection  # orange dropout
         x = self.norm1(x)
 
@@ -104,7 +106,14 @@ class BayesEncoderLayer(nn.Module):
         x = x + skip_connection  # brown dropout
         x = self.norm2(x)
 
-        return x, regularization1 + regularization2 + regularization3 + regularization4 + regularization5
+        return (
+            x,
+            regularization1
+            + regularization2
+            + regularization3
+            + regularization4
+            + regularization5,
+        )
 
 
 class BayesEncoder(nn.Module):
@@ -131,7 +140,7 @@ class BayesEncoder(nn.Module):
         src: (batch_size, src_seq_length)
         src_mask: (batch_size, 1, 1, src_seq_length) or (batch_size, 1, src_seq_length, src_seq_length)
         """
-        regularization: Tensor = 0 # type: ignore
+        regularization: Tensor = 0  # type: ignore
         for layer in self.layers:
             src, regularization_layer = layer(src, src_mask)
             regularization += regularization_layer
@@ -160,13 +169,19 @@ class BayesDecoderLayer(nn.Module):
     ) -> Tuple[Tensor, Tensor]:
         # Masked self-attention
         attn_output, regularization1 = self.self_attn(x, x, x, tgt_mask)
-        skip_connection, regularization2 = self.dropout_skip_connection(attn_output, None)
+        skip_connection, regularization2 = self.dropout_skip_connection(
+            attn_output, None
+        )
         x = x + skip_connection  # orange dropout
         x = self.norm1(x)
 
         # Cross-attention sub-layer
-        attn_output, regularization3 = self.cross_attn(x, enc_output, enc_output, memory_mask)
-        skip_connection, regularization4 = self.dropout_skip_connection(attn_output, None)
+        attn_output, regularization3 = self.cross_attn(
+            x, enc_output, enc_output, memory_mask
+        )
+        skip_connection, regularization4 = self.dropout_skip_connection(
+            attn_output, None
+        )
         x = x + skip_connection  # green dropout
         x = self.norm2(x)
 
@@ -179,7 +194,16 @@ class BayesDecoderLayer(nn.Module):
         x = x + skip_connection  # brown dropout
         x = self.norm3(x)
 
-        return x, regularization1 + regularization2 + regularization3 + regularization4 + regularization5 + regularization6 + regularization7
+        return (
+            x,
+            regularization1
+            + regularization2
+            + regularization3
+            + regularization4
+            + regularization5
+            + regularization6
+            + regularization7,
+        )
 
 
 class BayesDecoder(nn.Module):
@@ -207,7 +231,7 @@ class BayesDecoder(nn.Module):
         tgt: (batch_size, tgt_seq_length)
         enc_output: (batch_size, src_seq_length, d_model)
         """
-        regularization: Tensor = 0 # type: ignore
+        regularization: Tensor = 0  # type: ignore
         for layer in self.layers:
             tgt, regularization_layer = layer(tgt, enc_output, tgt_mask, memory_mask)
             regularization += regularization_layer
@@ -261,7 +285,9 @@ class BayesTransformer(nn.Module):
         )
 
         enc_output, regularization1 = self.encoder(src, enc_src_mask)
-        dec_output, regularization2 = self.decoder(tgt, enc_output, tgt_mask, memory_mask)
+        dec_output, regularization2 = self.decoder(
+            tgt, enc_output, tgt_mask, memory_mask
+        )
 
         assert isinstance(dec_output, torch.Tensor)
         return dec_output, regularization1 + regularization2
