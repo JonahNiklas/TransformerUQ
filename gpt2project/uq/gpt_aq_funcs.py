@@ -261,12 +261,13 @@ class BALD(AcquisitionFunctionGPT):
         )  # (batch_size)
 
         return bald_score_sum / length_penalty
-    
+
 
 class ProbabilityVariance(AcquisitionFunctionGPT):
     """
     Used by Hellaswag. This is class is just for types and aq name.
     """
+
     def __call__(
         self,
         hypothesis: List[List[str]],

@@ -27,20 +27,21 @@ from utils.checkpoints import load_checkpoint
 from uq.validate_uq import ValidationResult, validate_uq
 from data_processing.vocab import load_vocab
 from constants import constants
+import time
 from utils.general_plotter import plot_ret_curve
 
 
 def main() -> None:
     # run_id = "7sy5cau3"
     # checkpoint = "checkpoints/checkpoint-300000b.pth" # remember to change hyperparameters.training.transformer_implementation
-    run_id = "xn8evvcd"
-    checkpoint = "local/checkpoints/checkpoint-300000_trans.pth"
-    hyperparameters.transformer.transformer_implementation = "own"
-    # run_id = "5c8z0pxa"
-    # checkpoint = "local/checkpoints/5c8z0pxa/checkpoint-300000_bayes_pre_emb_drop.pth"
-    # hyperparameters.transformer.transformer_implementation = "bayesformer"
+    # run_id = "xn8evvcd"
+    # checkpoint = "local/checkpoints/checkpoint-300000_trans.pth"
+    # hyperparameters.transformer.transformer_implementation = "own"
+    run_id = "5c8z0pxa"
+    checkpoint = "local/checkpoints/5c8z0pxa/checkpoint-300000_bayes_pre_emb_drop.pth"
+    hyperparameters.transformer.transformer_implementation = "bayesformer"
 
-    run_name = "beam_score_fix2_2504"
+    run_name = "fast_dropout_uq_run_06052025"
     shared_vocab = load_vocab(constants.file_paths.vocab)
     print(f"Shared vocab size: {len(shared_vocab)}")
     device = hyperparameters.device
@@ -105,27 +106,35 @@ def main() -> None:
         {
             "search_method": "greedy",
             "dropout": True,
+            "fast_dropout": True,
         },
-        # {
-        #     "search_method": "beam",
-        #     "dropout": True,
-        # },
+        {
+            "search_method": "beam",
+            "dropout": True,
+            "fast_dropout": True,
+        },
         # {
         #     "search_method": "sample",
         #     "dropout": True,
+        #     "fast_dropout": True,
         # },
         # {
         #     "search_method": "sample",
         #     "dropout": False,
+        #     "fast_dropout": False,
         # },
     ]
 
     for spec in val_spec:
         search_method: str = str(spec["search_method"])
         dropout: bool = bool(spec["dropout"])
-        filename = f"{run_name}_{search_method}_{dropout}"
+        fast_dropout: bool = bool(spec["fast_dropout"])
+        filename = (
+            f"{run_name}_{search_method}_{dropout}{'_fast' if fast_dropout else ''}"
+        )
         os.makedirs(
-            f"local/results/{run_id}/{search_method}/dropout{dropout}", exist_ok=True
+            f"local/results/{run_id}/{search_method}/dropout{dropout}{'/fast' if fast_dropout else ''}",
+            exist_ok=True,
         )
         print(f"Validating model with {search_method} search, dropout={dropout}")
 
@@ -138,6 +147,7 @@ def main() -> None:
             dropout,
             filename + "_id",
             run_id,
+            enable_fast_dropout=fast_dropout,
         )
 
         # run validate_uq or load cached results for ood data
@@ -149,6 +159,7 @@ def main() -> None:
             dropout,
             filename + "_ood",
             run_id,
+            enable_fast_dropout=fast_dropout,
         )
 
         for validation_result, benchmark_name, save_path in [
@@ -234,6 +245,7 @@ def load_or_validate(
     enable_dropout: bool,
     filename: str,
     run_id: str,
+    enable_fast_dropout: bool,
 ) -> List[ValidationResult]:
     cache_file = f"local/results/{run_id}/{filename}.pth"
     validation_results: List[ValidationResult] = []
@@ -242,13 +254,19 @@ def load_or_validate(
         cache = torch.load(cache_file, weights_only=False)
         validation_results = cache
     else:
+        print("starting timer")
+        start_time = time.time()
         validation_results = validate_uq(
             model,
             loader,
             sample_beam_greed,
             aq_funcs,
             enable_dropout,
+            enable_fast_dropout,
             num_batches_to_validate_on=None,
+        )
+        print(
+            f"Validation with {sample_beam_greed} search, dropout={enable_dropout} and fast_dropout={enable_fast_dropout} {time.time() - start_time} seconds"
         )
         os.makedirs(f"local/results/{run_id}", exist_ok=True)
         torch.save(validation_results, cache_file)

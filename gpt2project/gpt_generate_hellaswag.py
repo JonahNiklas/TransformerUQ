@@ -81,7 +81,9 @@ def _eval_hellaswag_example(
         class_prediction_strs.append(str(most_likely_row))
 
     final_class_prediction = _majority_vote(class_prediction_strs)
-    uqs = torch.tensor([_hellaSwag_UQ_selected_class_only(avg_probs, int(final_class_prediction))]).to(hyperparameters.device)
+    uqs = torch.tensor(
+        [_hellaSwag_UQ_selected_class_only(avg_probs, int(final_class_prediction))]
+    ).to(hyperparameters.device)
 
     return [final_class_prediction], uqs
 
@@ -201,7 +203,9 @@ def _hellaSwag_UQ_beam_score(
 
 def _hellaSwag_BALD_UQ(sequence_log_probabilities: torch.Tensor) -> torch.Tensor:
     # Convert log probabilities to probabilities via softmax along candidate dimension.
-    dropout_probs = F.softmax(sequence_log_probabilities, dim=1)  # shape: (T, num_choices)
+    dropout_probs = F.softmax(
+        sequence_log_probabilities, dim=1
+    )  # shape: (T, num_choices)
 
     # Compute the predictive distribution as the average over the dropout samples.
     predictive_distribution = dropout_probs.mean(dim=0)  # shape: (num_choices)

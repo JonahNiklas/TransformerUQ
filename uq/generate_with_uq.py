@@ -43,11 +43,15 @@ def generate_autoregressivly_with_uq(
     sample_beam_greed: str,
     aq_funcs: List[AcquisitionFunction],
     enable_dropout: bool,
+    enable_fast_dropout: bool,
 ) -> List[BatchedValidationResult]:
     vocab = load_vocab(constants.file_paths.vocab)
     model.eval()
     if enable_dropout:
-        _enable_test_time_dropout(model)
+        if enable_fast_dropout:
+            enable_fast_test_time_dropout(model)
+        else:
+            _enable_test_time_dropout(model)
     if sample_beam_greed == "beam":
         beam_search_function = beam_search_batched
     elif sample_beam_greed == "sample":
@@ -106,7 +110,7 @@ def _enable_test_time_dropout(model: nn.Module) -> None:
             module.train()
 
 
-def enable_fast_test_time_dropout(model: TransformerModel) -> None:
+def enable_fast_test_time_dropout(model: nn.Module) -> None:
     """
     Enable dropout for the final decoder layer in the transformer.
     """

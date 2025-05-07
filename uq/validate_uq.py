@@ -45,6 +45,7 @@ def validate_uq(
     sample_beam_greed: str,
     aq_funcs: List[AcquisitionFunction],
     enable_dropout: bool,
+    enable_fast_dropout: bool,
     save_hypotheses_to_file: bool = False,
     num_batches_to_validate_on: int | None = None,
     print_ex: int = 1,
@@ -77,6 +78,7 @@ def validate_uq(
                     sample_beam_greed,
                     aq_funcs,
                     enable_dropout,
+                    enable_fast_dropout,
                 )
             )
 

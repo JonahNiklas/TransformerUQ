@@ -25,7 +25,6 @@ def main() -> None:
     checkpoint = "local/checkpoints/checkpoint-300000_trans.pth"
     hyperparameters.transformer.transformer_implementation = "own"
 
-
     # Load shared vocabulary
 
     vocab = load_vocab(constants.file_paths.vocab)

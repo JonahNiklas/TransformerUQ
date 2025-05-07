@@ -40,7 +40,9 @@ class StreamingParallelDataset(Dataset):
         cache_path = self.src_file.rpartition("/")[0] + "/offsets.pkl"
         if os.path.exists(cache_path):
             logger.debug("Load offsets from disk pkl")
-            self.offsets_src, self.offsets_tgt = torch.load(cache_path)
+            self.offsets_src, self.offsets_tgt = torch.load(
+                cache_path, weights_only=False
+            )
             return
 
         if store_offsets:
