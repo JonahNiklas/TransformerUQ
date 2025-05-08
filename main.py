@@ -24,6 +24,8 @@ use_wandb = os.getenv("USE_WANDB", "TRUE") != "FALSE"
 
 
 def main() -> None:
+    logger.info("Starting concrete dropout run")
+
     logger.info("Tokenize data")
     tokenizer = ParallelCorpusTokenizer()
     tokenizer.tokenize_files(

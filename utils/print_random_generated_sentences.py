@@ -12,9 +12,10 @@ def print_random_generated_sentences(
     seed: int | None = 42,
 ) -> None:
     batch_size = src_tokens.size(0)
-    random_indices = torch.randperm(batch_size, generator=torch.Generator().manual_seed(seed) if seed is not None else None)[
-        :print_ex
-    ]
+    random_indices = torch.randperm(
+        batch_size,
+        generator=torch.Generator().manual_seed(seed) if seed is not None else None,
+    )[:print_ex]
     for i in random_indices:
         print(f"Example {i+1} in batch")
         print(f"Source: {output_to_text(src_tokens[i].tolist(), lang='de')}")

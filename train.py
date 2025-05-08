@@ -46,11 +46,11 @@ def train(
                 optimizer.zero_grad()
                 decoder_input = tgt_tokens[:, :-1]
                 labels = tgt_tokens[:, 1:]
-                logits = model(src_tokens, decoder_input)
+                logits, regularization = model(src_tokens, decoder_input)
                 logits = logits.transpose(1, 2)
                 assert logits.shape == (batch_size, vocab_size, tgt_len - 1)
                 assert labels.shape == (batch_size, tgt_len - 1)
-                loss = criterion(logits, labels)
+                loss = criterion(logits, labels) + regularization
                 loss.backward()
                 optimizer.step()
                 scheduler.step()  # Update learning rate

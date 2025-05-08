@@ -3,3 +3,4 @@ local/
 checkpoints/
 __pycache__/
 logs/
+.mypy_cache/

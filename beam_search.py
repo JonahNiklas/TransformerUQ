@@ -77,7 +77,7 @@ def beam_search_batched(
                 .repeat(1, beam_size, 1)
                 .view(batch_size * beam_size, -1)
             )
-            model_output = model(encoder_input, decoder_input)
+            model_output, regularization = model(encoder_input, decoder_input)
             next_token_logits = model_output[
                 :, -1, :
             ]  # we only need the last time step
@@ -194,7 +194,7 @@ def beam_search_batched(
     vocab_size = len(vocab)
     softmax_probs = torch.zeros(batch_size, max_len, vocab_size, device=device)
     with torch.no_grad():
-        output = model(
+        output, regularization = model(
             src_tokens, final_tgt_tokens
         )  # shape: (batch_size, max_len, vocab_size)
         for t in range(1, max_len):
