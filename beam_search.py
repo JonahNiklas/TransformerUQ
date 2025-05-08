@@ -194,7 +194,7 @@ def beam_search_batched(
     vocab_size = len(vocab)
     softmax_probs = torch.zeros(batch_size, max_len, vocab_size, device=device)
     with torch.no_grad():
-        output = model(
+        output, regularization = model(
             src_tokens, final_tgt_tokens
         )  # shape: (batch_size, max_len, vocab_size)
         for t in range(1, max_len):
